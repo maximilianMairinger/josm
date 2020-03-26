@@ -2,10 +2,10 @@ const InjectPlugin = require('webpack-inject-plugin').default;
 
 module.exports = (env = {}) => {
   return {
-    entry: './test/src/test.ts',
+    entry: './repl/src/repl.ts',
     output: {
-      filename: 'test/dist/josm.js',
-      chunkFilename: 'test/dist/[name].js',
+      filename: 'repl/dist/repl-bundle.js',
+      chunkFilename: 'repl/dist/[name].js',
       path: __dirname,
       publicPath: "/"
     },
