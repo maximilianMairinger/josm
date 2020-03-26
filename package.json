@@ -15,12 +15,12 @@
     "url": "git+https://github.com/maximilianMairinger/josm.git"
   },
   "keywords": [
-  "state",
-  "manager",
-  "object-oriented",
-  "client",
-  "web"
-],
+    "state",
+    "manager",
+    "object-oriented",
+    "client",
+    "web"
+  ],
   "author": "Maximilian Mairinger",
   "license": "ISC",
   "bugs": {
@@ -42,5 +42,8 @@
     "webpack-cli": "^3.3.10",
     "webpack-inject-plugin": "^1.5.2",
     "webpack-merge": "^4.2.2"
+  },
+  "dependencies": {
+    "ajaon": "^1.5.5"
   }
 }
