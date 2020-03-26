@@ -1,4 +1,4 @@
-import { Data, DataCollection, DataSubscription, DataBase } from "../../app/src/f-db"
+import { Data, DataCollection, DataSubscription, DataBase } from "../../app/src/josm"
 import clone from "tiny-clone"
 import { DataBaseLink } from "../../app/src/dataBase"
 import attatchToPrototype from "attatch-to-prototype"

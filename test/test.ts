@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataCollection } from "../app/src/f-db"
+import { Data, DataSubscription, DataCollection } from "../app/src/josm"
 import delay from "delay"
 
 
