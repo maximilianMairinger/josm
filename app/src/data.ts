@@ -3,8 +3,8 @@
 import { Concat } from 'typescript-tuple'
 import { DataBase } from './josm'
 
-import { deepEqual } from "fast-equals"
-import clone from "tiny-clone"
+import { circularDeepEqual } from "fast-equals"
+import clone from "fast-copy"
 
 
 export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
@@ -230,7 +230,7 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
       let prevData = clone((this._data as ProperSubscribable<Values>).get())
       this.deacivate()
       this._data = data
-      if (isActive) this.activate(!deepEqual(prevData, (data as ProperSubscribable<Values>).get()))
+      if (isActive) this.activate(!circularDeepEqual(prevData, (data as ProperSubscribable<Values>).get()))
       return this
     }
   }
