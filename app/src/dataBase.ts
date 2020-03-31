@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataCollection, DataSet, Subscription } from "./data"
+import { Data, DataSubscription, DataCollection, Subscription, DataSet } from "./data"
 import { nthIndex } from "./helper"
 import clone from "tiny-clone"
 import attatchToPrototype from "attatch-to-prototype"
@@ -6,46 +6,94 @@ import attatchToPrototype from "attatch-to-prototype"
 
 
 
-export class DataBaseLink<Store extends ComplexData> extends Function {
-  private t: any
-  private db: DataBase<Store>
-  constructor(db: DataBase<Store>) {
-    super(paramsOfDataBaseLinkFunction, bodyOfDataBaseLinkFunction)
-    this.t = this.bind(this)
-    this.db = db
-
-    this.attatchDataToFunction()
-
-    return this.t
-  }
-
-  private attatchDataToFunction() {
-    let attatch = attatchToPrototype(this.t)
-    
-    for (let key in this.db) {
-      attatch(key, { get: () => {
-        return this.db[key]
-      }, enumerable: true})
-    }
-  }
-
-  private DataBaseLinkFunction(...a: any[]) {
-    this.db(...a)
-  }
-
-  private DataBaseLinkFunctionWrapper(...a: any[]) {
-    this.DataBaseLinkFunction(...a)
-  }
-}
-
 //@ts-ignore
 const entireDataBaseLinkFunction = DataBaseLink.prototype.DataBaseLinkFunctionWrapper.toString(); 
 const paramsOfDataBaseLinkFunction = entireDataBaseLinkFunction.slice(entireDataBaseLinkFunction.indexOf("(") + 1, nthIndex(entireDataBaseLinkFunction, ")", 1));
 const bodyOfDataBaseLinkFunction = entireDataBaseLinkFunction.slice(entireDataBaseLinkFunction.indexOf("{") + 1, entireDataBaseLinkFunction.lastIndexOf("}"));
 
-export class DataLink<Value> {
-  constructor(private data: Data<Value>) {
+export class Link<Value> {
+  private value: Value extends object ? Data<Value> | DataBase<Value> : Data<Value>
+  private home: any
 
+  private subscriptions: DataSubscription<PathSegment[]>[] = []
+
+  destroy() {
+    this.subscriptions.ea((subscription) => {
+      subscription.deacivate()
+    })
+    this.home.destroy()
+    for (let iterator in this) {
+      delete this[iterator]
+    }
+  }
+
+  constructor(private wrapper: DataBase<{[key: string]: Value}>, paths: PathSegment[]) {
+    this.home = wrapper
+
+    let currentPathIndex: (string | number)[] = []
+
+
+    let change = (at: number, parent: any) => {
+
+    }
+
+    for (let i = 0; i < paths.length; i++) {
+      const path = paths[i];
+      let top = currentPathIndex.length
+      
+      
+      if (typeof path === "number" || typeof path === "string") {
+        currentPathIndex[top] = path
+      }
+      else {
+
+        let me = path.get((...a) => {
+          let maTop = top
+          let lastFine = maTop - 1
+
+          let mayBeFirstChange = a.ea((e) => {
+            if (currentPathIndex[maTop] !== e) return maTop
+            maTop++
+          })
+          if (mayBeFirstChange !== undefined) lastFine = mayBeFirstChange - 1
+
+          let prevVal = currentPathIndex[lastFine] === undefined ? wrapper : currentPathIndex[lastFine] 
+          let firstChange = lastFine + 1
+
+          maTop = firstChange
+          for (let i = firstChange - top; i < a.length; i++) {
+            const e = a[i];
+
+            currentPathIndex[maTop] = e
+
+            maTop++
+          }
+
+
+          change(firstChange, prevVal)
+        })
+
+
+        this.subscriptions.add(me)
+
+      }
+    }
+
+    change = (at: number, parent: any) => {
+      for (; at < currentPathIndex.length; at++) {
+        const path = currentPathIndex[at];
+        parent = parent[path]
+      }
+      this.value = parent
+
+      //@ts-ignore
+      if (this.value instanceof DataBase) this.home = this.value[internalDataBaseBridge]
+      //@ts-ignore
+      else this.home = this.value
+    }
+
+    change(0, wrapper)
+    
   }
 
   public get(): Value
@@ -53,24 +101,24 @@ export class DataLink<Value> {
   public get(subscription: DataSubscription<[Value]>, initialize?: boolean): DataSubscription<[Value]>
   public get(...a: any[]) {
     //@ts-ignore
-    return this.data.get(...a)
+    return this.home.get(...a)
   }
 
   private isSubscribed(subscription: Subscription<[Value]>) {
     //@ts-ignore
-    return this.data.isSubscribed(subscription)
+    return this.home.isSubscribed(subscription)
   }
   private unsubscribe(subscription: Subscription<[Value]>) {
     //@ts-ignore
-    return this.data.unsubscribe(subscription)
+    return this.home.unsubscribe(subscription)
   }
   private subscribe(subscription: Subscription<[Value]>, initialize: boolean) {
     //@ts-ignore
-    return this.data.subscribe(subscription, initialize)
+    return this.home.subscribe(subscription, initialize)
   }
 
   public got(subscription: Subscription<[Value]> | DataSubscription<[Value]>): DataSubscription<[Value]> {
-    return this.got(subscription)
+    return this.home.got(subscription)
   }
 
 
@@ -79,14 +127,16 @@ export class DataLink<Value> {
   public set(value: Value, wait: true): Promise<Value>
   public set(...a: any[]): Value | Promise<Value> {
     //@ts-ignore
-    return this.set(...a)
+    return this.home.set(...a)
   }
 
   public toString() {
-    return this.data.toString()
+    return this.home.toString()
   }
 }
 
+
+let internalDataBaseBridge = Symbol("InternalDataBaseBridge")
 
 
 class InternalDataBase<Store extends ComplexData> extends Function {
@@ -108,7 +158,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     this.attatchDataToFunction()
     
 
-    
+    this.t[internalDataBaseBridge] = this
     return this.t
   }
   private subscriptions: ((store: Store) => void)[]
@@ -122,6 +172,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       this.t[key].destory()
       delete this.t[key]
     }
+    for (let i = 0; i < this.distributedLinks.length; i++) {
+      this.distributedLinks[i].destroy()
+      delete this.distributedLinks[i]
+      
+    }
     for (const key in this) {
       //@ts-ignore
       delete this[key]
@@ -132,6 +187,8 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     return this.DataBaseFunction(...a)
   }
 
+  private distributedLinks: Link<any>[] = []
+
 
   private DataBaseFunction(...paths: PathSegment[]): any
   private DataBaseFunction<NewStore extends ComplexData>(data: NewStore): DataBase<NewStore & Store>
@@ -141,30 +198,9 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     const t = this.t
 
     if (path_data_subscription instanceof Data || path_data_subscription instanceof DataCollection) {
-
-      let erg: any
-
-      let path: PathSegment = path_data_subscription
-
-      if (typeof path === "string" || typeof path === "number") {
-        erg = t[path]
-
-      }
-      else {
-        path.get()
-        path.get((path) => {
-          erg.
-        }, false)
-        erg = t[path.get()]
-
-      }
-
-
-      let link: DataLink<any> | DataBase<any> =  erg instanceof Data ? new DataLink(erg) : new DataBaseLink(erg)
-      
-
-      if (init_path === undefined) return erg
-      else return erg([init_path, ...paths])
+      let link = new Link<any>(t, init_path === undefined ? [path_data_subscription] : [path_data_subscription, init_path, ...paths] as PathSegment[]) as any
+      this.distributedLinks.add(link)
+      return link
     }
     else if (typeof path_data_subscription === "function") {
       let subscription = path_data_subscription as (store: Store) => void
@@ -176,7 +212,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     else if (path_data_subscription === undefined) {
       return this.store
     }
-    else {
+    else if (typeof path_data_subscription === "object") {
       let data = path_data_subscription as ComplexData
       
       
@@ -233,6 +269,18 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       }
       return t
     }
+    else if (typeof path_data_subscription === "string" || typeof path_data_subscription === "number") {
+      if (init_path === undefined) return this[path_data_subscription]
+      else {
+        let ret = this
+        for (let path of [path_data_subscription, init_path, ...paths]) {
+          //@ts-ignore
+          ret = ret[path]
+        }
+        return ret
+      }
+    }
+    
     
   }
 
@@ -240,7 +288,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     const t = this.t
     const data = this.store
     for (const key in data) {
-      const val = data[key]
+      const val = data[key] as any
       if (!(val instanceof Data || val instanceof InternalDataBase)) {
         if (typeof val === objectString) t[key] = new InternalDataBase(val, this.notify)
         else {
@@ -267,7 +315,7 @@ const objectString: "object" = "object"
 
 
 type PrimitivePathSegment = string | number
-type PathSegment = PrimitivePathSegment | DataSet<[PrimitivePathSegment]>
+type PathSegment = PrimitivePathSegment | DataSet<PrimitivePathSegment[]>
 type ComplexData = {[key: string]: any}
 
 
