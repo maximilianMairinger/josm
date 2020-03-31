@@ -173,14 +173,6 @@ type OptionalifyTuple<Tuple extends any[]> = {
   [key in keyof Tuple]?: Tuple[key]
 }
 
-let w: DataSet<[number, string, number]>
-
-
-type f = (a: number, b?: string) => void
-let f: f = (a, bv) => {
-
-}
-
 
 type ProperSubscribable<Values extends any[]> = {subscribe: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribe: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
 type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
