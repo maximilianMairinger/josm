@@ -1,5 +1,10 @@
+// Those are just types, thus can be collected by  
+// dead code detection & omited for treeshaking
 import { Concat } from 'typescript-tuple'
+import { DataBase } from './josm'
 
+import { deepEqual } from "fast-equals"
+import clone from "tiny-clone"
 
 
 export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
@@ -178,7 +183,7 @@ let f: f = (a, bv) => {
 
 
 type ProperSubscribable<Values extends any[]> = {subscribe: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribe: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
-type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values>
+type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
 
 export class DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
 
@@ -230,10 +235,10 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
     if (data === undefined) return this._data
     else {
       let isActive = this.active()
-      let prevData = this._data.get()
+      let prevData = clone((this._data as ProperSubscribable<Values>).get())
       this.deacivate()
       this._data = data
-      if (isActive) this.activate(prevData !== data.get())
+      if (isActive) this.activate(!deepEqual(prevData, (data as ProperSubscribable<Values>).get()))
       return this
     }
   }
