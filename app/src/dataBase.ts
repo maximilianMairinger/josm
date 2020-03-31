@@ -193,7 +193,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   private DataBaseFunction(...paths: PathSegment[]): any
   private DataBaseFunction<NewStore extends ComplexData>(data: NewStore): DataBase<NewStore & Store>
   private DataBaseFunction(): Store
-  private DataBaseFunction(subscription: (store: Store) => void, init: boolean): any
+  private DataBaseFunction(subscription: ((store: Store) => void) | DataSubscription<[Store]>, init: boolean): DataSubscription<[Store]>
   private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void), init_path?: PathSegment | boolean, ...paths: PathSegment[]): any {
     const t = this.t
 
@@ -202,12 +202,14 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       this.distributedLinks.add(link)
       return link
     }
-    else if (typeof path_data_subscription === "function") {
-      let subscription = path_data_subscription as (store: Store) => void
-
-      if (init_path === undefined || init_path) subscription(this.store)
-      this.subscriptions.add(subscription)
-
+    else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
+      if (path_data_subscription instanceof DataSubscription) {
+        return path_data_subscription.active() ? path_data_subscription.deacivate() : path_data_subscription.activate()
+      }
+      else {
+        //@ts-ignore
+        return this.subscriptions.includes(path_data_subscription) ? new DataSubscription(this, path_data_subscription, false) : new DataSubscription(this, path_data_subscription, true, init_path)
+      }
     }
     else if (path_data_subscription === undefined) {
       return this.store
@@ -231,7 +233,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               //@ts-ignore
               this.store[key] = clone(val)
               (inner as any).destory()
-              t[key] = new InternalDataBase(val, this.notify)
+              t[key] = new InternalDataBase(val, this.notify.bind(this))
             }
           }
           else {
@@ -302,6 +304,29 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       }
     }
   }
+
+
+  // ------------
+  // Functions for DataSubscription
+  // ------------
+
+  subscribe(subscription: Subscription<[Store]>, initialize?: boolean): void {
+    if (initialize === undefined || initialize) subscription(this.store)
+    this.subscriptions.add(subscription)
+  }
+
+  unsubscribe(subscription: Subscription<[Store]>): void {
+    this.subscriptions.rmV(subscription)
+  }
+
+  isSubscribed(subscription: Subscription<[Store]>): boolean {
+    return this.subscriptions.includes(subscription)
+  }
+
+  get(): Store {
+    return this.store
+  }
+
 }
 
 
@@ -327,7 +352,7 @@ type DataBaseify<Type extends object> = {
   [Key in keyof Type]: Type[Key] extends object ? DataBase<Type[Key]> : Data<Type[Key]>
 }
 
-type DataBase<Store extends object> = OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]> & DataBaseify<Store>
+export type DataBase<Store extends object> = OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]> & DataBaseify<Store>
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new<Store extends object>(store: Store): DataBase<Store> })
