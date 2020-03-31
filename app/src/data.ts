@@ -1,10 +1,13 @@
-import { DataLink } from "./dataBase"
+import { Concat } from 'typescript-tuple'
+
+
 
 export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
 
 
 export class Data<Value> {
   private value: Value
+  public data123: string
   private subscriptions: Subscription<[Value]>[] = []
 
   public constructor(value?: Value) {
@@ -74,11 +77,13 @@ export class Data<Value> {
 }
 
 
+// Why this works is an absolute mirracle to me...
+// In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs)
+type FuckedUpDataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>
 
-export type DataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>
 
 type DataSetify<T extends any[]> = { 
-  [P in keyof T]: DataSet<[T[P]]>
+  [P in keyof T]: FuckedUpDataSet<[T[P]]>
 }
 
 
@@ -149,8 +154,31 @@ export class DataCollection<Values extends any[], Value extends Values[number] =
 
 } 
 
+//@ts-ignore
+export type DataSet<Values extends any[], DataOrDataCol extends Values[0] | Values = Values[0] | Values, DataOrDataColTuple extends Concat<[Values[0]], OptionalifyTuple<Tail<Values>>> | Values = Concat<[Values[0]], OptionalifyTuple<Tail<Values>>> | Values> = {
+  get(): DataOrDataCol
+  get(subscription: Subscription<DataOrDataColTuple> | DataSubscription<DataOrDataColTuple>, initialize?: boolean): DataSubscription<DataOrDataColTuple>
+}
+
+type FnWithArgs<T extends unknown[]> = (...args: T) => void;
+type TailArgs<T> = T extends (x: unknown, ...args: infer T) => unknown ? T : never;
+type Tail<T extends unknown[]> = TailArgs<FnWithArgs<T>>;
+
+type OptionalifyTuple<Tuple extends any[]> = {
+  [key in keyof Tuple]?: Tuple[key]
+}
+
+let w: DataSet<[number, string, number]>
+
+
+type f = (a: number, b?: string) => void
+let f: f = (a, bv) => {
+
+}
+
+
 type ProperSubscribable<Values extends any[]> = {subscribe: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribe: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
-type Subscribable<Values extends any[]> = ProperSubscribable<Values> | DataSet<Values>
+type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values>
 
 export class DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
 
@@ -162,11 +190,9 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
 
   constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: false)
   constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, inititalize?: boolean)
-  constructor(data: DataLink<Value>, subscription: Subscription<TupleValue>, activate?: false)
-  constructor(data: DataLink<Value>, subscription: Subscription<TupleValue>, activate?: true, inititalize?: boolean)
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false)
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean)
-  constructor(data: Subscribable<Values> | Data<Value> | DataLink<Value> | DataCollection<Values>, _subscription: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, inititalize: boolean = true) {
+  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, _subscription: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, inititalize: boolean = true) {
     //@ts-ignore
     this._data = data
     //@ts-ignore
