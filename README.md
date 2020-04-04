@@ -50,6 +50,8 @@ data2.set(20)
 
 This would log `[10, 2]; [100, 2]; [100, 20]`. 
 
+#### DataSubscription
+
 Both Data and DataCollection return a `DataSubscription` when subscribing (via `Data#get(cb)`). These can be used to manage the subscription state & can be viewed independently of their source (their source can be changed).
 
 ```ts
