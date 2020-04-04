@@ -1,5 +1,5 @@
 ---
-description: Object/oriented state manager
+description: Object-oriented state manager
 ---
 
 # Josm
