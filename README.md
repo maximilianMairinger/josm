@@ -4,7 +4,7 @@ description: Object-oriented state manager
 
 # Josm
 
-Josm is an \(JS\) object-oriented state manager for the web & node, which aims to be both, a lightweight observable \(called Data\) implementation & a feature rich state manager, providing an awesome deve
+Josm is an \(JS\) **o**bject-oriented **s**tate **m**anager for the web & node, which aims to be both, a lightweight observable \(called Data\) implementation & a feature rich state manager, providing an awesome deve
 
 > Please note that Josm is currently under development and not yet suited for production
 
