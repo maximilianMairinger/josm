@@ -4,15 +4,14 @@ import { Concat } from 'typescript-tuple'
 import { DataBase } from './josm'
 
 import { circularDeepEqual } from "fast-equals"
-import clone from "fast-copy"
+
 
 
 export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
 
 
-export class Data<Value> {
+export class Data<Value = unknown> {
   private value: Value
-  public data123: string
   private subscriptions: Subscription<[Value]>[] = []
 
   public constructor(value?: Value) {
@@ -27,6 +26,7 @@ export class Data<Value> {
     if (subscription === undefined) return this.value
     else {
       if (subscription instanceof DataSubscription) return subscription.activate(initialize)
+      else if (this.subscriptions.contains(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
@@ -42,13 +42,22 @@ export class Data<Value> {
     if (initialize) return subscription(this.value)
   }
 
-  // TODO return true when successfull
+  // Return false when not successfull; dont throw (maybe in general Xrray)
   public got(subscription: Subscription<[Value]> | DataSubscription<[Value]>): DataSubscription<[Value]> {
     return (subscription instanceof DataSubscription) ? subscription.deacivate()
-    : new DataSubscription(this, subscription, false)
+    : subscription[dataSubscriptionCbBridge].deacivate()
+  }
+  
+
+  // Datas can only have one parent, thus there is no need to keep track of them. From is just there to match the syntax of InternalDataBase
+  private beforeDestroyCbs = []
+  private addBeforeDestroyCb(from: any, cb: () => void) {
+    this.beforeDestroyCbs.add(cb)
   }
 
   private destroy() {
+    this.beforeDestroyCbs.Call()
+    this.beforeDestroyCbs.clear()
     for (const key in this) {
       delete this[key]
     }
@@ -83,7 +92,7 @@ export class Data<Value> {
 
 
 // Why this works is an absolute mirracle to me...
-// In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs)
+// In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs), but somehow it works like this
 type FuckedUpDataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>
 
 
@@ -92,7 +101,7 @@ type DataSetify<T extends any[]> = {
 }
 
 
-export class DataCollection<Values extends any[], Value extends Values[number] = Values[number]> {
+export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: Subscription<Values>[] = []
   //@ts-ignore
   private datas: DataSetify<Values> = []
@@ -117,8 +126,9 @@ export class DataCollection<Values extends any[], Value extends Values[number] =
 
 
     this.datas.ea((data, i) => {
-      const observer = (val: Value) => {
-        this.store[i] = val
+      const observer = (...val: Value[]) => {
+        if (this.store[i] instanceof Array) this.store[i] = val
+        else this.store[i] = val.first
         this.subscriptions.Call(...this.store)
       }
       this.observers[i] = observer
@@ -177,6 +187,9 @@ type OptionalifyTuple<Tuple extends any[]> = {
 type ProperSubscribable<Values extends any[]> = {subscribe: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribe: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
 type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
 
+
+const dataSubscriptionCbBridge = Symbol("dataSubscriptionCbBridge")
+
 export class DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
 
   private _subscription: ConcreteSubscription
@@ -189,11 +202,12 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
   constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, inititalize?: boolean)
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false)
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean)
-  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, _subscription: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, inititalize: boolean = true) {
+  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, inititalize?: boolean) {
     //@ts-ignore
     this._data = data
     //@ts-ignore
-    this._subscription = _subscription
+    this._subscription = subscription
+    subscription[dataSubscriptionCbBridge] = this
     this.active(activate, inititalize)
   }
 
@@ -213,7 +227,7 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
   public active(activate: false): this
   public active(activate: true, initialize?: boolean): this
   public active(activate: boolean, initialize?: boolean): this
-  public active(activate?: boolean, initialize?: boolean): this | boolean {
+  public active(activate?: boolean, initialize: boolean = true): this | boolean {
     if (activate === undefined) return (this._data as ProperSubscribable<Values>).isSubscribed(this._subscription)
     if (activate) this.activate(initialize)
     else this.deacivate()
@@ -222,15 +236,18 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
 
   
   public data(): ConcreteData
-  public data(data: ConcreteData): this
-  public data(data?: ConcreteData): ConcreteData | this {
+  public data(data: ConcreteData, initialize?: boolean): this
+  public data(data?: ConcreteData, initialize: boolean = true): ConcreteData | this {
     if (data === undefined) return this._data
     else {
-      let isActive = this.active()
-      let prevData = clone((this._data as ProperSubscribable<Values>).get())
-      this.deacivate()
-      this._data = data
-      if (isActive) this.activate(!circularDeepEqual(prevData, (data as ProperSubscribable<Values>).get()))
+      if (this._data !== data) {
+        let isActive = this.active()
+        let prevData: any
+        if (initialize) prevData = (this._data as ProperSubscribable<Values>).get()
+        this.deacivate()
+        this._data = data
+        if (isActive) this.activate(initialize && (!circularDeepEqual(prevData, (data as ProperSubscribable<Values>).get())))
+      }
       return this
     }
   }
@@ -240,9 +257,11 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
   public subscription(subscription?: ConcreteSubscription, initialize?: boolean): ConcreteSubscription | this {
     if (subscription === undefined) return this._subscription
     else {
+      if (subscription === this._subscription) return this
       let isActive = this.active()
       this.deacivate()
       this._subscription = subscription
+      subscription[dataSubscriptionCbBridge] = this
       if (isActive) this.activate(initialize)
       return this
     }

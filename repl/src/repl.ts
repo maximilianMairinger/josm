@@ -1,7 +1,59 @@
-import { Data, DataCollection, DataSubscription, DataBase } from "../../app/src/josm"
-import clone from "tiny-clone"
-import { DataBaseLink } from "../../app/src/dataBase"
-import attatchToPrototype from "attatch-to-prototype"
+import { Data, DataCollection, DataBase } from "../../app/src/josm"
+import clone from "fast-copy"
+
+
+
+
+
+
+
+
+let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: "Brein", age: 30}})
+
+let personPath = new Data("student")
+let propPath = new Data("fullName")
+db(personPath, propPath).get(console.log)
+
+
+db.student.fullName.set("Maxxe")
+
+propPath.set("age")
+personPath.set("teacher")
+propPath.set("fullName")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // class TestMatcher<Matcher extends 2> extends JSONMatcherClass<Matcher> {
@@ -14,8 +66,6 @@ import attatchToPrototype from "attatch-to-prototype"
 // let db = new DataBase({a: {b: 2}, c: "5"})
 
 
-let db = new DataBase({ok: 2})
-let link = new DataBaseLink(db)
 
 
 // console.log(link.ok)
@@ -51,12 +101,3 @@ let link = new DataBaseLink(db)
 // })
 
 // o.ok()
-
-
-let a = new Data("")
-
-let me = new DataSubscription(a, (a) => {
-
-})
-
-
