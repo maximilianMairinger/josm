@@ -10,22 +10,37 @@ import clone from "fast-copy"
 
 let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: "Brein", age: 30}})
 
-let personPath = new Data("student")
+let personPath = new Data("teacher")
 let propPath = new Data("fullName")
-db(personPath, propPath).get(console.log)
+
+db(personPath)(propPath).get(console.log)
 
 
-db.student.fullName.set("Maxxe")
 
+personPath.set("student")
 propPath.set("age")
-personPath.set("teacher")
 propPath.set("fullName")
+personPath.set("teacher")
+
+db({teacher: {fullName: "Breiniweini"}},)
+
+
+
+db.teacher({fullName: "What"})
+db.teacher.fullName.set("BROIN")
+
+
+// TODO: Custom objects. How to create new elements? by default added to base class array (josm serialize style) when creating new.
+// Types for db function set object
+
+
+// TODO: make Datas at the end of DataBase primitives with functions attatched. Or give em valueof and toSTring. Maybe this is the same? (Probably better). Also consider having Data extend Function to enable similar syntax like db with all those overloads.
+// Also consider performance of only importing Primitive data shit. Leavin Data as it is could be & supporting this syntax could be done by writing data once and then extending it somehow; or implementing its shit in different contextes -> one with and one without Function as super
 
 
 
 
-
-
+// Test DataCollection as path
 
 
 

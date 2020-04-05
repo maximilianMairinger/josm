@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataCollection, Subscription, DataSet } from "./data"
+import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge } from "./data"
 import { nthIndex } from "./helper"
 import attatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
@@ -105,8 +105,8 @@ class DataBaseLink extends Function implements Link {
   private paths: DataSet<PrimitivePathSegment[]>[] | PrimitivePathSegment[]
   private currentPathIndex: (string  | number)[]
 
-  private distributedDataLinks: DataLink[]
-  private distributedDataBaseLinks: DataBaseLink[]
+  private distributedLinks: Link[]
+  private subscriptions: DataSubscription<any>[]
 
   private pathSubscriptions: DataSubscription<PathSegment[]>[]
 
@@ -118,8 +118,9 @@ class DataBaseLink extends Function implements Link {
 
     this.paths = paths
     this.pathSubscriptions = []
-    this.distributedDataLinks = []
-    this.distributedDataBaseLinks = []
+    this.distributedLinks = []
+    this.subscriptions = []
+    
     this.dataChange(wrapper)
     this.initFuncProps()
     
@@ -131,6 +132,8 @@ class DataBaseLink extends Function implements Link {
     // this is only getting called from InternalDataBase.
 
     this.destroyPathSubscriptions()
+
+    this.distributedLinks.clear()
     
     for (let iterator in this) {
       delete this[iterator]
@@ -142,6 +145,8 @@ class DataBaseLink extends Function implements Link {
   destroyPathSubscriptions() {}
   resolvePath() {}
   updatePathResolvement(wrapper: DataBase<any> = this.wrapper) {
+    if (this.dataBase) this.dataBase.distributedLinks.rmV(...this.distributedLinks)
+
     let parent = this.wrapper = wrapper as any
     this.currentPathIndex.ea((path) => {
       parent = parent[path]
@@ -152,6 +157,13 @@ class DataBaseLink extends Function implements Link {
 
       //@ts-ignore
       this.dataBase = this.dataBaseFunc[internalDataBaseBridge]
+
+
+      this.dataBase.distributedLinks.add(...this.distributedLinks)
+
+
+      this.subscriptions.Inner("data", [parent, true])
+      this.distributedLinks.Inner("dataChange", [parent])
     }
   }
 
@@ -168,15 +180,10 @@ class DataBaseLink extends Function implements Link {
       Object.defineProperty(this.funcThis, key, {
         get: () => {
           if (link === undefined) {
-            if (this.dataBaseFunc[key] instanceof Data) {
-              link = new DataLink(this.dataBaseFunc[key] as any, [key])
-              this.distributedDataLinks.add(link as DataLink)  
-            }
-            else {
-              link = new DataBaseLink(this.dataBaseFunc[key] as any, [key])
-              this.distributedDataBaseLinks.add(link as DataBaseLink)
-            }
-            
+            if (this.dataBaseFunc[key] instanceof Data) link = new DataLink(this.dataBaseFunc as any, [key])
+            else link = new DataBaseLink(this.dataBaseFunc as any, [key])
+            this.distributedLinks.add(link)
+            this.dataBase.distributedLinks.add(link)
           }
           return link
         }
@@ -193,11 +200,21 @@ class DataBaseLink extends Function implements Link {
 
 
   LinkFunctionWrapper(...a) {
-    this.LinkFunction(...a)
+    return this.LinkFunction(...a)
   }
 
   LinkFunction(...a) {
-    this.dataBaseFunc(...a)
+    if (typeof a[0] === "function" || a[0] instanceof DataSubscription) {
+      let sub = this.dataBaseFunc(...a)
+      this.subscriptions.add(sub)
+      return sub
+    }
+    else if (a[0] instanceof Data || a[0] instanceof DataCollection || typeof a[0] === "string" || typeof a[0] === "number") {
+      let link = this.dataBaseFunc(...a)
+      this.distributedLinks.add(link)
+      return link
+    }
+    else this.dataBaseFunc(...a)
   }
 
 }
@@ -278,8 +295,10 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   private notifyParentOfChangeCbs: any[]
   private beforeDestroyCbs: Map<InternalDataBase<any>, Function>
 
-  private distributedDataLinks: DataLink[]
-  private distributedDataBaseLinks: DataBaseLink[]
+  public distributedLinks: Link[]
+
+  private subscriptionsOfChildChanges: DataSubscription<[Readonly<Store>]>[]
+  private subscriptionsThisChanges: DataSubscription<[Readonly<Store>]>[]
 
   private boundNotifyFromChild: () => void
 
@@ -287,8 +306,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     this.funcThis = this.bind(this)
 
-    this.distributedDataLinks = []
-    this.distributedDataBaseLinks = []
+    this.distributedLinks = []
     this.notifyParentOfChangeCbs = []
     this.subscriptionsOfChildChanges = []
     this.subscriptionsThisChanges = []
@@ -308,8 +326,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   }
 
 
-  private subscriptionsOfChildChanges: ((store: Readonly<Store>) => void)[]
-  private subscriptionsThisChanges: ((store: Readonly<Store>) => void)[]
+  
 
 
   addNotifyParentOfChangeCb(cb: () => void) {
@@ -336,14 +353,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       this.beforeDestroyCbs.clear()
       this.notifyParentOfChangeCbs.clear()
       for (const key in this.funcThis) {
-        this.funcThis[key].destroy(this)
+        this.funcThis[key][internalDataBaseBridge].destroy(this)
         delete this.funcThis[key]
       }
   
-      this.distributedDataLinks.Inner("destroy", [])
-      this.distributedDataLinks.clear()
-      this.distributedDataBaseLinks.Inner("destroy", [])
-      this.distributedDataBaseLinks.clear()
+      this.distributedLinks.Inner("destroy", [])
+      this.distributedLinks.clear()
   
       for (const key in this) {
         //@ts-ignore
@@ -364,14 +379,14 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   private DataBaseFunction(...paths: PathSegment[]): any
   private DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
   private DataBaseFunction(): Store
-  private DataBaseFunction(subscription: ((store: Store) => void) | DataSubscription<[Store]>, init: boolean): DataSubscription<[Store]>
-  private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void), init_path_strict?: PathSegment | boolean, ...paths: PathSegment[]): any {
+  private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataSubscription<[Store]>
+  private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void), notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]): any {
     const funcThis = this.funcThis
 
-
+    
     
     if (path_data_subscription instanceof Data || path_data_subscription instanceof DataCollection || typeof path_data_subscription === "string" || typeof path_data_subscription === "number") {
-      let dataSegments = (init_path_strict === undefined ? [path_data_subscription] : [path_data_subscription, init_path_strict, ...paths]) as PathSegment[]
+      let dataSegments = (notfiyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription] : [path_data_subscription, notfiyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
       let hasData = (dataSegments as any).ea((e) => {
         if (e instanceof Data || e instanceof DataCollection) return true
       })
@@ -396,14 +411,9 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
 
         let link: any
-        if (par instanceof Data) {
-          link = new DataLink(funcThis, dataSegments as any) as any
-          this.distributedDataLinks.add(link)
-        }
-        else {
-          link = new DataBaseLink(funcThis, dataSegments as any) as any
-          this.distributedDataBaseLinks.add(link)
-        }
+        if (par instanceof Data) link = new DataLink(funcThis, dataSegments as any) as any
+        else link = new DataBaseLink(funcThis, dataSegments as any) as any
+        this.distributedLinks.add(link)
         return link
       }
       else {
@@ -418,12 +428,19 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
     
     else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
-      if (path_data_subscription instanceof DataSubscription) {
-        return path_data_subscription.active() ? path_data_subscription.deacivate() : path_data_subscription.activate()
+      let notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds_path_strict === undefined ? true : notfiyAboutChangesOfChilds_path_strict
+      let subscription = path_data_subscription
+      let initialize = paths[0] === undefined ? true : paths[0]
+
+      if (notfiyAboutChangesOfChilds) {
+        if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
+        else if (this.subscriptionsOfChildChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
+        else return new DataSubscription(this as any, subscription as any, true, initialize)
       }
       else {
-        //@ts-ignore
-        return this.subscriptionsOfChildChanges.includes(path_data_subscription) ? new DataSubscription(this, path_data_subscription, false) : new DataSubscription(this, path_data_subscription, true, init_path_strict)
+        if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
+        else if (this.subscriptionsThisChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
+        else return new DataSubscription(this as any, subscription as any, true, initialize)
       }
     }
     else if (path_data_subscription === undefined) {
@@ -431,7 +448,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     }
     else if (typeof path_data_subscription === "object") {
       let newData = path_data_subscription as ComplexData
-      let strict = init_path_strict === undefined ? false : init_path_strict
+      let strict = notfiyAboutChangesOfChilds_path_strict === undefined ? false : notfiyAboutChangesOfChilds_path_strict
 
       let parsingId = (paths[0] !== undefined ? paths[0] : Symbol("parsingId")) as any
       
@@ -455,12 +472,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
                 prop.destroy()
 
                 newVal[parsingId] = funcThis[key] = new InternalDataBase(newVal, parsingId, this.boundNotifyFromChild)
-                newVal[parsingId].addBeforeDestroyCb(this, () => {
+                newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                   delete newVal[parsingId]
                   delete funcThis[key]
                   delete newData[key]
                   this.notifyFromThis()
-                  this.distributedDataLinks.Inner("updatePathResolvement", [])
                 })
                 this.notifyFromThis()
               }
@@ -492,10 +508,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               prop.destroy(this)
               funcThis[key] = new Data(newVal)
               funcThis[key].addBeforeDestroyCb(this, () => {
-                this.notifyFromThis()
+                
                 delete newVal[parsingId]
                 delete funcThis[key]
                 delete newData[key]
+                this.notifyFromThis()
               })
               funcThis[key].get((e) => {
                 //@ts-ignore
@@ -509,12 +526,13 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         else {
           if (typeof newVal === "object") {
             if (newVal[parsingId] === undefined) {
-              newVal[parsingId] = funcThis[key] = new InternalDataBase(newVal, parsingId, this.notifyFromChild.bind(this))
-              funcThis[key].addBeforeDestroyCb(this, () => {
-                this.notifyFromThis()
+              newVal[parsingId] = funcThis[key] = new InternalDataBase(newVal, parsingId, this.boundNotifyFromChild)
+              funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+                
                 delete newVal[parsingId]
                 delete funcThis[key]
                 delete newData[key]
+                this.notifyFromThis()
               })
               //@ts-ignore
               this.store[key] = newVal
@@ -529,10 +547,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
             this.store[key] = newVal
             funcThis[key] = new Data(newVal)
             funcThis[key].addBeforeDestroyCb(this, () => {
-              this.notifyFromThis()
+
               delete newVal[parsingId]
               delete funcThis[key]
               delete newData[key]
+              this.notifyFromThis()
             })
             funcThis[key].get((e) => {
               //@ts-ignore
@@ -564,11 +583,13 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
   private notifyFromChild() {
     this.notifyParentOfChangeCbs.Call()
+    //@ts-ignore
     this.subscriptionsOfChildChanges.Call(this.store)
   }
 
   private notifyFromThis() {
     this.notifyFromChild()
+    //@ts-ignore
     this.subscriptionsThisChanges.Call(this.store)
   }
 
@@ -582,12 +603,14 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       if (typeof val !== "function") {
         
         if (typeof val === objectString) {
-          if (val[parsingId] === undefined) {
-            val[parsingId] = funcThis[key] = new InternalDataBase(val, parsingId, this.notifyFromChild.bind(this))
-          }
-          else {
-            funcThis[key] = val[parsingId]
-          }
+          if (val[parsingId] === undefined) val[parsingId] = funcThis[key] = new InternalDataBase(val, parsingId, this.boundNotifyFromChild)
+          else funcThis[key] = val[parsingId]
+          funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+
+            delete funcThis[key]
+            delete store[key]
+            this.notifyFromThis()
+          })
         }
         else {
           funcThis[key] = new Data(val)
@@ -606,16 +629,19 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   // Functions for DataSubscription
   // ------------
 
-  subscribe(subscription: Subscription<[Store]>, initialize?: boolean): void {
+  subscribe(subscription: Subscription<[Readonly<Store>]>, initialize?: boolean): void {
     if (initialize === undefined || initialize) subscription(this.store)
+    //@ts-ignore
     this.subscriptionsOfChildChanges.add(subscription)
   }
 
-  unsubscribe(subscription: Subscription<[Store]>): void {
+  unsubscribe(subscription: Subscription<[Readonly<Store>]>): void {
+    //@ts-ignore
     this.subscriptionsOfChildChanges.rmV(subscription)
   }
 
-  isSubscribed(subscription: Subscription<[Store]>): boolean {
+  isSubscribed(subscription: Subscription<[Readonly<Store>]>): boolean {
+    //@ts-ignore
     return this.subscriptionsOfChildChanges.includes(subscription)
   }
 
@@ -641,8 +667,8 @@ const objectString: "object" = "object"
 
 
 type PrimitivePathSegment = string | number
-type PathSegment = PrimitivePathSegment | DataSet<PrimitivePathSegment[]>
-type ComplexData = {[key: string]: any}
+type PathSegment<Of extends PrimitivePathSegment = PrimitivePathSegment> = Of | DataSet<Of[]>
+type ComplexData = {[key in string | number]: any}
 
 
 

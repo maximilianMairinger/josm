@@ -1,6 +1,6 @@
 // Those are just types, thus can be collected by  
 // dead code detection & omited for treeshaking
-import { Concat } from 'typescript-tuple'
+import { Concat, SliceStartQuantity } from 'typescript-tuple'
 import { DataBase } from './josm'
 
 import { circularDeepEqual } from "fast-equals"
@@ -25,7 +25,7 @@ export class Data<Value = unknown> {
   public get(subscription?: Subscription<[Value]> | DataSubscription<[Value]>, initialize: boolean = true): Value | DataSubscription<[Value]> {
     if (subscription === undefined) return this.value
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(initialize)
+      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
       else if (this.subscriptions.contains(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       else return new DataSubscription(this, subscription, true, initialize)
     }
@@ -93,10 +93,10 @@ export class Data<Value = unknown> {
 
 // Why this works is an absolute mirracle to me...
 // In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs), but somehow it works like this
-type FuckedUpDataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>
+export type FuckedUpDataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>
 
 
-type DataSetify<T extends any[]> = { 
+export type DataSetify<T extends any[]> = { 
   [P in keyof T]: FuckedUpDataSet<[T[P]]>
 }
 
@@ -158,7 +158,8 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     //@ts-ignore
     if (subscription === undefined) return this.datas.Inner("get", [])
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(initialize)
+      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
+      else if (this.subscriptions.contains(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
@@ -188,7 +189,7 @@ type ProperSubscribable<Values extends any[]> = {subscribe: (subscription: Subsc
 type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
 
 
-const dataSubscriptionCbBridge = Symbol("dataSubscriptionCbBridge")
+export const dataSubscriptionCbBridge = Symbol("dataSubscriptionCbBridge")
 
 export class DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
 
@@ -267,5 +268,27 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+// type w = ["a", "b"]
+
+// type QWE<Tuple extends string[], Ob extends {[key in string]: any}, TupleWithoutFirst extends SliceStartQuantity<Tuple, 1> = SliceStartQuantity<Tuple, 1>>
+//  = TupleWithoutFirst extends [] ? Ob[Tuple[0]] : QWE<TupleWithoutFirst, Ob[Tuple[0]]>
+
+
+// type s = [""]
+// type test = s extends [] ? true : false
+
+
 
 
