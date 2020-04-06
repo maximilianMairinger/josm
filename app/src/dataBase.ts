@@ -154,16 +154,14 @@ class DataBaseLink extends Function implements Link {
 
     if (this.dataBaseFunc !== parent) {
       this.dataBaseFunc = parent
-
       //@ts-ignore
       this.dataBase = this.dataBaseFunc[internalDataBaseBridge]
 
 
       this.dataBase.distributedLinks.add(...this.distributedLinks)
 
-
-      this.subscriptions.Inner("data", [parent, true])
-      this.distributedLinks.Inner("dataChange", [parent])
+      this.subscriptions.Inner("data", [this.dataBase, true])
+      this.distributedLinks.Inner("dataChange", [this.dataBaseFunc])
     }
   }
 

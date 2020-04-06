@@ -13,21 +13,25 @@ let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: 
 let personPath = new Data("teacher")
 let propPath = new Data("fullName")
 
-db(personPath)(propPath).get(console.log)
+db(personPath)(console.log, false)
+
+
+db()
 
 
 
-personPath.set("student")
-propPath.set("age")
-propPath.set("fullName")
-personPath.set("teacher")
-
-db({teacher: {fullName: "Breiniweini"}},)
 
 
 
-db.teacher({fullName: "What"})
-db.teacher.fullName.set("BROIN")
+
+
+
+
+
+
+
+
+
 
 
 // TODO: Custom objects. How to create new elements? by default added to base class array (josm serialize style) when creating new.
