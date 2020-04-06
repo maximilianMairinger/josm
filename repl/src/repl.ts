@@ -13,13 +13,6 @@ let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: 
 let personPath = new Data("student")
 let propPath = new Data("fullName")
 
-db(personPath)(console.log, false, true)
-
-let w = db.student({whaat: "yea"}, true)
-
-console.log(w.whaat.get())
-
-
 
 
 
@@ -42,13 +35,6 @@ console.log(w.whaat.get())
 
 // TODO: make Datas at the end of DataBase primitives with functions attatched. Or give em valueof and toSTring. Maybe this is the same? (Probably better). Also consider having Data extend Function to enable similar syntax like db with all those overloads.
 // Also consider performance of only importing Primitive data shit. Leavin Data as it is could be & supporting this syntax could be done by writing data once and then extending it somehow; or implementing its shit in different contextes -> one with and one without Function as super
-
-
-
-
-// Test DataCollection as path
-
-
 
 
 

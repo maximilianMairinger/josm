@@ -487,7 +487,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               }
 
               notifyFromThis = true
-              // cache all changes comming from below (children) so that only one change event gets emmited
+
             }
           }
           else {
@@ -496,6 +496,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               let duringActivationNotificationBundler = () => {
                 activeated = true
               }
+              // cache all changes comming from below (children) so that only one change event gets emmited
               let db = prop[internalDataBaseBridge]
               db.removeNotifyParentOfChangeCb(this.boundNotifyFromChild)
               db.addNotifyParentOfChangeCb(duringActivationNotificationBundler)
