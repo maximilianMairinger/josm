@@ -159,7 +159,7 @@ class DataBaseLink extends Function implements Link {
 
 
       this.dataBase.distributedLinks.add(...this.distributedLinks)
-
+      //@ts-ignore
       this.subscriptions.Inner("data", [this.dataBase, true])
       this.distributedLinks.Inner("dataChange", [this.dataBaseFunc])
     }
@@ -444,13 +444,18 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     else if (path_data_subscription === undefined) {
       return clone(this.store)
     }
-    else if (typeof path_data_subscription === "object") {
+    else if (typeof path_data_subscription === objectString) {
       let newData = path_data_subscription as ComplexData
       let strict = notfiyAboutChangesOfChilds_path_strict === undefined ? false : notfiyAboutChangesOfChilds_path_strict
 
       let parsingId = (paths[0] !== undefined ? paths[0] : Symbol("parsingId")) as any
       
       let handledKeys: string[]
+
+      let notifyFromThis = false
+
+      this.inBulkChange = true
+      
       if (strict) handledKeys = []
 
       for (const key in newData) {
@@ -476,13 +481,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
                   delete newData[key]
                   this.notifyFromThis()
                 })
-                this.notifyFromThis()
               }
               else {
                 funcThis[key] = newVal[parsingId]
               }
 
-              this.notifyFromThis()
+              notifyFromThis = true
               // cache all changes comming from below (children) so that only one change event gets emmited
             }
           }
@@ -517,7 +521,8 @@ class InternalDataBase<Store extends ComplexData> extends Function {
                 this.store[key] = e
                 this.notifyFromChild()
               }, false)
-              this.notifyFromThis()
+
+              notifyFromThis = true
             }
           }
         }
@@ -557,7 +562,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               this.notifyFromChild()
             }, false)
           }
-          this.notifyFromThis()
+          notifyFromThis = true
         }
       }
 
@@ -570,7 +575,9 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         }
       }
 
+      this.inBulkChange = false
 
+      if (notifyFromThis) this.notifyFromThis()
 
       return funcThis
     }
@@ -585,10 +592,13 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     this.subscriptionsOfChildChanges.Call(this.store)
   }
 
+  private inBulkChange: boolean
   private notifyFromThis() {
-    this.notifyFromChild()
-    //@ts-ignore
-    this.subscriptionsOfThisChanges.Call(this.store)
+    if (!this.inBulkChange) {
+      this.notifyFromChild()
+      //@ts-ignore
+      this.subscriptionsOfThisChanges.Call(this.store)
+    }
   }
 
   private initFuncProps(store: Store, parsingId: any) {
@@ -612,6 +622,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         }
         else {
           funcThis[key] = new Data(val)
+          funcThis[key].addBeforeDestroyCb(this, () => {
+
+            delete funcThis[key]
+            delete store[key]
+            this.notifyFromThis()
+          })
           funcThis[key].get((e) => {
             this.store[key] = e
             this.notifyFromChild()

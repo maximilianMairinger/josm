@@ -15,10 +15,9 @@ let propPath = new Data("fullName")
 
 db(personPath)(console.log, false, true)
 
-let w = db.student({whaat: "yea"})
+let w = db.student({whaat: "yea"}, true)
 
 console.log(w.whaat.get())
-db.student.fullName.set("ww")
 
 
 
