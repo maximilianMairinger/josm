@@ -186,15 +186,15 @@ type OptionalifyTuple<Tuple extends any[]> = {
 
 
 type ProperSubscribable<Values extends any[]> = {subscribe: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribe: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
-type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
+export type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
 
 
 export const dataSubscriptionCbBridge = Symbol("dataSubscriptionCbBridge")
 
 export class DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
 
-  private _subscription: ConcreteSubscription
-  private _data: ConcreteData
+  protected _subscription: ConcreteSubscription
+  protected _data: ConcreteData
 
   constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: false)
   constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean)

@@ -10,13 +10,16 @@ import clone from "fast-copy"
 
 let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: "Brein", age: 30}})
 
-let personPath = new Data("teacher")
+let personPath = new Data("student")
 let propPath = new Data("fullName")
 
-db(personPath)(console.log, false)
+db(personPath)(console.log, false, true)
 
+let w = db.student({whaat: "yea"})
 
-db()
+console.log(w.whaat.get())
+db.student.fullName.set("ww")
+
 
 
 

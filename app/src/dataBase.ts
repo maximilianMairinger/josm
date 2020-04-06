@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge } from "./data"
+import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable } from "./data"
 import { nthIndex } from "./helper"
 import attatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
@@ -296,7 +296,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   public distributedLinks: Link[]
 
   private subscriptionsOfChildChanges: DataSubscription<[Readonly<Store>]>[]
-  private subscriptionsThisChanges: DataSubscription<[Readonly<Store>]>[]
+  private subscriptionsOfThisChanges: DataSubscription<[Readonly<Store>]>[]
 
   private boundNotifyFromChild: () => void
 
@@ -307,7 +307,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     this.distributedLinks = []
     this.notifyParentOfChangeCbs = []
     this.subscriptionsOfChildChanges = []
-    this.subscriptionsThisChanges = []
+    this.subscriptionsOfThisChanges = []
     this.beforeDestroyCbs = new Map
     this.boundNotifyFromChild = this.notifyFromChild.bind(this)
     this.initFuncProps(store, parsingId)
@@ -377,7 +377,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   private DataBaseFunction(...paths: PathSegment[]): any
   private DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
   private DataBaseFunction(): Store
-  private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataSubscription<[Store]>
+  private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
   private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void), notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]): any {
     const funcThis = this.funcThis
 
@@ -426,19 +426,19 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
     
     else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
-      let notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds_path_strict === undefined ? true : notfiyAboutChangesOfChilds_path_strict
+      let notfiyAboutChangesOfChilds = (notfiyAboutChangesOfChilds_path_strict === undefined ? true : notfiyAboutChangesOfChilds_path_strict) as boolean
       let subscription = path_data_subscription
       let initialize = paths[0] === undefined ? true : paths[0]
 
       if (notfiyAboutChangesOfChilds) {
         if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
         else if (this.subscriptionsOfChildChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
-        else return new DataSubscription(this as any, subscription as any, true, initialize)
+        else return new DataBaseSubscription(this as any, subscription as any, true, notfiyAboutChangesOfChilds, initialize)
       }
       else {
         if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-        else if (this.subscriptionsThisChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
-        else return new DataSubscription(this as any, subscription as any, true, initialize)
+        else if (this.subscriptionsOfThisChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
+        else return new DataBaseSubscription(this as any, subscription as any, true, notfiyAboutChangesOfChilds, initialize)
       }
     }
     else if (path_data_subscription === undefined) {
@@ -588,7 +588,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   private notifyFromThis() {
     this.notifyFromChild()
     //@ts-ignore
-    this.subscriptionsThisChanges.Call(this.store)
+    this.subscriptionsOfThisChanges.Call(this.store)
   }
 
   private initFuncProps(store: Store, parsingId: any) {
@@ -624,23 +624,32 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
 
   // ------------
-  // Functions for DataSubscription
+  // Functions for Data**Base**Subscription
   // ------------
 
-  subscribe(subscription: Subscription<[Readonly<Store>]>, initialize?: boolean): void {
+  subscribeToChildren(subscription: Subscription<[Readonly<Store>]>, initialize?: boolean): void {
     if (initialize === undefined || initialize) subscription(this.store)
     //@ts-ignore
     this.subscriptionsOfChildChanges.add(subscription)
   }
+  subscribeToThis(subscription: Subscription<[Readonly<Store>]>, initialize?: boolean): void {
+    if (initialize === undefined || initialize) subscription(this.store)
+    //@ts-ignore
+    this.subscriptionsOfThisChanges.add(subscription)
+  }
 
-  unsubscribe(subscription: Subscription<[Readonly<Store>]>): void {
+  unsubscribeToChildren(subscription: Subscription<[Readonly<Store>]>): void {
     //@ts-ignore
     this.subscriptionsOfChildChanges.rmV(subscription)
+  }
+  unsubscribeToThis(subscription: Subscription<[Readonly<Store>]>): void {
+    //@ts-ignore
+    this.subscriptionsOfThisChanges.rmV(subscription)
   }
 
   isSubscribed(subscription: Subscription<[Readonly<Store>]>): boolean {
     //@ts-ignore
-    return this.subscriptionsOfChildChanges.includes(subscription)
+    return this.subscriptionsOfChildChanges.includes(subscription) || this.subscriptionsOfThisChanges.includes(subscription)
   }
 
   get(): Store {
@@ -681,4 +690,65 @@ export type DataBase<Store extends object> = (DataBaseify<Store> & OmitFunctionP
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new<Store extends object>(store: Store): DataBase<Store> })
+
+
+
+
+
+
+
+class DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> extends DataSubscription<Values> {
+  protected _notfiyAboutChangesOfChilds: boolean
+
+  constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: false, notfiyAboutChangesOfChilds?: boolean)
+  constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: true, notfiyAboutChangesOfChilds?: boolean, inititalize?: boolean)
+
+  constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: false, notfiyAboutChangesOfChilds?: boolean)
+  constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, notfiyAboutChangesOfChilds?: boolean, inititalize?: boolean)
+  constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false, notfiyAboutChangesOfChilds?: boolean)
+  constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, notfiyAboutChangesOfChilds?: boolean, inititalize?: boolean)
+  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, notfiyAboutChangesOfChilds: boolean = true, inititalize?: boolean) {
+    //@ts-ignore
+    super(data, subscription, false, false)
+    this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
+
+    this.active(activate, inititalize)
+  }
+
+  public notfiyAboutChangesOfChilds(): boolean
+  public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds: boolean): this
+  public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds?: boolean) {
+    if (notfiyAboutChangesOfChilds === undefined) return this._notfiyAboutChangesOfChilds
+    
+    if (this._notfiyAboutChangesOfChilds !== notfiyAboutChangesOfChilds) {
+      this.deacivate()
+      this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
+      this.active(false)
+    }
+
+    return this
+  }
+
+  public activate(initialize: boolean = true): this {  
+    if (this.active()) return this;
+    if (this._notfiyAboutChangesOfChilds) {
+      (this._data as any).subscribeToChildren(this._subscription, initialize)
+    }
+    else {
+      (this._data as any).subscribeToThis(this._subscription, initialize)
+    }
+    return this
+  }
+
+  public deacivate(): this {
+    if (!this.active()) return this;
+    if (this._notfiyAboutChangesOfChilds) (this._data as any).unsubscribeToChildren(this._subscription)
+    else (this._data as any).unsubscribeToThis(this._subscription)
+    return this
+  }
+}
+
+
+
+
 
