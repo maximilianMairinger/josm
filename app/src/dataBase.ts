@@ -11,7 +11,7 @@ interface Link {
   destroyPathSubscriptions(): void
   dataChange(wrapper: DataBase<any>): void
   updatePathResolvement(wrapper?: DataBase<any>): void
-}
+} 
 
 class DataLink implements Link {
   private pathSubscriptions: DataSubscription<PathSegment[]>[] | PrimitivePathSegment[] = []
@@ -82,8 +82,13 @@ class DataLink implements Link {
       parent = parent[path]
     })
 
+    //@ts-ignore
+    if (this.data) this.data.linksOfMe.rmV(this)
+
     if (this.data !== parent) {
       this.data = parent
+      //@ts-ignore
+      this.data.linksOfMe.add(this)
       this.subscriptions.Inner("data", [parent, true])
     }
   }
@@ -145,7 +150,7 @@ class DataBaseLink extends Function implements Link {
   destroyPathSubscriptions() {}
   resolvePath() {}
   updatePathResolvement(wrapper: DataBase<any> = this.wrapper) {
-    if (this.dataBase) this.dataBase.distributedLinks.rmV(...this.distributedLinks)
+    if (this.dataBase) this.dataBase.linksOfMe.rmV(this)
 
     let parent = this.wrapper = wrapper as any
     this.currentPathIndex.ea((path) => {
@@ -158,7 +163,7 @@ class DataBaseLink extends Function implements Link {
       this.dataBase = this.dataBaseFunc[internalDataBaseBridge]
 
 
-      this.dataBase.distributedLinks.add(...this.distributedLinks)
+      this.dataBase.linksOfMe.add(this)
       //@ts-ignore
       this.subscriptions.Inner("data", [this.dataBase, true])
       this.distributedLinks.Inner("dataChange", [this.dataBaseFunc])
@@ -181,7 +186,6 @@ class DataBaseLink extends Function implements Link {
             if (this.dataBaseFunc[key] instanceof Data) link = new DataLink(this.dataBaseFunc as any, [key])
             else link = new DataBaseLink(this.dataBaseFunc as any, [key])
             this.distributedLinks.add(link)
-            this.dataBase.distributedLinks.add(link)
           }
           return link
         }
@@ -293,7 +297,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   private notifyParentOfChangeCbs: any[]
   private beforeDestroyCbs: Map<InternalDataBase<any>, Function>
 
-  public distributedLinks: Link[]
+  public linksOfMe: Link[]
 
   private subscriptionsOfChildChanges: DataSubscription<[Readonly<Store>]>[]
   private subscriptionsOfThisChanges: DataSubscription<[Readonly<Store>]>[]
@@ -304,7 +308,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     this.funcThis = this.bind(this)
 
-    this.distributedLinks = []
+    this.linksOfMe = []
     this.notifyParentOfChangeCbs = []
     this.subscriptionsOfChildChanges = []
     this.subscriptionsOfThisChanges = []
@@ -341,6 +345,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   }
 
   destroy(from: InternalDataBase<any>) {
+    this.inBulkChange = true
     this.beforeDestroyCbs.get(from)()
     this.beforeDestroyCbs.delete(from)
 
@@ -348,15 +353,23 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       this.beforeDestroyCbs.forEach((val) => {
         val()
       })
-      this.beforeDestroyCbs.clear()
       this.notifyParentOfChangeCbs.clear()
       for (const key in this.funcThis) {
+        if (this.funcThis[key] instanceof Data) {
+          this.funcThis[key].destroy(this)
+        }
+        else {
+          this.funcThis[key][internalDataBaseBridge].destroy(this)  
         this.funcThis[key][internalDataBaseBridge].destroy(this)
+          this.funcThis[key][internalDataBaseBridge].destroy(this)  
+        this.funcThis[key][internalDataBaseBridge].destroy(this)
+          this.funcThis[key][internalDataBaseBridge].destroy(this)  
+        }
         delete this.funcThis[key]
       }
   
-      this.distributedLinks.Inner("destroy", [])
-      this.distributedLinks.clear()
+      this.linksOfMe.Inner("destroy", [])
+      this.linksOfMe.clear()
   
       for (const key in this) {
         //@ts-ignore
@@ -364,7 +377,10 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       }
       return true
     }
-    else return false
+    else {
+      this.inBulkChange = false
+      return false
+    }
   }
 
   private DataBaseFunctionWrapper(...a) {
@@ -411,7 +427,6 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         let link: any
         if (par instanceof Data) link = new DataLink(funcThis, dataSegments as any) as any
         else link = new DataBaseLink(funcThis, dataSegments as any) as any
-        this.distributedLinks.add(link)
         return link
       }
       else {
@@ -430,7 +445,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       let subscription = path_data_subscription
       let initialize = paths[0] === undefined ? true : paths[0]
 
-      if (notfiyAboutChangesOfChilds) {
+      if (notfiyAboutChangesOfChilds) { 
         if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
         else if (this.subscriptionsOfChildChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
         else return new DataBaseSubscription(this as any, subscription as any, true, notfiyAboutChangesOfChilds, initialize)
@@ -492,9 +507,8 @@ class InternalDataBase<Store extends ComplexData> extends Function {
           }
           else {
             if (typeof newVal === "object") {
-              let activeated = false
               let duringActivationNotificationBundler = () => {
-                activeated = true
+                notifyFromThis = true
               }
               // cache all changes comming from below (children) so that only one change event gets emmited
               let db = prop[internalDataBaseBridge]
@@ -503,7 +517,6 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               prop(newVal, parsingId)
               db.removeNotifyParentOfChangeCb(duringActivationNotificationBundler)
               db.addNotifyParentOfChangeCb(this.boundNotifyFromChild)
-              if (activeated) this.notifyFromChild()
             }
             else {
               //@ts-ignore
@@ -572,7 +585,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
           if (handledKeys.includes(key)) continue
 
           if (funcThis[key] instanceof Data) funcThis[key].destroy()
-          else funcThis[key][internalDataBaseBridge].destroy()
+          else funcThis[key][internalDataBaseBridge].destroy(this)
         }
       }
 

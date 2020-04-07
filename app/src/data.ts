@@ -13,6 +13,7 @@ export type Subscription<Values extends any[]> = (...value: Values) => void | Pr
 export class Data<Value = unknown> {
   private value: Value
   private subscriptions: Subscription<[Value]>[] = []
+  private linksOfMe = []
 
   public constructor(value?: Value) {
     this.value = value
@@ -58,6 +59,8 @@ export class Data<Value = unknown> {
   private destroy() {
     this.beforeDestroyCbs.Call()
     this.beforeDestroyCbs.clear()
+    this.linksOfMe.Inner("destroy", [])
+    this.linksOfMe.clear()
     for (const key in this) {
       delete this[key]
     }

@@ -10,12 +10,15 @@ import clone from "fast-copy"
 
 let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: "Brein", age: 30}})
 
-let personPath = new Data("student")
-let propPath = new Data("fullName")
+let student = db(new Data("student"))
+
+student(console.log)
+
+db({teacher: {fullName: "Only Brein"}}, true)
 
 
 
-
+db({student: {fullName: "Maxx", age: 17}, teacher: {fullName: "Brein", age: 30}})
 
 
 
