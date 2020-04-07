@@ -7,17 +7,23 @@ import { circularDeepEqual } from "fast-equals"
 
 
 
+export const localSubscriptionNamespace = {
+  register: (me: {destroy: () => void}) => {
+
+  }
+}
+
+
 export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
 
 
 export class Data<Value = unknown> {
-  private value: Value
   private subscriptions: Subscription<[Value]>[] = []
   private linksOfMe = []
 
-  public constructor(value?: Value) {
-    this.value = value
-  }
+  private locSubNsReg: {destroy: () => void}[] = []
+
+  public constructor(private value?: Value) {}
 
   
   public get(): Value
@@ -40,7 +46,14 @@ export class Data<Value = unknown> {
   }
   protected subscribe(subscription: Subscription<[Value]>, initialize: boolean) {
     this.subscriptions.add(subscription)
-    if (initialize) return subscription(this.value)
+    if (initialize) {
+      let last = localSubscriptionNamespace.register
+      localSubscriptionNamespace.register = (me) => {
+        this.locSubNsReg.add(me)
+      }
+      subscription(this.value)
+      localSubscriptionNamespace.register = last
+    }
   }
 
   // Return false when not successfull; dont throw (maybe in general Xrray)
@@ -67,25 +80,25 @@ export class Data<Value = unknown> {
   }
 
   public set(value: Value): Value
-  public set(value: Value, wait: false): Value
-  public set(value: Value, wait: true): Promise<Value>
-  public set(value: Value, wait: boolean = false): Value | Promise<Value> {
+  public set(value: Value): Value {
     if (value === this.value) return value
     this.value = value
-    if (!wait) {
-      for (let subscription of this.subscriptions) {
-        subscription(value)
-      }
-      return value
+
+    this.locSubNsReg.Inner("destroy", [])
+
+    let last = localSubscriptionNamespace.register
+    localSubscriptionNamespace.register = (me) => {
+      this.locSubNsReg.add(me)
     }
-    else {
-      return (async () => {
-        for (let subscription of this.subscriptions) {
-          await subscription(value)
-        }
-        return value
-      })()
+
+
+    for (let subscription of this.subscriptions) {
+      subscription(value)
     }
+
+    localSubscriptionNamespace.register = last
+
+    return value
   }
 
   public toString() {
@@ -212,6 +225,8 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
     //@ts-ignore
     this._subscription = subscription
     subscription[dataSubscriptionCbBridge] = this
+
+    localSubscriptionNamespace.register(this as any)
     this.active(activate, inititalize)
   }
 
@@ -236,6 +251,14 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
     if (activate) this.activate(initialize)
     else this.deacivate()
     return this
+  }
+
+  private destroy() {
+    this.deacivate()
+
+    for (let key in this) {
+      delete this[key]
+    }
   }
 
   

@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable } from "./data"
+import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace } from "./data"
 import { nthIndex } from "./helper"
 import attatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
@@ -184,6 +184,10 @@ class DataBaseLink extends Function implements Link {
           if (link === undefined) {
             if (this.dataBaseFunc[key] instanceof Data) link = new DataLink(this.dataBaseFunc as any, [key])
             else link = new DataBaseLink(this.dataBaseFunc as any, [key])
+            localSubscriptionNamespace.register({destroy: () => {
+              link.destroy()
+              link = undefined
+            }})
             this.distributedLinks.add(link)
           }
           return link
@@ -426,6 +430,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         let link: any
         if (par instanceof Data) link = new DataLink(funcThis, dataSegments as any) as any
         else link = new DataBaseLink(funcThis, dataSegments as any) as any
+        localSubscriptionNamespace.register(link)
         return link
       }
       else {

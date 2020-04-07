@@ -5,27 +5,35 @@ import clone from "fast-copy"
 
 
 
-
+let lang = new DataBase({
+  ok: "Alright",
+  what: "Excuse me?!"
+})
 
 
 let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: "Brein", age: 30}})
 
-let student = db(new Data("student"))
-
-student(console.log)
-
-db({teacher: {fullName: "Only Brein"}}, true)
 
 
+let stud = db(new Data("student"))
 
-db({student: {fullName: "Maxx", age: 17}, teacher: {fullName: "Brein", age: 30}})
+let f;
 
+lang.ok.get((ok) => {
 
+  stud(new Data("fullName")).get((e) => {
+    console.log(ok, e)
+  })
 
+})
 
+setTimeout(() => {
+  lang.ok.set("Ok")
 
-
-
+  setTimeout(() => {
+    db.student.fullName.set("Maarks")
+  }, 500)
+}, 500)
 
 
 
