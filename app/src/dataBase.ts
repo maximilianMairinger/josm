@@ -2,7 +2,6 @@ import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubs
 import { nthIndex } from "./helper"
 import attatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
-import { circularDeepEqual } from "fast-equals"
 
 
 interface Link {
