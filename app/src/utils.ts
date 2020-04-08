@@ -5,49 +5,68 @@ export function isInstanceofDataBase() {
   
 }
 
-export abstract class DataClass<T> {
-  constructor(protected data: Data<T>) {
+export const dataDerivativeIndex: DataDerivativeIndex<DataDerivativeIndexInstances> = {
+  array: undefined,
+  object: undefined,
+  string: undefined,
+  number: undefined,
+  boolean: undefined
+}
 
+
+type BaseDataDerivativeIndex = {
+  array: DataBase<any[]> | Data<any[]>
+  object: DataBase<object> | Data<object>
+  string: Data<string>
+  number: Data<number>
+  boolean: Data<boolean>
+}
+
+type DataDerivativeIndexInstances = {
+  [key in keyof BaseDataDerivativeIndex]: {new<T = any>(...a: any[]): BaseDataDerivativeIndex[key]}[]
+}
+
+
+
+
+type DataDerivativeIndex<Of extends {[key in string]: any[]}> = {
+  [key in keyof Of]?: Of[key]
+}
+
+
+
+
+export function setDataDerivativeIndex<T extends {[key in string]: any[]}>(index: DataDerivativeIndex<T> & DataDerivativeIndex<DataDerivativeIndexInstances>): void {
+  for (let key in dataDerivativeIndex) {
+    dataDerivativeIndex[key] = []
+  }
+  for (let key in index) {
+    dataDerivativeIndex[key] = index[key]
+
+    index[key].ea((e) => {
+      if (e.prototype instanceof Data) {
+        for (let key in e.prototype) {
+          Data.prototype[key] = e.prototype[key]
+        }
+      }
+    })
+    
   }
 }
 
-export abstract class DataBaseClass<T extends object> {
-  constructor(protected dataBase: DataBase<T>) {
-
-  }
-}
-
-type PropertyClassIndex = {
-  array: DataBaseClass<any[]>
-  object: DataBaseClass<object>
-  string: DataClass<string>
-  number: DataClass<number>
-  boolean: DataClass<boolean>
-}
-
-
-
-
-type Construc<T extends any[], A extends DataClass<W> | DataBaseClass<W>, W> = {
-  [key in keyof T]: {new(e: A): (T[key] & A)}
-}
-
-
-export type PropertyOperationIndex<T extends any[]> = {
-  [property in keyof PropertyClassIndex]?: Construc<T, PropertyClassIndex[property]>
-}
-
-export const propertyOperationIndex: PropertyOperationIndex<any[]> = {
+setDataDerivativeIndex({
   array: [
-    class extends DataBaseClass<any> {
-
+    class List<T extends string[]> extends Data<string[]> {
+      constructor(a: T) {
+        super(a)
+      }
+      qwerqwer(): T {
+        return
+      }
     }
   ]
+})
 
-}
 
 
-export function setPropertyOperationIndex() {
-
-}
 
