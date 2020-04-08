@@ -17,7 +17,7 @@ export const localSubscriptionNamespace = {
 export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
 
 
-export class Data<Value = unknown> {
+export class Data<Value = any> {
   private subscriptions: Subscription<[Value]>[] = []
   private linksOfMe = []
 

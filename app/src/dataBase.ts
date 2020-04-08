@@ -720,10 +720,10 @@ type DataBaseify<Type extends object> = {
   [Key in keyof Type]: Type[Key] extends object ? DataBase<Type[Key]> : Data<Type[Key]>
 }
 
-export type DataBase<Store extends object> = (DataBaseify<Store> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)
+export type DataBase<Store extends object = any> = (DataBaseify<Store> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)
 
 //@ts-ignore
-export const DataBase = InternalDataBase as ({ new<Store extends object>(store: Store): DataBase<Store> })
+export const DataBase = InternalDataBase as ({ new <Store extends object = any>(store: Store): DataBase<Store> })
 
 
 
