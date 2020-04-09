@@ -1,72 +1,81 @@
 import { DataBase } from "./dataBase"
 import { Data } from "./data"
+import { constructAttatchToPrototype } from "attatch-to-prototype"
 
 export function isInstanceofDataBase() {
   
 }
 
-export const dataDerivativeIndex: DataDerivativeIndex<DataDerivativeIndexInstances> = {
-  array: undefined,
-  object: undefined,
-  string: undefined,
-  number: undefined,
-  boolean: undefined
+
+export const dataDerivativeLiableIndex: any[] = []
+export const dbDerivativeLiableIndex: any[] = []
+
+
+
+
+
+
+
+type DataClass<W> = (W extends object ? Data<W> | DataBase<W> : Data<W>)
+type Instance<E = unknown> = {new<T = any>(...a: any[]): DataClass<E>}
+type DataDerivativeCollectionClasses<A extends unknown[] = unknown[]> = {
+  [key in keyof A]: Instance<A[key]>
 }
 
 
-type BaseDataDerivativeIndex = {
-  array: DataBase<any[]> | Data<any[]>
-  object: DataBase<object> | Data<object>
-  string: Data<string>
-  number: Data<number>
-  boolean: Data<boolean>
-}
+export function setDataDerivativeIndex<T, E extends unknown[]>(collection: T & DataDerivativeCollectionClasses<E>): void {
 
-type DataDerivativeIndexInstances = {
-  [key in keyof BaseDataDerivativeIndex]: {new<T = any>(...a: any[]): BaseDataDerivativeIndex[key]}[]
-}
+  dbDerivativeLiableIndex.clear()
 
-
-
-
-type DataDerivativeIndex<Of extends {[key in string]: any[]}> = {
-  [key in keyof Of]?: Of[key]
-}
-
-
-
-
-export function setDataDerivativeIndex<T extends {[key in string]: any[]}>(index: DataDerivativeIndex<T> & DataDerivativeIndex<DataDerivativeIndexInstances>): void {
-  for (let key in dataDerivativeIndex) {
-    dataDerivativeIndex[key] = []
-  }
-  for (let key in index) {
-    dataDerivativeIndex[key] = index[key]
-
-    index[key].ea((e) => {
-      if (e.prototype instanceof Data) {
+  collection.ea((e, i) => {
+    if (e.prototype instanceof Data) {
+      let attach = constructAttatchToPrototype(dataDerivativeLiableIndex.Inner("prototype"))
         for (let key in e.prototype) {
-          Data.prototype[key] = e.prototype[key]
+          attach(key, e.prototype[key])
         }
-      }
-    })
-    
+    }
+    else {
+      // DB appends it on its own
+      dbDerivativeLiableIndex.add(e.prototype)
+    }
+  })
+}
+
+setDataDerivativeIndex([
+  class List<T extends string[]> extends DataBase<string[]> {
+    constructor(a: T) {
+      super(a)
+    }
+    qwerqwer(): T {
+      return
+    }
+  },
+
+])
+
+
+
+
+
+
+class List<T extends string> extends Data<string> {
+  constructor(a: T) {
+    super(a)
+  }
+  qwerqwer(): T {
+    return
   }
 }
 
-setDataDerivativeIndex({
-  array: [
-    class List<T extends string[]> extends Data<string[]> {
-      constructor(a: T) {
-        super(a)
-      }
-      qwerqwer(): T {
-        return
-      }
-    }
-  ]
-})
 
 
 
 
+
+
+
+type E<T> = Data<T> & (any extends List<infer W> ? T extends W ? List<T> : void : void)
+
+let e: E<string>
+
+e

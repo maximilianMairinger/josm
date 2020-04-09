@@ -1,8 +1,11 @@
 import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace } from "./data"
 import { nthIndex } from "./helper"
-import attatchToPrototype from "attatch-to-prototype"
+import { constructAttatchToPrototype } from "attatch-to-prototype"
+import { dataDerivativeLiableIndex, dbDerivativeLiableIndex } from "./utils"
 import clone from "fast-copy"
 
+
+console.log(Data)
 
 interface Link {
   destroy(): void
@@ -128,7 +131,15 @@ class DataBaseLink extends Function implements Link {
     this.dataChange(wrapper)
     this.initFuncProps()
     
+
     this.funcThis[internalDataBaseBridge] = this
+    const attach = constructAttatchToPrototype(this.funcThis)
+    dbDerivativeLiableIndex.ea((e) => {
+      for (let key in e) {
+        attach(key, e[key])  
+      }
+    })
+
     return this.funcThis
   }
 
@@ -226,7 +237,7 @@ class DataBaseLink extends Function implements Link {
 
 
 
-const attachToLinks = attatchToPrototype([DataBaseLink.prototype, DataLink.prototype])
+const attachToLinks = constructAttatchToPrototype([DataBaseLink.prototype, DataLink.prototype])
 
 
 
@@ -327,6 +338,13 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     
 
     this.funcThis[internalDataBaseBridge] = this
+    const attach = constructAttatchToPrototype(this.funcThis)
+    dbDerivativeLiableIndex.ea((e) => {
+      for (let key in e) {
+        attach(key, e[key])  
+      }
+    })
+
     return this.funcThis
   }
 
@@ -783,6 +801,7 @@ class DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = 
 }
 
 
+dataDerivativeLiableIndex.set([Data, DataLink])
 
 
-
+console.log(DataSubscription)

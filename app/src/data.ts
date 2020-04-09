@@ -5,7 +5,9 @@ import { DataBase } from './josm'
 
 import { circularDeepEqual } from "fast-equals"
 
-
+import Xrray from "xrray"
+import { dataDerivativeLiableIndex } from './utils'
+Xrray(Array)
 
 export const localSubscriptionNamespace = {
   register: (me: {destroy: () => void}) => {
@@ -17,7 +19,8 @@ export const localSubscriptionNamespace = {
 export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
 
 
-export class Data<Value = any> {
+
+export class Data<Value = unknown> {
   private subscriptions: Subscription<[Value]>[] = []
   private linksOfMe = []
 
@@ -33,7 +36,7 @@ export class Data<Value = any> {
     if (subscription === undefined) return this.value
     else {
       if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-      else if (this.subscriptions.contains(subscription)) return subscription[dataSubscriptionCbBridge].activate()
+      else if (this.subscriptions.includes(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
@@ -106,6 +109,7 @@ export class Data<Value = any> {
   }
 }
 
+dataDerivativeLiableIndex.set([Data])
 
 // Why this works is an absolute mirracle to me...
 // In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs), but somehow it works like this
@@ -175,7 +179,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     if (subscription === undefined) return this.datas.Inner("get", [])
     else {
       if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-      else if (this.subscriptions.contains(subscription)) return subscription[dataSubscriptionCbBridge].activate()
+      else if (this.subscriptions.includes(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }

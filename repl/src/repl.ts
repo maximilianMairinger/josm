@@ -1,39 +1,48 @@
-import { Data, DataCollection, DataBase } from "../../app/src/josm"
-import clone from "fast-copy"
+import { Data, DataBase } from "../../app/src/josm"
+
+console.log("qwe")
+
+let d = new Data("qwe")
+d.get(console.log)
+
+
+d.set("sss")
+d.set("sss")
+d.set("qwe")
+
+// let w = new DataBase({w: "qwe"})
+
+// console.log(w)
+
+// let lang = new DataBase({
+//   ok: "Alright",
+//   what: "Excuse me?!"
+// })
+
+
+// let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: "Brein", age: 30}})
 
 
 
+// let stud = db(new Data("student"))
 
+// let f;
 
-let lang = new DataBase({
-  ok: "Alright",
-  what: "Excuse me?!"
-})
+// lang.ok.get((ok) => {
 
+//   stud(new Data("fullName")).get((e) => {
+//     console.log(ok, e)
+//   })
 
-let db = new DataBase({student: {fullName: "Max", age: 17}, teacher: {fullName: "Brein", age: 30}})
+// })
 
+// setTimeout(() => {
+//   lang.ok.set("Ok")
 
-
-let stud = db(new Data("student"))
-
-let f;
-
-lang.ok.get((ok) => {
-
-  stud(new Data("fullName")).get((e) => {
-    console.log(ok, e)
-  })
-
-})
-
-setTimeout(() => {
-  lang.ok.set("Ok")
-
-  setTimeout(() => {
-    db.student.fullName.set("Maarks")
-  }, 500)
-}, 500)
+//   setTimeout(() => {
+//     db.student.fullName.set("Maarks")
+//   }, 500)
+// }, 500)
 
 
 
