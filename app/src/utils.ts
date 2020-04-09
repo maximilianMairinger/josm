@@ -41,31 +41,31 @@ export function setDataDerivativeIndex<T, E extends unknown[]>(collection: T & D
   })
 }
 
-setDataDerivativeIndex([
-  class List<T extends string[]> extends DataBase<string[]> {
-    constructor(a: T) {
-      super(a)
-    }
-    qwerqwer(): T {
-      return
-    }
-  },
+// setDataDerivativeIndex([
+//   class List<T extends string[]> extends DataBase<string[]> {
+//     constructor(a: T) {
+//       super(a)
+//     }
+//     qwerqwer(): T {
+//       return
+//     }
+//   },
 
-])
-
-
+// ])
 
 
 
 
-class List<T extends string> extends Data<string> {
-  constructor(a: T) {
-    super(a)
-  }
-  qwerqwer(): T {
-    return
-  }
-}
+
+
+// class List<T extends string> extends Data<string> {
+//   constructor(a: T) {
+//     super(a)
+//   }
+//   qwerqwer(): T {
+//     return
+//   }
+// }
 
 
 

@@ -1,6 +1,6 @@
 // Those are just types, thus can be collected by  
 // dead code detection & omited for treeshaking
-import { Concat, SliceStartQuantity } from 'typescript-tuple'
+import { Concat } from 'typescript-tuple'
 import { DataBase } from './josm'
 
 import { circularDeepEqual } from "fast-equals"

@@ -5,7 +5,6 @@ import { dataDerivativeLiableIndex, dbDerivativeLiableIndex } from "./utils"
 import clone from "fast-copy"
 
 
-console.log(Data)
 
 interface Link {
   destroy(): void
@@ -802,6 +801,3 @@ class DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = 
 
 
 dataDerivativeLiableIndex.set([Data, DataLink])
-
-
-console.log(DataSubscription)
