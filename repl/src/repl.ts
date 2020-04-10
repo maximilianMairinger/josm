@@ -23,14 +23,10 @@ d.dec(0)
 
 
 
-let w = new DataBase({a: "b", c: "d", e: 2})
-
-let s1 = w((qqqq) => {
-
-})
 
 
-let qwe = w()
+
+
 
 
 

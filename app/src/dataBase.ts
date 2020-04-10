@@ -415,11 +415,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
 
 
-  private DataBaseFunction(...paths: PathSegment[]): any
+  
   private DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
   private DataBaseFunction(): Readonly<Store>
   private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
-  private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]): any {
+  private DataBaseFunction(...paths: PathSegment[]): any
+  private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]) {
     const funcThis = this.funcThis
 
     
