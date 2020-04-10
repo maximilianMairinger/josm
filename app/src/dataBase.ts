@@ -414,15 +414,15 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
   private DataBaseFunction(...paths: PathSegment[]): any
   private DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
-  private DataBaseFunction(): Store
+  private DataBaseFunction(doNotClone?: boolean): Store
   private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
-  private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void), notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]): any {
+  private DataBaseFunction(path_data_subscription_doNotClone?: PathSegment | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]): any {
     const funcThis = this.funcThis
 
     
     
-    if (path_data_subscription instanceof Data || path_data_subscription instanceof DataCollection || typeof path_data_subscription === "string" || typeof path_data_subscription === "number") {
-      let dataSegments = (notfiyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription] : [path_data_subscription, notfiyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
+    if (path_data_subscription_doNotClone instanceof Data || path_data_subscription_doNotClone instanceof DataCollection || typeof path_data_subscription_doNotClone === "string" || typeof path_data_subscription_doNotClone === "number") {
+      let dataSegments = (notfiyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription_doNotClone] : [path_data_subscription_doNotClone, notfiyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
       let hasData = (dataSegments as any).ea((e) => {
         if (e instanceof Data || e instanceof DataCollection) return true
       })
@@ -463,9 +463,9 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     }
 
     
-    else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
+    else if (typeof path_data_subscription_doNotClone === "function" || path_data_subscription_doNotClone instanceof DataSubscription) {
       let notfiyAboutChangesOfChilds = (notfiyAboutChangesOfChilds_path_strict === undefined ? true : notfiyAboutChangesOfChilds_path_strict) as boolean
-      let subscription = path_data_subscription
+      let subscription = path_data_subscription_doNotClone
       let initialize = paths[0] === undefined ? true : paths[0]
 
       if (notfiyAboutChangesOfChilds) { 
@@ -479,11 +479,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         else return new DataBaseSubscription(this as any, subscription as any, true, notfiyAboutChangesOfChilds, initialize)
       }
     }
-    else if (path_data_subscription === undefined) {
-      return clone(this.store)
+    else if (path_data_subscription_doNotClone === undefined || typeof path_data_subscription_doNotClone === "boolean") {
+      return path_data_subscription_doNotClone ? this.store : clone(this.store)
     }
-    else if (typeof path_data_subscription === objectString) {
-      let newData = path_data_subscription as ComplexData
+    else if (typeof path_data_subscription_doNotClone === objectString) {
+      let newData = path_data_subscription_doNotClone as ComplexData
       let strict = notfiyAboutChangesOfChilds_path_strict === undefined ? false : notfiyAboutChangesOfChilds_path_strict
 
       let parsingId = (paths[0] !== undefined ? paths[0] : Symbol("parsingId")) as any
@@ -537,7 +537,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               let db = prop[internalDataBaseBridge]
               db.removeNotifyParentOfChangeCb(this.boundNotifyFromChild)
               db.addNotifyParentOfChangeCb(duringActivationNotificationBundler)
-              prop(newVal, parsingId)
+              prop(newVal, strict, parsingId)
               db.removeNotifyParentOfChangeCb(duringActivationNotificationBundler)
               db.addNotifyParentOfChangeCb(this.boundNotifyFromChild)
             }
