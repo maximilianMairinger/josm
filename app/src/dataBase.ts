@@ -1,7 +1,7 @@
 import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace } from "./data"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
-import { dataDerivativeLiableIndex, dbDerivativeLiableIndex } from "./utils"
+import { dataDerivativeLiableIndex, dbDerivativeLiableIndex } from "./derivativeExtention"
 import clone from "fast-copy"
 
 
@@ -134,7 +134,7 @@ class DataBaseLink extends Function implements Link {
     this.funcThis[internalDataBaseBridge] = this
     const attach = constructAttatchToPrototype(this.funcThis)
     dbDerivativeLiableIndex.ea((e) => {
-      for (let key in e) {
+      for (let key of Object.getOwnPropertyNames(e).rmV("constructor")) {
         attach(key, e[key])  
       }
     })
@@ -339,10 +339,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     this.funcThis[internalDataBaseBridge] = this
     const attach = constructAttatchToPrototype(this.funcThis)
     dbDerivativeLiableIndex.ea((e) => {
-      for (let key in e) {
+      for (let key of Object.getOwnPropertyNames(e).rmV("constructor")) {
         attach(key, e[key])  
       }
     })
+
+    
 
     return this.funcThis
   }

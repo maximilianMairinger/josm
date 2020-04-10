@@ -6,7 +6,7 @@ import { DataBase } from './josm'
 import { circularDeepEqual } from "fast-equals"
 
 import Xrray from "xrray"
-import { dataDerivativeLiableIndex } from './utils'
+import { dataDerivativeLiableIndex } from './derivativeExtention'
 Xrray(Array)
 
 export const localSubscriptionNamespace = {

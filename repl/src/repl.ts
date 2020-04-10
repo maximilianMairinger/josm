@@ -1,14 +1,62 @@
-import { Data, DataBase } from "../../app/src/josm"
+import { Data, DataBase, setDataDerivativeIndex } from "../../app/src/josm"
 
-console.log("qwe")
 
-let d = new Data("qwe")
+
+setDataDerivativeIndex([
+  class Number extends Data<number> {
+    inc(by: number = 1) {
+      this.set(this.get() + by)
+    }
+    dec(by: number = 1) {
+      this.set(this.get() - by)
+    }
+  },
+  class List extends DataBase<any[]> {
+    
+  }
+])
+
+let d = new Data(2)
 d.get(console.log)
+//@ts-ignore
+d.dec(0)
 
 
-d.set("sss")
-d.set("sss")
-d.set("qwe")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // let w = new DataBase({w: "qwe"})
 
