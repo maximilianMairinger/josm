@@ -17,20 +17,20 @@ setDataDerivativeIndex([
 ])
 
 let d = new Data(2)
-d.get(console.log)
+let sub = d.get(console.log)
 //@ts-ignore
 d.dec(0)
 
 
 
+let w = new DataBase({a: "b", c: "d", e: 2})
+
+let s1 = w((qqqq) => {
+
+})
 
 
-
-
-
-
-
-
+let qwe = w()
 
 
 

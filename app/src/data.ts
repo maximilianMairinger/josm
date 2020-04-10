@@ -2,11 +2,13 @@
 // dead code detection & omited for treeshaking
 import { Concat } from 'typescript-tuple'
 import { DataBase } from './josm'
+import clone from "fast-copy"
 
 import { circularDeepEqual } from "fast-equals"
 
 import Xrray from "xrray"
 import { dataDerivativeLiableIndex } from './derivativeExtention'
+import constructAttatchToPrototype from 'attatch-to-prototype'
 Xrray(Array)
 
 export const localSubscriptionNamespace = {
@@ -41,27 +43,10 @@ export class Data<Value = unknown> {
     }
   }
 
-  protected isSubscribed(subscription: Subscription<[Value]>) {
-    return this.subscriptions.includes(subscription)
-  }
-  protected unsubscribe(subscription: Subscription<[Value]>) {
-    this.subscriptions.rmV(subscription)
-  }
-  protected subscribe(subscription: Subscription<[Value]>, initialize: boolean) {
-    this.subscriptions.add(subscription)
-    if (initialize) {
-      let last = localSubscriptionNamespace.register
-      localSubscriptionNamespace.register = (me) => {
-        this.locSubNsReg.add(me)
-      }
-      subscription(this.value)
-      localSubscriptionNamespace.register = last
-    }
-  }
 
   // Return false when not successfull; dont throw (maybe in general Xrray)
   public got(subscription: Subscription<[Value]> | DataSubscription<[Value]>): DataSubscription<[Value]> {
-    return (subscription instanceof DataSubscription) ? subscription.deacivate()
+    return (subscription instanceof DataSubscription) ? subscription.deactivate()
     : subscription[dataSubscriptionCbBridge].deacivate()
   }
   
@@ -103,6 +88,12 @@ export class Data<Value = unknown> {
 
     return value
   }
+
+  protected isSubscribed(subscription: Subscription<[Value]>) {}
+  protected subscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
+  protected subscribeToChildren(subscription: Subscription<[Value]>, initialize: boolean) {}
+  protected unsubscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
+  protected unsubscribeToChildren(subscription: Subscription<[Value]>, initialize: boolean) {}
 
   public toString() {
     return "Data: " + this.value
@@ -157,21 +148,6 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     })
   }
 
-  // Gets called from DataSubscription
-  protected isSubscribed(subscription: Subscription<Values>) {
-    return this.subscriptions.includes(subscription)
-  }
-
-  // Gets called from DataSubscription
-  protected subscribe(subscription: Subscription<Values>, initialize: boolean) {
-    this.subscriptions.add(subscription)
-    if (initialize) subscription(...this.store)
-  }
-
-  protected unsubscribe(subscription: Subscription<Values>) {
-    this.subscriptions.rmV(subscription)
-  }
-
   public get(): Values
   public get(subscription: Subscription<Values> | DataSubscription<Values>, initialize?: boolean): DataSubscription<Values>
   public get(subscription?: Subscription<Values> | DataSubscription<Values>, initialize: boolean = true): DataSubscription<Values> | Values {
@@ -184,11 +160,36 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     }
   }
   public got(subscription: Subscription<Values> | DataSubscription<Values>): DataSubscription<Values> {
-    return (subscription instanceof DataSubscription) ? subscription.deacivate()
+    return (subscription instanceof DataSubscription) ? subscription.deactivate()
     : new DataSubscription(this, subscription, false)
   }
 
 } 
+
+const attach = constructAttatchToPrototype([Data, DataCollection].inner("prototype"))
+
+
+attach("isSubscribed", function(subscription: any) {
+  return this.subscriptions.includes(subscription)
+})
+
+attach(["unsubscribeToThis", "unsubscribeToChildren"], function(subscription: any) {
+  return this.subscriptions.includes(subscription)
+})
+
+attach(["subscribeToThis", "subscribeToChildren"], function(subscription: any, initialize: any) {
+  this.subscriptions.add(subscription)
+  if (initialize) {
+    let last = localSubscriptionNamespace.register
+    localSubscriptionNamespace.register = (me) => {
+      this.locSubNsReg.add(me)
+    }
+    subscription(this.value)
+    localSubscriptionNamespace.register = last
+  }
+})
+
+
 
 //@ts-ignore
 export type DataSet<Values extends any[], DataOrDataCol extends Values[0] | Values = Values[0] | Values, DataOrDataColTuple extends Concat<[Values[0]], OptionalifyTuple<Tail<Values>>> | Values = Concat<[Values[0]], OptionalifyTuple<Tail<Values>>> | Values> = {
@@ -205,45 +206,39 @@ type OptionalifyTuple<Tuple extends any[]> = {
 }
 
 
-type ProperSubscribable<Values extends any[]> = {subscribe: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribe: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
+type ProperSubscribable<Values extends any[]> = {subscribeToThis: (subscription: Subscription<Values>, initialize?: boolean) => void, subscribeToChildren: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribeToThis: (subscription: Subscription<Values>) => void, unsubscribeToChildren: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
 export type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
 
 
 export const dataSubscriptionCbBridge = Symbol("dataSubscriptionCbBridge")
 
-export class DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
+export class DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
+  private _notfiyAboutChangesOfChilds: boolean
 
-  protected _subscription: ConcreteSubscription
-  protected _data: ConcreteData
+  private _subscription: ConcreteSubscription
+  private _data: ConcreteData
+
 
   constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: false)
-  constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean)
+  constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean)
 
   constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: false)
-  constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, inititalize?: boolean)
+  constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean)
+
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false)
-  constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean)
-  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, inititalize?: boolean) {
+  constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean)
+
+  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription?: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, inititalize?: boolean, notfiyAboutChangesOfChilds: boolean = true) {
     //@ts-ignore
     this._data = data
     //@ts-ignore
     this._subscription = subscription
+    this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
     subscription[dataSubscriptionCbBridge] = this
 
     localSubscriptionNamespace.register(this as any)
     this.active(activate, inititalize)
-  }
 
-  public activate(initialize: boolean = true): this {  
-    if (this.active()) return this;
-    (this._data as ProperSubscribable<Values>).subscribe(this._subscription, initialize)
-    return this
-  }
-
-  public deacivate(): this {
-    if (!this.active()) return this;
-    (this._data as ProperSubscribable<Values>).unsubscribe(this._subscription)
-    return this
   }
 
   public active(): boolean
@@ -274,7 +269,7 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
       if (this._data !== data) {
         let isActive = this.active()
         let prevData: any
-        if (initialize) prevData = (this._data as ProperSubscribable<Values>).get()
+        if (initialize) prevData = clone((this._data as ProperSubscribable<Values>).get())
         this.deacivate()
         this._data = data
         if (isActive) this.activate(initialize && (!circularDeepEqual(prevData, (data as ProperSubscribable<Values>).get())))
@@ -297,28 +292,81 @@ export class DataSubscription<Values extends Value[], TupleValue extends [Value]
       return this
     }
   }
+
+  public notfiyAboutChangesOfChilds(): boolean
+  public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds: boolean): this
+  public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds?: boolean) {
+    if (notfiyAboutChangesOfChilds === undefined) return this._notfiyAboutChangesOfChilds
+    
+    if (this._notfiyAboutChangesOfChilds !== notfiyAboutChangesOfChilds) {
+      this.deacivate()
+      this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
+      this.active(false)
+    }
+
+    return this
+  }
+
+  public activate(initialize: boolean = true): this {  
+    if (this.active()) return this;
+    if (this._notfiyAboutChangesOfChilds) {
+      (this._data as any).subscribeToChildren(this._subscription, initialize)
+    }
+    else {
+      (this._data as any).subscribeToThis(this._subscription, initialize)
+    }
+    return this
+  }
+
+  public deacivate(): this {
+    if (!this.active()) return this;
+    if (this._notfiyAboutChangesOfChilds) (this._data as any).unsubscribeToChildren(this._subscription)
+    else (this._data as any).unsubscribeToThis(this._subscription)
+    return this
+  }
 }
 
 
 
+export interface DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
+
+  deactivate(): this
+
+  activate(initialize?: boolean): this
+
+  subscription(): ConcreteSubscription
+  subscription(subscription: ConcreteSubscription, initialize?: boolean): this
+
+  data(): ConcreteData
+  data(data: ConcreteData, initialize?: boolean): this
+
+  active(): boolean
+  active(activate: false): this
+  active(activate: true, initialize?: boolean): this
+  active(activate: boolean, initialize?: boolean): this
+}
 
 
+//@ts-ignore
+export const DataSubscription = DataBaseSubscription as ({ 
+  new <Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Subscribable<Values>, subscription: Subscription<Values>, activate?: false): DataSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription> 
+
+  new <Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Subscribable<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean): DataSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription> 
 
 
+  new <Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Data<Value>, subscription: Subscription<TupleValue>, activate?: false): DataSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription> 
+
+  new <Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, inititalize?: boolean): DataSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription> 
 
 
+  new <Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false): DataSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription> 
 
-
-
-// type w = ["a", "b"]
-
-// type QWE<Tuple extends string[], Ob extends {[key in string]: any}, TupleWithoutFirst extends SliceStartQuantity<Tuple, 1> = SliceStartQuantity<Tuple, 1>>
-//  = TupleWithoutFirst extends [] ? Ob[Tuple[0]] : QWE<TupleWithoutFirst, Ob[Tuple[0]]>
-
-
-// type s = [""]
-// type test = s extends [] ? true : false
-
-
-
+  new <Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean): DataSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription> 
+})
 

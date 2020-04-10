@@ -1,8 +1,7 @@
-import { Data, DataSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace } from "./data"
+import { Data, DataSubscription, DataBaseSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace } from "./data"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dataDerivativeLiableIndex, dbDerivativeLiableIndex } from "./derivativeExtention"
-import clone from "fast-copy"
 
 
 
@@ -18,6 +17,7 @@ class DataLink implements Link {
   private pathSubscriptions: DataSubscription<PathSegment[]>[] | PrimitivePathSegment[] = []
   private wrapper: DataBase<any>
   private data: Data<any>
+  private subscriptions: DataSubscription<any>[] = []
 
   private currentPathIndex: PrimitivePathSegment[]
 
@@ -27,7 +27,7 @@ class DataLink implements Link {
   destroy() {
     this.destroyPathSubscriptions()
 
-    this.subscriptions.Inner("deacivate", [])
+    this.subscriptions.Inner("deactivate", [])
     this.subscriptions.clear()
 
     for (let key in this) {
@@ -35,7 +35,7 @@ class DataLink implements Link {
     }
   }
 
-  private subscriptions: DataSubscription<any>[] = []
+  
   get(cb?: Function | DataSubscription<any>, init?: boolean) {
     if (cb) {
       let sub = this.data.get(cb as any, init)
@@ -232,11 +232,14 @@ class DataBaseLink extends Function implements Link {
     else this.dataBaseFunc(...a)
   }
 
+
+
+  // TODO
 }
 
 
 
-const attachToLinks = constructAttatchToPrototype([DataBaseLink.prototype, DataLink.prototype])
+const attachToLinks = constructAttatchToPrototype([DataBaseLink, DataLink].inner("prototype"))
 
 
 
@@ -414,15 +417,15 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
   private DataBaseFunction(...paths: PathSegment[]): any
   private DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
-  private DataBaseFunction(doNotClone?: boolean): Store
+  private DataBaseFunction(): Readonly<Store>
   private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
-  private DataBaseFunction(path_data_subscription_doNotClone?: PathSegment | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]): any {
+  private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]): any {
     const funcThis = this.funcThis
 
     
     
-    if (path_data_subscription_doNotClone instanceof Data || path_data_subscription_doNotClone instanceof DataCollection || typeof path_data_subscription_doNotClone === "string" || typeof path_data_subscription_doNotClone === "number") {
-      let dataSegments = (notfiyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription_doNotClone] : [path_data_subscription_doNotClone, notfiyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
+    if (path_data_subscription instanceof Data || path_data_subscription instanceof DataCollection || typeof path_data_subscription === "string" || typeof path_data_subscription === "number") {
+      let dataSegments = (notfiyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription] : [path_data_subscription, notfiyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
       let hasData = (dataSegments as any).ea((e) => {
         if (e instanceof Data || e instanceof DataCollection) return true
       })
@@ -463,27 +466,27 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     }
 
     
-    else if (typeof path_data_subscription_doNotClone === "function" || path_data_subscription_doNotClone instanceof DataSubscription) {
+    else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
       let notfiyAboutChangesOfChilds = (notfiyAboutChangesOfChilds_path_strict === undefined ? true : notfiyAboutChangesOfChilds_path_strict) as boolean
-      let subscription = path_data_subscription_doNotClone
-      let initialize = paths[0] === undefined ? true : paths[0]
+      let subscription = path_data_subscription
+      let initialize: boolean = paths[0] === undefined ? true : paths[0]
 
       if (notfiyAboutChangesOfChilds) { 
         if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
         else if (this.subscriptionsOfChildChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
-        else return new DataBaseSubscription(this as any, subscription as any, true, notfiyAboutChangesOfChilds, initialize)
+        else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notfiyAboutChangesOfChilds)
       }
       else {
         if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
         else if (this.subscriptionsOfThisChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
-        else return new DataBaseSubscription(this as any, subscription as any, true, notfiyAboutChangesOfChilds, initialize)
+        else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notfiyAboutChangesOfChilds)
       }
     }
-    else if (path_data_subscription_doNotClone === undefined || typeof path_data_subscription_doNotClone === "boolean") {
-      return path_data_subscription_doNotClone ? this.store : clone(this.store)
+    else if (path_data_subscription === undefined) {
+      return this.store
     }
-    else if (typeof path_data_subscription_doNotClone === objectString) {
-      let newData = path_data_subscription_doNotClone as ComplexData
+    else if (typeof path_data_subscription === objectString) {
+      let newData = path_data_subscription as ComplexData
       let strict = notfiyAboutChangesOfChilds_path_strict === undefined ? false : notfiyAboutChangesOfChilds_path_strict
 
       let parsingId = (paths[0] !== undefined ? paths[0] : Symbol("parsingId")) as any
@@ -680,7 +683,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   // Functions for Data**Base**Subscription
   // ------------
 
-  subscribeToChildren(subscription: Subscription<[Readonly<Store>]>, initialize?: boolean): void {
+  subscribeToChildren(subscription: Subscription<[Readonly<Store>]>, initialize?: boolean, ): void {
     if (initialize === undefined || initialize) subscription(this.store)
     //@ts-ignore
     this.subscriptionsOfChildChanges.add(subscription)
@@ -705,8 +708,8 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     return this.subscriptionsOfChildChanges.includes(subscription) || this.subscriptionsOfThisChanges.includes(subscription)
   }
 
-  get(): Store {
-    return clone(this.store)
+  get(): Readonly<Store> {
+    return this.store
   }
 
 
@@ -747,59 +750,6 @@ export const DataBase = InternalDataBase as ({ new <Store extends object = any>(
 
 
 
-
-
-
-class DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> extends DataSubscription<Values> {
-  protected _notfiyAboutChangesOfChilds: boolean
-
-  constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: false, notfiyAboutChangesOfChilds?: boolean)
-  constructor(data: Subscribable<Values>, subscription: Subscription<Values>, activate?: true, notfiyAboutChangesOfChilds?: boolean, inititalize?: boolean)
-
-  constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: false, notfiyAboutChangesOfChilds?: boolean)
-  constructor(data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, notfiyAboutChangesOfChilds?: boolean, inititalize?: boolean)
-  constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false, notfiyAboutChangesOfChilds?: boolean)
-  constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, notfiyAboutChangesOfChilds?: boolean, inititalize?: boolean)
-  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, notfiyAboutChangesOfChilds: boolean = true, inititalize?: boolean) {
-    //@ts-ignore
-    super(data, subscription, false, false)
-    this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
-
-    this.active(activate, inititalize)
-  }
-
-  public notfiyAboutChangesOfChilds(): boolean
-  public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds: boolean): this
-  public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds?: boolean) {
-    if (notfiyAboutChangesOfChilds === undefined) return this._notfiyAboutChangesOfChilds
-    
-    if (this._notfiyAboutChangesOfChilds !== notfiyAboutChangesOfChilds) {
-      this.deacivate()
-      this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
-      this.active(false)
-    }
-
-    return this
-  }
-
-  public activate(initialize: boolean = true): this {  
-    if (this.active()) return this;
-    if (this._notfiyAboutChangesOfChilds) {
-      (this._data as any).subscribeToChildren(this._subscription, initialize)
-    }
-    else {
-      (this._data as any).subscribeToThis(this._subscription, initialize)
-    }
-    return this
-  }
-
-  public deacivate(): this {
-    if (!this.active()) return this;
-    if (this._notfiyAboutChangesOfChilds) (this._data as any).unsubscribeToChildren(this._subscription)
-    else (this._data as any).unsubscribeToThis(this._subscription)
-    return this
-  }
-}
 
 
 dataDerivativeLiableIndex.set([Data, DataLink])
