@@ -39,6 +39,7 @@ export class Data<Value = unknown> {
     else {
       if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
       else if (this.subscriptions.includes(subscription)) return subscription[dataSubscriptionCbBridge].activate()
+      //@ts-ignore
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
@@ -107,7 +108,10 @@ dataDerivativeLiableIndex.set([Data])
 export type FuckedUpDataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>
 
 
-export type DataSetify<T extends any[]> = { 
+
+
+
+export type FuckedUpDataSetify<T extends any[]> = { 
   [P in keyof T]: FuckedUpDataSet<[T[P]]>
 }
 
@@ -115,17 +119,17 @@ export type DataSetify<T extends any[]> = {
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: Subscription<Values>[] = []
   //@ts-ignore
-  private datas: DataSetify<Values> = []
+  private datas: FuckedUpDataSetify<Values> = []
   private store: Values
 
   private observers: Subscription<[Value]>[] = []
 
-  constructor(...datas: DataSetify<Values>) {
+  constructor(...datas: FuckedUpDataSetify<Values>) {
     //@ts-ignore
     this.set(...datas)
   }
 
-  public set(...datas: DataSetify<Values>) {
+  public set(...datas: FuckedUpDataSetify<Values>) {
     this.datas.ea((data, i) => {
       data.got(this.observers[i])
     })

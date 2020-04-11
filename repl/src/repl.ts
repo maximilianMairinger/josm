@@ -1,5 +1,4 @@
-import { Data, DataBase, setDataDerivativeIndex } from "../../app/src/josm"
-
+import { Data, DataBase, setDataDerivativeIndex, DataCollection } from "../../app/src/josm"
 
 
 setDataDerivativeIndex([
@@ -16,14 +15,8 @@ setDataDerivativeIndex([
   }
 ])
 
-let d = new Data(2)
-let sub = d.get(console.log)
-//@ts-ignore
-d.dec(0)
-
-
-
-
+let d = new DataBase({a: {b: "qwe"}, b: 2})
+let sub = d(new DataCollection(new Data("qwe")))
 
 
 

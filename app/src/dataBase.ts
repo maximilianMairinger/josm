@@ -220,15 +220,20 @@ class DataBaseLink extends Function implements Link {
 
   LinkFunction(...a) {
     if (typeof a[0] === "function" || a[0] instanceof DataSubscription) {
+      //@ts-ignore
       let sub = this.dataBaseFunc(...a)
+      //@ts-ignore
       this.subscriptions.add(sub)
       return sub
     }
     else if (a[0] instanceof Data || a[0] instanceof DataCollection || typeof a[0] === "string" || typeof a[0] === "number") {
+      //@ts-ignore
       let link = this.dataBaseFunc(...a)
+      //@ts-ignore
       this.distributedLinks.add(link)
       return link
     }
+    //@ts-ignore
     else this.dataBaseFunc(...a)
   }
 
@@ -293,6 +298,78 @@ attachToLinks("resolvePath", function() {
 
 
 
+
+type DataSetify<E extends any[]> = {
+  //@ts-ignore
+  [key in keyof E]: DataCollection<E[key]> | Data<E[key]> | (E[key] extends PrimitivePathSegment ? E[key] : never)
+}
+
+
+type Unshift<A, T extends Array<any>> 
+= ((a: A, ...b: T) => any) extends ((...result: infer Result) => any) ? Result : never;
+type Shift<T extends Array<any>> 
+= ((...a: T) => any) extends ((a: any, ...result: infer Result) => any) ? Result : never;
+
+type Revert
+  <T extends Array<any>
+  , Result extends Array<any> = []
+  , First extends T[keyof T] = T[0]
+  , Rest extends Array<any> = Shift<T>> = {
+  [K in keyof T]: Rest['length'] extends 0 ? Unshift<First, Result> : Revert<Rest, Unshift<First, Result>> 
+}[0]
+
+// this was done to avoid infinite processing the type by TS
+type Level = 0 | 1 | 2 | 3 | 4 | 5
+type NextLevel<X extends Level> = 
+  X extends 0
+  ? 1
+  : X extends 1
+  ? 2
+  : X extends 2
+  ? 3
+  : X extends 3
+  ? 4
+  : X extends 4
+  ? 5
+  : never
+
+// this type will give us possible path type for the object
+type RecursivePath<Obj extends object, Result extends any[] = [], Lv extends Level = 0> = {
+  [K in keyof Obj]: 
+    Lv extends never
+    ? Result
+    : Obj[K] extends object 
+    ? (Result['length'] extends 0 ? never : Revert<Result>) | RecursivePath<Obj[K], Unshift<K, Result>, NextLevel<Lv>>
+    : Revert<Result> | Revert<Unshift<K,Result>>
+}[keyof Obj]
+
+
+// this type will give as value type at given path
+type RecursivePathPluck<Obj, Path extends any> = 
+{
+  [K in keyof Path]: 
+    Path extends any[]
+    ? Path[K] extends keyof Obj 
+    ? Path['length'] extends 1 
+    ? Obj[Path[K]]
+    : RecursivePathPluck<Obj[Path[K]], Shift<Path>>
+    : never
+    : never
+}[number]
+
+// // checks if type is working
+// type Test3 = RecursivePathPluck<{a: {b: {c: string}, d: string}},['a', 'b']>
+// type Test4 = RecursivePathPluck<{a: {b: {c: {e: string}}, d: [string, number]}}, ['a','d', 0]>
+
+type MaybeDataBase<Type> = Type extends object ? DataBase<Type> : Data<Type>
+
+type RecursivePathPluckDatabase<Obj, Path> = MaybeDataBase<RecursivePathPluck<Obj, Path>>
+
+
+// type Test5 = RecursivePathPluckDatabase<{a: 2, b: {qwe: "qwe"}}, ["b"]>
+
+// let e: Test5
+// e.qwe
 
 
 
@@ -409,6 +486,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   }
 
   private DataBaseFunctionWrapper(...a) {
+    //@ts-ignore
     return this.DataBaseFunction(...a)
   }
 
@@ -416,14 +494,23 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
 
   
-  private DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
+  
   private DataBaseFunction(): Readonly<Store>
   private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
-  private DataBaseFunction(...paths: PathSegment[]): any
-  private DataBaseFunction(path_data_subscription?: PathSegment | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: PathSegment | boolean, ...paths: any[]) {
+  private DataBaseFunction<Path extends (keyof Store)>(path: Path): RecursivePathPluckDatabase<Store, [Path]>
+  private DataBaseFunction(path: Data | DataCollection): any
+
+  private DataBaseFunction<Path extends (keyof Store)>(path: Path, ...paths: PrimitivePathSegment[]): any
+  // Not working in ts yet | alternative above
+  // private DataBaseFunction<Paths extends (string | number)[]>(...paths: Paths): RecursivePathPluckDatabase<Store, Paths>
+
+  private DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
+  
+  // Not working in ts yet
+  // private DataBaseFunction<Paths extends any[]>(...paths: DataSetify<Paths> & PathSegment[]): RecursivePathPluck<Store, List.Flatten<Paths>>
+  private DataBaseFunction(path_data_subscription?: Data | DataCollection | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: Data | DataCollection | boolean | PrimitivePathSegment, ...paths: any[]) {
     const funcThis = this.funcThis
 
-    
     
     if (path_data_subscription instanceof Data || path_data_subscription instanceof DataCollection || typeof path_data_subscription === "string" || typeof path_data_subscription === "number") {
       let dataSegments = (notfiyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription] : [path_data_subscription, notfiyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
@@ -737,17 +824,18 @@ type ComplexData = {[key in string | number]: any}
 
 
 
-type FunctionProperties = "apply" | "call" | "caller" | "bind" | "arguments" | "length" | "prototype" | "name" | "toString"
-type OmitFunctionProperties<Func extends Function> = Func & Record<FunctionProperties, never>
 type DataBaseify<Type extends object> = { 
   [Key in keyof Type]: Type[Key] extends object ? DataBase<Type[Key]> : Data<Type[Key]>
 }
+
+// when omiting function props the expression is not callable any more so for now this does nothing (maybe this changes in the future)
+type FunctionProperties = "apply" | "call" | "caller" | "bind" | "arguments" | "length" | "prototype" | "name" | "toString"
+type OmitFunctionProperties<Func extends Function> = Func & Record<FunctionProperties, Func>
 
 export type DataBase<Store extends object = any> = (DataBaseify<Store> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new <Store extends object = any>(store: Store): DataBase<Store> })
-
 
 
 
