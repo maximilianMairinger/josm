@@ -823,16 +823,20 @@ type ComplexData = {[key in string | number]: any}
 
 
 
+export type RemovePotentialArrayFunctions<Ob extends object> = Ob extends Array<any> ? Ob extends Array<infer I> ? Omit<Ob, keyof Array<I>> extends {0: any} ? Omit<Ob, keyof Array<any>> : {[key in number]: I} : Ob : Ob
+
 
 type DataBaseify<Type extends object> = { 
-  [Key in keyof Type]: Type[Key] extends object ? DataBase<Type[Key]> : Data<Type[Key]>
+  [Key in keyof Type]: Type[Key] extends object ? RecDataBase<RemovePotentialArrayFunctions<Type[Key]>> : Data<Type[Key]>
 }
+
+type RecDataBase<Store extends {[key in string]: any} = unknown> = DataBaseify<Store>/* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
 
 // when omiting function props the expression is not callable any more so for now this does nothing (maybe this changes in the future)
 type FunctionProperties = "apply" | "call" | "caller" | "bind" | "arguments" | "length" | "prototype" | "name" | "toString"
-type OmitFunctionProperties<Func extends Function> = Func & Record<FunctionProperties, Func>
+type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionProperties>
 
-export type DataBase<Store extends object = any> = (DataBaseify<Store> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)
+export type DataBase<Store extends {[key in string]: any} = unknown, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new <Store extends object = any>(store: Store): DataBase<Store> })
