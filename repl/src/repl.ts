@@ -15,32 +15,22 @@ setDataDerivativeIndex([
   }
 ])
 
-export type RemovePotentialArrayFunctions<Ob extends object> = Ob extends Array<infer I> ? Omit<Ob, keyof Array<I>> extends {0: any} ? Omit<Ob, keyof Array<any>> : {[key in number]: I} : Ob
-
-type te = RemovePotentialArrayFunctions<{a: ["asd"], b: {c: 2}}>
 
 
 
-let db = new DataBase({a: ["asd"], b: {c: 2}})
-let db2 = new DataBase([2, 3, "qwe"])
-
-db2[0].get((qwerqwer) => {
-
-})
 
 
-type FilterFlags<Base, Condition> = { [Key in keyof Base]: Base[Key] extends Condition ? Key : never };
-type AllowedNames<Base, Condition> = FilterFlags<Base, Condition>[keyof Base];
-type SubType<Base, Condition> = Pick<Base, AllowedNames<Base, Condition>>;
-
-// type test = {
-//   [key in keyof SubType<e, string>]: e[key]
-// }
 
 
-//   type SubType<Base, Condition> = Pick<Base, {
-//     [Key in keyof Base]: Base[Key] extends Condition ? Key : never
-// }[keyof Base]>;
+
+
+
+
+
+
+
+
+
 
 
 
