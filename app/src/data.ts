@@ -4,12 +4,15 @@ import { Concat } from 'typescript-tuple'
 import { DataBase } from './josm'
 import clone from "fast-copy"
 
+import xrray from "xrray"
+xrray(Array)
+
 import { circularDeepEqual } from "fast-equals"
 
-import Xrray from "xrray"
+
 import { dataDerivativeLiableIndex } from './derivativeExtention'
 import constructAttatchToPrototype from 'attatch-to-prototype'
-Xrray(Array)
+
 
 export const localSubscriptionNamespace = {
   register: (me: {destroy: () => void}) => {

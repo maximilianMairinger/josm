@@ -3,6 +3,9 @@ import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dataDerivativeLiableIndex, dbDerivativeLiableIndex } from "./derivativeExtention"
 
+import xrray from "xrray"
+xrray(Array)
+
 
 
 interface Link {

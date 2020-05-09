@@ -1,5 +1,5 @@
-import { DataBase } from "./dataBase"
-import { Data } from "./data"
+import { DataBase } from "./josm"
+import { Data } from "./josm"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 
 
@@ -35,7 +35,8 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
     }
   })
 
-  return collection.first.prototype
+  //@ts-ignore
+  return Data
 }
 
 
@@ -48,7 +49,8 @@ export function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectio
     dbDerivativeLiableIndex.add(e.prototype)
   })
 
-  return collection.first.prototype
+  //@ts-ignore
+  return DataBase
 }
 
 

@@ -50,7 +50,8 @@ db
 
 
 let d = new DATA(2)
-d
+console.log(d.get(console.log))
+d.inc()
 
 
 
