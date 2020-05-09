@@ -496,8 +496,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   
   
   private DataBaseFunction(): Readonly<Store>
+  
   private DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
-  private DataBaseFunction<Path extends (keyof Store)>(path: Path): RecursivePathPluckDatabase<Store, [Path]>
+  private DataBaseFunction<Path extends (keyof Store)>(path: Path): any
+  // Not working in ts yet | alternative above
+  // private DataBaseFunction<Path extends (keyof Store)>(path: Path): RecursivePathPluckDatabase<Store, [Path]>
   private DataBaseFunction(path: Data | DataCollection): any
 
   private DataBaseFunction<Path extends (keyof Store)>(path: Path, ...paths: PrimitivePathSegment[]): any

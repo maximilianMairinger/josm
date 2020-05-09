@@ -1,8 +1,23 @@
-import { Data, DataBase, setDataDerivativeIndex, DataCollection } from "../../app/src/josm"
+import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection } from "../../app/src/josm"
 
 
-setDataDerivativeIndex([
-  class Number extends Data<number> {
+let DB = setDataBaseDerivativeIndex([
+  class List extends DataBase<any[]> {
+
+  }
+])
+
+
+let db = new DB({ok: "qwe"})
+
+
+
+
+let DATA = setDataDerivativeIndex(
+  class Num extends Data<number> {
+    constructor(e: number) {
+      super(e)
+    }
     inc(by: number = 1) {
       this.set(this.get() + by)
     }
@@ -10,21 +25,20 @@ setDataDerivativeIndex([
       this.set(this.get() - by)
     }
   },
-  class List extends DataBase<any[]> {
-
+  class Str extends Data<string> {
+    constructor(n: string) {
+      super(n)
+    }
+    append(s: string) {
+      //TODO
+    }
   }
-])
+)
 
 
 
-
-
-
-
-
-
-
-
+let d = new DATA(2)
+d.
 
 
 
