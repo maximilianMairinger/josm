@@ -10,7 +10,6 @@ export const dbDerivativeLiableIndex: any[] = []
 
 
 
-type DBClass<E> = { new<T = any> (...a: any): DataBase<E> }
 
 
 
@@ -19,19 +18,15 @@ type DataDerivativeCollectionClasses<E extends unknown[]> = {
 }
 
 
-type DBDerivativeCollectionClasses<A extends unknown[] = unknown[]> = {
-  [key in keyof A]: DBClass<A[key]>
+type DataBaseDerivativeCollectionClasses<E extends unknown[]> = {
+  [key in keyof E]: { new<T = unknown> (...a: any[]): DataBase<E[key]> }
 }
 
 
 
 
 
-
-type Inferrr<W> = never extends Data<infer T> ? [W] extends [T] ? Data<W> : void : never
-
-
-export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): {new<Q> (a: Q): {[key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never}[number]} {
+export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): {new<Q> (a: Q): {[key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never}[number] & Data<Q>} {
 
   collection.ea((e) => {
     let attach = constructAttatchToPrototype(dataDerivativeLiableIndex.Inner("prototype"))
@@ -43,7 +38,8 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
   return collection.first.prototype
 }
 
-export function setDataBaseDerivativeIndex<T extends any[], E extends unknown[]>(collection: T & DBDerivativeCollectionClasses<E>): { new<O extends object> (a: O): DataBase<O> & T[number] } {
+
+export function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): {new<Q> (a: Q): {[key in keyof T]: InstanceType<T[key]> extends DataBase<Q> ? InstanceType<T[key]> : never}[number] & DataBase<Q>} {
 
   dbDerivativeLiableIndex.clear()
 
