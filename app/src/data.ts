@@ -104,8 +104,6 @@ export class Data<Value = unknown> {
   }
 }
 
-dataDerivativeLiableIndex.set([Data])
-
 // Why this works is an absolute mirracle to me...
 // In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs), but somehow it works like this
 export type FuckedUpDataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>

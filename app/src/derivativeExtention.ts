@@ -1,5 +1,8 @@
+// JUST TYPES
 import { DataBase } from "./josm"
 import { Data } from "./josm"
+
+
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 
 
@@ -36,7 +39,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
   })
 
   //@ts-ignore
-  return Data
+  return
 }
 
 
@@ -50,7 +53,7 @@ export function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectio
   })
 
   //@ts-ignore
-  return DataBase
+  return
 }
 
 

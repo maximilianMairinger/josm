@@ -1,7 +1,7 @@
 import { Data, DataSubscription, DataBaseSubscription, DataCollection, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace } from "./data"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
-import { dataDerivativeLiableIndex, dbDerivativeLiableIndex } from "./derivativeExtention"
+import { dbDerivativeLiableIndex } from "./derivativeExtention"
 
 import xrray from "xrray"
 xrray(Array)
@@ -16,7 +16,7 @@ interface Link {
   updatePathResolvement(wrapper?: DataBase<any>): void
 } 
 
-class DataLink implements Link {
+export class DataLink implements Link {
   private pathSubscriptions: DataSubscription<PathSegment[]>[] | PrimitivePathSegment[] = []
   private wrapper: DataBase<any>
   private data: Data<any>
@@ -846,9 +846,3 @@ export type DataBase<Store extends {[key in string]: any} = unknown, S extends R
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new <Store extends object = any>(store: Store): DataBase<Store> })
-
-
-
-
-
-dataDerivativeLiableIndex.set([Data, DataLink])
