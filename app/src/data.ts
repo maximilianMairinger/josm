@@ -118,29 +118,34 @@ export type FuckedUpDataSetify<T extends any[]> = {
 }
 
 
+function isSubscribed(subscription: any) {
+  return this.subscriptions.includes(subscription)
+}
+
+function unsubscribe(subscription: any) {
+  return this.subscriptions.includes(subscription)
+
+}
+
+function subscribe(subscription: any, initialize: any) {
+  this.subscriptions.add(subscription)
+  if (initialize) {
+    let last = localSubscriptionNamespace.register
+    localSubscriptionNamespace.register = (me) => {
+      this.locSubNsReg.add(me)
+    }
+    subscription(this.value)
+    localSubscriptionNamespace.register = last
+  }
+}
+
+
 export function attachSubscribeableMixin(to: any) {
   const attach = constructAttatchToPrototype(to.prototype)
 
-
-  attach("isSubscribed", function(subscription: any) {
-    return this.subscriptions.includes(subscription)
-  })
-  
-  attach(["unsubscribeToThis", "unsubscribeToChildren"], function(subscription: any) {
-    return this.subscriptions.includes(subscription)
-  })
-  
-  attach(["subscribeToThis", "subscribeToChildren"], function(subscription: any, initialize: any) {
-    this.subscriptions.add(subscription)
-    if (initialize) {
-      let last = localSubscriptionNamespace.register
-      localSubscriptionNamespace.register = (me) => {
-        this.locSubNsReg.add(me)
-      }
-      subscription(this.value)
-      localSubscriptionNamespace.register = last
-    }
-  })
+  attach("isSubscribed", isSubscribed)
+  attach(["unsubscribeToThis", "unsubscribeToChildren"], unsubscribe)
+  attach(["subscribeToThis", "subscribeToChildren"], subscribe)
 }
 
 attachSubscribeableMixin(Data)
