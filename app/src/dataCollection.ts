@@ -1,4 +1,4 @@
-import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge } from "./data"
+import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribeableMixin } from "./data"
 
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: Subscription<Values>[] = []
@@ -53,3 +53,5 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   }
 
 } 
+
+attachSubscribeableMixin(DataCollection)
