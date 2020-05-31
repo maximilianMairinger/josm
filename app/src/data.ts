@@ -41,8 +41,8 @@ export class Data<Value = unknown> {
   public get(subscription?: Subscription<[Value]> | DataSubscription<[Value]>, initialize: boolean = true): Value | DataSubscription<[Value]> {
     if (subscription === undefined) return this.value
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-      else if (this.subscriptions.includes(subscription)) return subscription[dataSubscriptionCbBridge].activate()
+      if (subscription instanceof DataSubscription) return subscription.data(this, initialize)
+      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       //@ts-ignore
       else return new DataSubscription(this, subscription, true, initialize)
     }
@@ -94,7 +94,8 @@ export class Data<Value = unknown> {
     return value
   }
 
-  protected isSubscribed(subscription: Subscription<[Value]>) {}
+  //@ts-ignore
+  protected isSubscribed(subscription: Subscription<[Value]>): boolean {}
   protected subscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
   protected subscribeToChildren(subscription: Subscription<[Value]>, initialize: boolean) {}
   protected unsubscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
@@ -248,6 +249,7 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
       if (subscription === this._subscription) return this
       let isActive = this.active()
       this.deacivate()
+      delete this._subscription[dataSubscriptionCbBridge]
       this._subscription = subscription
       subscription[dataSubscriptionCbBridge] = this
       if (isActive) this.activate(initialize)

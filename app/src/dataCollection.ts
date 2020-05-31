@@ -42,11 +42,19 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     //@ts-ignore
     if (subscription === undefined) return this.datas.Inner("get", [])
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-      else if (this.subscriptions.includes(subscription)) return subscription[dataSubscriptionCbBridge].activate()
+      if (subscription instanceof DataSubscription) return subscription.data(this, initialize)
+      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
+
+  //@ts-ignore
+  protected isSubscribed(subscription: Subscription<Values>): boolean {}
+  protected subscribeToThis(subscription: Subscription<Values>, initialize: boolean) {}
+  protected subscribeToChildren(subscription: Subscription<Values>, initialize: boolean) {}
+  protected unsubscribeToThis(subscription: Subscription<Values>, initialize: boolean) {}
+  protected unsubscribeToChildren(subscription: Subscription<Values>, initialize: boolean) {}
+
   public got(subscription: Subscription<Values> | DataSubscription<Values>): DataSubscription<Values> {
     return (subscription instanceof DataSubscription) ? subscription.deactivate()
     : new DataSubscription(this, subscription, false)
