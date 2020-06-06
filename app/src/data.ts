@@ -41,7 +41,7 @@ export class Data<Value = unknown> {
   public get(subscription?: Subscription<[Value]> | DataSubscription<[Value]>, initialize: boolean = true): Value | DataSubscription<[Value]> {
     if (subscription === undefined) return this.value
     else {
-      if (subscription instanceof DataSubscription) return subscription.data(this, initialize)
+      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
       else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       //@ts-ignore
       else return new DataSubscription(this, subscription, true, initialize)

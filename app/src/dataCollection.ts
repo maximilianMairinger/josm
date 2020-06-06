@@ -42,7 +42,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     //@ts-ignore
     if (subscription === undefined) return this.datas.Inner("get", [])
     else {
-      if (subscription instanceof DataSubscription) return subscription.data(this, initialize)
+      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
       else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge].activate()
       else return new DataSubscription(this, subscription, true, initialize)
     }

@@ -567,12 +567,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       let initialize: boolean = paths[0] === undefined ? true : paths[0]
 
       if (notfiyAboutChangesOfChilds) { 
-        if (subscription instanceof DataSubscription) return subscription.data(this, initialize)
+        if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
         else if (this.subscriptionsOfChildChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
         else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notfiyAboutChangesOfChilds)
       }
       else {
-        if (subscription instanceof DataSubscription) return subscription.data(this, initialize)
+        if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
         else if (this.subscriptionsOfThisChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
         else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notfiyAboutChangesOfChilds)
       }
