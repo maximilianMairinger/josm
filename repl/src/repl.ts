@@ -6,52 +6,77 @@ import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, Dat
 
 
 
+let d = new Data(2)
+console.log(d < 2)
 
 
-let DATA = setDataDerivativeIndex(
-  class Num extends Data<number> {
-    constructor(e: number) {
-      super(e)
-    }
-    inc(by: number = 1) {
-      this.set(this.get() + by)
-    }
-    dec(by: number = 1) {
-      this.set(this.get() - by)
-    }
-  },
-  class Str extends Data<string> {
-    constructor(n: string) {
-      super(n)
-    }
-    append(s: string) {
-      //TODO
-    }
-  }
-)
-
-let DATABASE = setDataBaseDerivativeIndex(
-  class List extends DataBase<unknown[]> {
-    add(a: any) {
-
-    }
-  },
-  class AnotherArr extends DataBase<string[]> {
-    rem(a: any) {
-
-    }
-  }
-)
-
-let me = ["qwe"]
-
-let db = new DATABASE(me)
-db
 
 
-let d = new DATA(2)
-console.log(d.get(console.log))
-d.inc()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// let DATA = setDataDerivativeIndex(
+//   class Num extends Data<number> {
+//     constructor(e: number) {
+//       super(e)
+//     }
+//     inc(by: number = 1) {
+//       this.set(this.get() + by)
+//     }
+//     dec(by: number = 1) {
+//       this.set(this.get() - by)
+//     }
+//   },
+//   class Str extends Data<string> {
+//     constructor(n: string) {
+//       super(n)
+//     }
+//     append(s: string) {
+//       //TODO
+//     }
+//   }
+// )
+
+// let DATABASE = setDataBaseDerivativeIndex(
+//   class List extends DataBase<unknown[]> {
+//     add(a: any) {
+
+//     }
+//   },
+//   class AnotherArr extends DataBase<string[]> {
+//     rem(a: any) {
+
+//     }
+//   }
+// )
+
+// let me = ["qwe"]
+
+// let db = new DATABASE(me)
+// db
+
+
+// let d = new DATA(2)
+// console.log(d.get(console.log))
+// d.inc()
 
 
 
