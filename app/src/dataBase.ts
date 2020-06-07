@@ -49,6 +49,10 @@ export class DataLink implements Link {
     else return this.data.get()
   }
 
+  public valueOf() {
+    return this.data.valueOf()
+  }
+
   subscribe(...a: any) {
     //@ts-ignore
     this.data.subscribe(...a)

@@ -94,6 +94,10 @@ export class Data<Value = unknown> {
     return value
   }
 
+  public valueOf() {
+    return this.get()
+  }
+
   //@ts-ignore
   protected isSubscribed(subscription: Subscription<[Value]>): boolean {}
   protected subscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
