@@ -128,8 +128,7 @@ function isSubscribed(subscription: any) {
 }
 
 function unsubscribe(subscription: any) {
-  return this.subscriptions.includes(subscription)
-
+  this.subscriptions.rmV(subscription)
 }
 
 function subscribe(subscription: any, initialize: any) {
