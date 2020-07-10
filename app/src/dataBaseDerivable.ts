@@ -1,4 +1,4 @@
-import { dataDerivativeLiableIndex } from "./derivativeExtention";
+import { dataDerivativeLiableIndex } from "./derivativeExtension";
 import { DataLink } from "./dataBase";
 export * from "./dataBase";
 

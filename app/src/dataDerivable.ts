@@ -1,5 +1,5 @@
 import { Data } from "./data";
-import { dataDerivativeLiableIndex } from "./derivativeExtention";
+import { dataDerivativeLiableIndex } from "./derivativeExtension";
 export * from "./data";
 
 

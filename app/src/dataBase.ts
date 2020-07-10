@@ -2,10 +2,12 @@ import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, da
 import { DataCollection } from "./dataCollection"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
-import { dbDerivativeLiableIndex } from "./derivativeExtention"
+import { dbDerivativeLiableIndex } from "./derivativeExtension"
 
 import xrray from "xrray"
 xrray(Array)
+import xtring from "xtring"
+xtring()
 
 
 
@@ -353,17 +355,17 @@ type RecursivePath<Obj extends object, Result extends any[] = [], Lv extends Lev
 
 
 // this type will give as value type at given path
-type RecursivePathPluck<Obj, Path extends any> = 
-{
-  [K in keyof Path]: 
-    Path extends any[]
-    ? Path[K] extends keyof Obj 
-    ? Path['length'] extends 1 
-    ? Obj[Path[K]]
-    : RecursivePathPluck<Obj[Path[K]], Shift<Path>>
-    : never
-    : never
-}[number]
+// type RecursivePathPluck<Obj, Path extends any> = 
+// {
+//   [K in keyof Path]: 
+//     Path extends any[]
+//     ? Path[K] extends keyof Obj 
+//     ? Path['length'] extends 1 
+//     ? Obj[Path[K]]
+//     : RecursivePathPluck<Obj[Path[K]], Shift<Path>>
+//     : never
+//     : never
+// }[number]
 
 // // checks if type is working
 // type Test3 = RecursivePathPluck<{a: {b: {c: string}, d: string}},['a', 'b']>
@@ -371,7 +373,7 @@ type RecursivePathPluck<Obj, Path extends any> =
 
 type MaybeDataBase<Type> = Type extends object ? DataBase<Type> : Data<Type>
 
-type RecursivePathPluckDatabase<Obj, Path> = MaybeDataBase<RecursivePathPluck<Obj, Path>>
+// type RecursivePathPluckDatabase<Obj, Path> = MaybeDataBase<RecursivePathPluck<Obj, Path>>
 
 
 // type Test5 = RecursivePathPluckDatabase<{a: 2, b: {qwe: "qwe"}}, ["b"]>

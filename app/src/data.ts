@@ -7,11 +7,13 @@ import { DataCollection } from "./dataCollection"
 
 import xrray from "xrray"
 xrray(Array)
+import xtring from "xtring"
+xtring()
 
 import { circularDeepEqual } from "fast-equals"
 
 
-import { dataDerivativeLiableIndex } from './derivativeExtention'
+import { dataDerivativeLiableIndex } from './derivativeExtension'
 import constructAttatchToPrototype from 'attatch-to-prototype'
 
 
