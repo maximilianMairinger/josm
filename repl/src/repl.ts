@@ -8,6 +8,7 @@ let historyIndex = constructIndex((a: any) => {return {} as {[timestamp: number]
 
 let DATA = setDataDerivativeIndex(
   class Num extends Data<number> {
+    static id = "Num"
     inc(by: number = 1) {
       this.set(this.get() + by)
     }
@@ -16,6 +17,7 @@ let DATA = setDataDerivativeIndex(
     }
   },
   class Str extends Data<string> {
+    static id = "Str"
     inject(injection: string, atIndex: number = this.get().length, atTime: number = Date.now()) {
 
       let injectionHistory = historyIndex(this)

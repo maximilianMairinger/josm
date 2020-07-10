@@ -144,7 +144,7 @@ class DataBaseLink extends Function implements Link {
     this.funcThis[internalDataBaseBridge] = this
     const attach = constructAttatchToPrototype(this.funcThis)
     dbDerivativeLiableIndex.ea((e) => {
-      for (let key of Object.getOwnPropertyNames(e).rmV("constructor")) {
+      for (let key in e) {
         attach(key, e[key])  
       }
     })
@@ -429,7 +429,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     this.funcThis[internalDataBaseBridge] = this
     const attach = constructAttatchToPrototype(this.funcThis)
     dbDerivativeLiableIndex.ea((e) => {
-      for (let key of Object.getOwnPropertyNames(e).rmV("constructor")) {
+      for (let key in e) {
         attach(key, e[key])  
       }
     })
