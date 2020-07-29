@@ -1,14 +1,18 @@
 import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection } from "../../app/src/josm"
-import { timeStamp } from "console"
 import constructIndex from "key-index"
+import constructAttatchToPrototype from "attatch-to-prototype"
+
+let ob = {}
+constructAttatchToPrototype(ob)("ok", () => {
+  console.log("qwe")
+})
+
+console.log(ob)
 
 
-let historyIndex = constructIndex((a: any) => {return {} as {[timestamp: number]: {[index: number]: string}}})
 
-
-let DATA = setDataDerivativeIndex(
+const DATA = setDataDerivativeIndex(
   class Num extends Data<number> {
-    static id = "Num"
     inc(by: number = 1) {
       this.set(this.get() + by)
     }
@@ -17,114 +21,205 @@ let DATA = setDataDerivativeIndex(
     }
   },
   class Str extends Data<string> {
-    static id = "Str"
-    inject(injection: string, atIndex: number = this.get().length, atTime: number = Date.now()) {
+    append(txt: string) {
+      this.set(this.get() + txt)
+    }
+  }
+)
 
-      let injectionHistory = historyIndex(this)
-      if (injectionHistory[atTime] === undefined) {
-        let q = injectionHistory[atTime] = {}
-        q[atIndex] = injection
-      }
-      else {
-        let q = injectionHistory[atTime]
-        let n = injectionHistory[atTime] = {}
-        let l = injection.length - 1
-        let keys = Object.keys(q)
-        let start = keys.length
+let d = new DATA(2)
+d.get(console.log)
+d.inc(2)
+d.dec(4)
+
+let ds = new DATA("qq")
+ds.get(console.log)
+ds.append("ss")
 
 
 
-        for (let i = 0; i < keys.length; i++) {
-          const index = keys[i]
-          if (+index < atIndex) n[index] = q[index]
-          else {
-            start = i
-            break
-          }
-        }
-        n[atIndex] = injection
-        for (let i = start; i < keys.length; i++) {
-          const index = +keys[i]
-          n[index + l] = q[index]
-        }
-      }
+
+
+interface Person {
+  age: number,
+  firstName: string,
+  lastName: string
+}
+
+const DATABASE = setDataBaseDerivativeIndex(
+  class Pers extends DataBase<Person> {
+    happyBirthday() {
+      (this.age as any).inc()
+    }
+  }
+)
+
+let person = new DATABASE({
+  age: 18,
+  firstName: "Max",
+  lastName: "Someone"
+})
+
+person(console.log)
+
+person.happyBirthday()
+
+
+
+let db = new DataBase({key1: 1, key2: 2, nested: ["a", "b"]})
+db(console.log)
+
+db.nested[1].set("c")
+
+db({key2: undefined})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// let historyIndex = constructIndex((a: any) => {return {} as {[timestamp: number]: {[index: number]: string}}})
+
+
+// let DATA = setDataDerivativeIndex(
+//   class Num extends Data<number> {
+//     static id = "Num"
+//     inc(by: number = 1) {
+//       this.set(this.get() + by)
+//     }
+//     dec(by: number = 1) {
+//       this.set(this.get() - by)
+//     }
+//   },
+//   class Str extends Data<string> {
+//     static id = "Str"
+//     inject(injection: string, atIndex: number = this.get().length, atTime: number = Date.now()) {
+
+//       let injectionHistory = historyIndex(this)
+//       if (injectionHistory[atTime] === undefined) {
+//         let q = injectionHistory[atTime] = {}
+//         q[atIndex] = injection
+//       }
+//       else {
+//         let q = injectionHistory[atTime]
+//         let n = injectionHistory[atTime] = {}
+//         let l = injection.length - 1
+//         let keys = Object.keys(q)
+//         let start = keys.length
+
+
+
+//         for (let i = 0; i < keys.length; i++) {
+//           const index = keys[i]
+//           if (+index < atIndex) n[index] = q[index]
+//           else {
+//             start = i
+//             break
+//           }
+//         }
+//         n[atIndex] = injection
+//         for (let i = start; i < keys.length; i++) {
+//           const index = +keys[i]
+//           n[index + l] = q[index]
+//         }
+//       }
 
 
 
       
 
-      let injectionHistoryKeys = Object.keys(injectionHistory)
+//       let injectionHistoryKeys = Object.keys(injectionHistory)
 
 
-      let value = this.get()
-      let min = 0
-      for (let i = injectionHistoryKeys.length - 1; i >= 0; i--) {
-        const timestamp = +injectionHistoryKeys[i]
+//       let value = this.get()
+//       let min = 0
+//       for (let i = injectionHistoryKeys.length - 1; i >= 0; i--) {
+//         const timestamp = +injectionHistoryKeys[i]
 
-        if (timestamp > atTime) {
-          let injectionHistoryAtTimestamp = injectionHistory[timestamp]
-          for (let index in injectionHistoryAtTimestamp) {
-            index = +index as any
-            value = value.splice(index as any, injectionHistoryAtTimestamp[index as any].length)
-          }
+//         if (timestamp > atTime) {
+//           let injectionHistoryAtTimestamp = injectionHistory[timestamp]
+//           for (let index in injectionHistoryAtTimestamp) {
+//             index = +index as any
+//             value = value.splice(index as any, injectionHistoryAtTimestamp[index as any].length)
+//           }
           
-        }
-        else {
-          min = i + 1
-          break
-        }
-      }
+//         }
+//         else {
+//           min = i + 1
+//           break
+//         }
+//       }
 
-      value = value.splice(atIndex as any, 0, injection)
+//       value = value.splice(atIndex as any, 0, injection)
 
-      for (let i = injectionHistoryKeys.length - 1; i >= min; i--) {
-        const timestamp = injectionHistoryKeys[i]
+//       for (let i = injectionHistoryKeys.length - 1; i >= min; i--) {
+//         const timestamp = injectionHistoryKeys[i]
         
-        let injectionHistoryAtTimestamp = injectionHistory[timestamp]
-        for (let index in injectionHistoryAtTimestamp) {
-          index = +index as any
-          value = value.splice(index as any, 0, injectionHistoryAtTimestamp[index as any])
-        }
+//         let injectionHistoryAtTimestamp = injectionHistory[timestamp]
+//         for (let index in injectionHistoryAtTimestamp) {
+//           index = +index as any
+//           value = value.splice(index as any, 0, injectionHistoryAtTimestamp[index as any])
+//         }
         
-      }
+//       }
 
-      this.set(value)
-    }
-  }
-)
-
-// let DATABASE = setDataBaseDerivativeIndex(
-//   class Auto extends DataBase<{topSpeed: number}> {
-//     drive(meters: number) {
-//       return true
+//       this.set(value)
 //     }
-//   }  
+//   }
 // )
 
-let w = 5000
+// // let DATABASE = setDataBaseDerivativeIndex(
+// //   class Auto extends DataBase<{topSpeed: number}> {
+// //     drive(meters: number) {
+// //       return true
+// //     }
+// //   }  
+// // )
 
-Date.now = () => {
-  // w++
-  return w
-}
+// let w = 5000
+
+// Date.now = () => {
+//   // w++
+//   return w
+// }
  
 
 
 
 
-let b = true
-let n = 2
-let s = "q"
-let d = new DATA(s)
+// let b = true
+// let n = 2
+// let s = "q"
+// let d = new DATA(s)
 
-d.get(console.log)
+// d.get(console.log)
 
-d.inject("hello", 1)
-d.inject("hellow")
+// d.inject("hello", 1)
+// d.inject("hellow")
 
-d.inject("___", 0)
+// d.inject("___", 0)
 
-console.log(historyIndex(d))
+// console.log(historyIndex(d))
 
 
 
