@@ -599,11 +599,19 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       this.inBulkChange = true
       
       if (strict) handledKeys = []
+      let explicitDeleteKeys = []
 
       for (const key in newData) {
         if (strict) handledKeys.add(key)
+
         const prop = funcThis[key]
         const newVal = newData[key]
+
+        if (newVal === undefined) {
+          explicitDeleteKeys.add(key)
+          notifyFromThis = true
+          continue
+        }
         if (prop !== undefined) {
           if (prop instanceof Data) {
             if (typeof newVal !== "object") {
@@ -707,12 +715,19 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         }
       }
 
+      const destroyFunc = (key: string) => {
+        if (funcThis[key] instanceof Data) funcThis[key].destroy()
+        else funcThis[key][internalDataBaseBridge].destroy(this)
+      }
+
+      for (const key of explicitDeleteKeys) {
+        
+        destroyFunc(key)
+      }
+
       if (strict) {
         for (const key in funcThis) {
-          if (handledKeys.includes(key)) continue
-
-          if (funcThis[key] instanceof Data) funcThis[key].destroy()
-          else funcThis[key][internalDataBaseBridge].destroy(this)
+          if (!handledKeys.includes(key)) destroyFunc(key)
         }
       }
 
