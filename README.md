@@ -8,7 +8,7 @@ Josm is an \(JS\) **o**bject-oriented **s**tate **m**anager for the web & node, 
 
 > Please note that Josm is currently under development and not yet suited for production
 
-## Example
+## Usage
 
 Note that the state manager can tree-shaken off the observable implementation using esImports & a properly configured bundler \(e.g. webpack\).
 
@@ -28,7 +28,7 @@ data.get(console.log) //Calles (the observer) console.log everytime data is set
 data.set(10)
 data.set(100)
 
-console.log(data.get()) // This gets the current value of data
+console.log(data.get()) // This gets the current value of data (100)
 ```
 
 This would log `1; 10; 100; 100`.
@@ -86,6 +86,96 @@ dataSubscription.subscription((d2, d3) => {
   console.log("Custom Subscription", d2, d3)
 })
 ```
+
+--------
+
+#### DataBase
+
+`DataBase`s function similar to `Data`s, only that they are used to store multiple indexed `Data`s (objects / arrays).
+
+```ts
+import { DataBase } from "josm"
+
+let db = new DataBase({
+  key1: 1,
+  key2: 2
+  nestedKey: ["a", "b", "c"]
+})
+```
+
+> Note: Observed objects can be circular
+
+This instance can be traversed like a plain object. The primitive values are wrapped inside `Data`s.
+
+```ts
+console.log(db.key1.get())          // 2
+console.log(db.nestedKey[2].get())  // "c"
+```
+
+All operations concerning more than a primitive can be accessed via the various function overloads on a `DataBase`.
+
+A simple example for this would be to change multiple values of an object.
+
+```ts
+db({key1: 11, key2: 22})
+console.log(db.key1.get(), db.key2.get())   // 11, 22
+```
+
+Adding or deleting properties (`undefined` stands for delete)
+
+```ts
+db({key3: 33, key1: undefined})
+```
+
+Retriving the whole object
+
+```ts
+// once
+console.log(db())         // { key2: 22, key3: 33, nestedKey: ["a", "b", "c"] }
+
+// observed
+db((ob) => {
+  console.log("db", ob)
+})
+```
+
+> Note: The observer is being invoked every time something below it changes. So when `db.nestedKey[0]` is changed, the event is propergated to all observers above or on it.
+
+
+The object can also be traversed via an overload
+
+```ts
+db("nested", 2).get()   // Aquivilant to db.key2[2].get()
+```
+
+Even `Data`s can be used as key here
+
+```ts
+import { Data, DataBase } from "jsom"
+
+let lang = new DataBase({
+  en: {
+    greeting: "Hello",
+    appName: "Cool.oi"
+  },
+  de: {
+    greeting: "Hallo",
+    appName: "Cool.io"
+  }
+})
+
+let currentLangKey = new Data("en")
+
+lang(currentLangKey).appName.get(console.log)   // "Cool.oi"  // initially english
+currentLangKey.set("de")                        // "Cool.io"  // now german
+lang.en.appName.set("Cool.io")
+currentLangKey.set("de")                        //            // no chnage ("Cool.io" > "Cool.io") 
+```
+
+> Caveat: `name` (and some other properties) cannot be used, as they are already defined on the function object
+
+> Caveat: IntelliSense will show all properties that function has
+
 
 ## Conribute
 
