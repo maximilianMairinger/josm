@@ -453,7 +453,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
   private boundNotifyFromChild: () => void
 
-  constructor(store: Store, parsingId: Symbol, notifyParentOfChange?: () => void) {
+  constructor(store: Store, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     this.funcThis = this.bind(this)
 
@@ -559,18 +559,20 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   protected DataBaseFunction<Path extends (keyof Store)>(path: Path): any
   // Not working in ts yet | alternative above
   // private DataBaseFunction<Path extends (keyof Store)>(path: Path): RecursivePathPluckDatabase<Store, [Path]>
-  protected DataBaseFunction(path: Data | DataCollection): any
+  protected DataBaseFunction(path: Data): any
+  protected DataBaseFunction(path: DataCollection): any
 
   protected DataBaseFunction<Path extends (keyof Store)>(path: Path, ...paths: PrimitivePathSegment[]): any
   // Not working in ts yet | alternative above
   // private DataBaseFunction<Paths extends (string | number)[]>(...paths: Paths): RecursivePathPluckDatabase<Store, Paths>
 
   protected DataBaseFunction<NewStore>(data: NewStore, strict: true): DataBase<Merge<FilterT<NewStore, DefinedFieldUnion<NewStore>>, FilterT<Store, DefinedFieldUnion<NewStore>>>>
-  protected DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: false): DataBase<Merge<FilterT<NewStore, DefinedFieldUnion<NewStore>>, FilterT<Store, DefinedFieldUnion<NewStore>>>>
+  protected DataBaseFunction<NewStore>(data: NewStore, strict: false): DataBase<Merge<FilterT<NewStore, DefinedFieldUnion<NewStore>>, FilterT<Store, DefinedFieldUnion<NewStore>>>>
+  protected DataBaseFunction<NewStore>(data: NewStore): DataBase<Merge<FilterT<NewStore, DefinedFieldUnion<NewStore>>, FilterT<Store, DefinedFieldUnion<NewStore>>>>
   
   // Not working in ts yet
   // private DataBaseFunction<Paths extends any[]>(...paths: DataSetify<Paths> & PathSegment[]): RecursivePathPluck<Store, List.Flatten<Paths>>
-  protected DataBaseFunction(path_data_subscription?: Data | DataCollection | ComplexData | ((store: Store) => void) | boolean, notifyAboutChangesOfChilds_path_strict?: Data | DataCollection | boolean | PrimitivePathSegment, ...paths: any[]) {
+  protected DataBaseFunction(path_data_subscription?: Data | DataCollection | ComplexData | ((store: Store) => void) | boolean, notifyAboutChangesOfChilds_path_strict?: Data | DataCollection | boolean | PrimitivePathSegment, ...paths: any[]): any {
     const funcThis = this.funcThis
 
     
@@ -885,6 +887,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 }
 
 
+
 //@ts-ignore
 const entireDataBaseFunction = InternalDataBase.prototype.DataBaseFunctionWrapper.toString(); 
 const paramsOfDataBaseFunction = entireDataBaseFunction.slice(entireDataBaseFunction.indexOf("(") + 1, nthIndex(entireDataBaseFunction, ")", 1));
@@ -917,3 +920,7 @@ export type DataBase<Store extends {[key in string]: any} = unknown, S extends R
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new <Store extends object = any>(store: Store): DataBase<Store> })
+
+
+let d = new InternalDataBase({q: "qwe"})
+// d.DataBaseFunction(new Data("q"))
