@@ -1,6 +1,7 @@
 import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection } from "../../app/src/josm"
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
+import clone from "fast-copy"
 
 let ob = {}
 constructAttatchToPrototype(ob)("ok", () => {
@@ -67,19 +68,35 @@ person.happyBirthday()
 
 
 let db = new DataBase({key1: 1, key2: 2, nested: ["a", "b"]})
-db(console.log)
+db((e) => console.log(clone(e)))
 
 db.nested[1].set("c")
 
-db({key2: undefined})
+let db2 = db({key2: undefined, key4: 44, key1: "qwe"})
+let e = db2.key1
 
 
 
 
 
+console.log("------------------------------------lang--------------------------------")
+let lang = new DataBase({
+  en: {
+    greeting: "Hello",
+    appName: "Cool.oi"
+  },
+  de: {
+    greeting: "Hallo",
+    appName: "Cool.io"
+  }
+})
 
+let currentLangKey = new Data("en")
 
-
+lang(currentLangKey).appName.get(console.log)   // "Cool.oi"  // initially english
+currentLangKey.set("de")                        // "Cool.io"  // now german
+lang.en.appName.set("Cool.io")
+currentLangKey.set("de")    
 
 
 
