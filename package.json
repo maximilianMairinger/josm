@@ -6,10 +6,13 @@
   "types": "app/dist/josm.d.ts",
   "scripts": {
     "build": "tsc -p ./tsconfig.prod.json",
-    "dev": "webpack --config webpack.dev.config.js",
+    "dev": "npm run webDev",
+    "webDev": "rollup --config rollup.web.dev.config.js -w",
+    "nodeDev": "rollup --config rollup.node.dev.config.js -w",
     "deploy": "npm run build && npm publish",
-    "repl": "node repl/dist/repl-bundle.js",
-    "test": "ava"
+    "repl": "node repl/dist/josm-repl.js",
+    "buildTest": "rollup --config rollup.node.test.config.js",
+    "test": "npm run buildTest && jest"
   },
   "repository": {
     "type": "git",
@@ -25,13 +28,19 @@
   },
   "homepage": "https://github.com/maximilianMairinger/jsom#readme",
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^14.0.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^8.4.0",
+    "@rollup/plugin-typescript": "^5.0.2",
+    "@types/jest": "^26.0.7",
     "@types/node": "^12.12.47",
-    "ava": "^3.10.1",
     "css-loader": "^3.6.0",
     "cssnano": "^4.1.8",
     "delay": "^4.3.0",
     "esm": "^3.2.25",
+    "jest": "^26.2.1",
     "postcss-loader": "^3.0.0",
+    "rollup": "^2.23.0",
     "terser-webpack-plugin": "^2.3.7",
     "to-string-loader": "^1.1.6",
     "ts-jest": "^25.5.1",
