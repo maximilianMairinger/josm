@@ -4,9 +4,7 @@ description: Object-oriented state manager
 
 # Josm
 
-Josm is an \(JS\) **o**bject-oriented **s**tate **m**anager for the web & node, which aims to be both, a lightweight observable \(called Data\) implementation & a feature rich state manager, providing an awesome developer experiance.
-
-> Please note that Josm is currently under development and not yet suited for production
+Josm is an \(JS\) **o**bject-oriented **s**tate **m**anager for the web & node, which aims to be both, a lightweight observable \(called Data\) implementation & a feature rich state manager, providing an awesome developer experience.
 
 ## Usage
 
@@ -99,9 +97,9 @@ let db = new DataBase({
 })
 ```
 
-#### Traversal
-
 > Note: Observed objects can be circular
+
+#### Traversal
 
 This instance can be traversed like a plain object. The primitive values are wrapped inside `Data`s.
 
@@ -228,7 +226,7 @@ str.append("lo")
 
 > Caveat: No function name can be used twice withing all dataDerivables or within all dataBaseDerivables.
 
-While derivable usage on `Data`s is substantial on its own, applying it to certain interfaces `DataBases`s does provide seemless interaction on a very high level.
+While derivable usage on `Data`s is substantial on its own, applying it to certain interfaces `DataBases`s does provide seamless interaction on a very high level.
 
 ```ts
 interface Person {
