@@ -381,15 +381,42 @@ type MaybeDataBase<Type> = Type extends object ? DataBase<Type> : Data<Type>
 // let e: Test5
 // e.qwe
 
+// When infering undefined as generic it gets converted to any (instead of staying undefined). So here is the quickfix, which 
+// detects any or undefined types as "undefined". Note: that this leaves out the case where you are infering from null
+type IsAny<Any> = (Any extends never ? true : false) extends false ? false : true
+type IsItUndefinedOrAny<T> = T extends undefined ? true : IsAny<T>
 
-type NotUndefinedKeyVal<V, K> = V extends undefined ? never : K
 
-type FilterForDefinedField<T> = { [P in keyof T]: NotUndefinedKeyVal<T[P], P> };
+type DefinedKeyVal<V, K> = IsItUndefinedOrAny<V> extends true ? never : K
+type UndefinedKeyVal<V, K> = IsItUndefinedOrAny<V> extends false ? never : K
+
+type FilterForDefinedField<T> = { [P in keyof T]: DefinedKeyVal<T[P], P> };
+type FilterForUndefinedField<T> = { [P in keyof T]: UndefinedKeyVal<T[P], P> };
 
 type DefinedFieldUnion<T> = FilterForDefinedField<T>[keyof FilterForDefinedField<T>]
+type UndefinedFieldUnion<T> = FilterForUndefinedField<T>[keyof FilterForUndefinedField<T>]
 
-type NoUndefinedField<T> = { [K in DefinedFieldUnion<T>]: T[K] extends object ? NoUndefinedField<T[K]> : T[K] }
 
+type Merge<A, B> = {[key in keyof A | keyof B]: (key extends keyof A ? A[key] : never) | (key extends keyof B ? B[key] : never)};
+
+type S = {key2: undefined, key4: 44}
+
+type e = DataBase<FilterT<S, DefinedFieldUnion<S>>>
+let e: e
+
+type FilterT<T extends {[key in string | number | symbol]: any}, Filter extends string | number | symbol, ProperFilter extends DefinedFieldUnion<{[key in Filter]: key extends keyof T ? T[key] : undefined}> = DefinedFieldUnion<{[key in Filter]: key extends keyof T ? T[key] : undefined}>> = { [K in ProperFilter]: T[K] extends {[key in string | number | symbol]: any} ? FilterT<T[K], Filter> : T[K] }
+type f = FilterT<{q: number}, "q" | "w">
+
+type Filter = "q" | "w"
+type T = {q: number}
+type qq = DefinedFieldUnion<{[key in Filter]: key extends keyof T ? T[key] : undefined}>
+
+type test = DataBase<FilterT<S, DefinedFieldUnion<S>>>
+let t: test
+
+
+
+type q = Exclude<{e: number, q: string}, "q">
 // type q = never | 2
 
 // type e = NoUndefinedField<{
@@ -527,6 +554,8 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   protected DataBaseFunction(): Readonly<Store>
   
   protected DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notifyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
+  protected DataBaseFunction(subscription: Function, notifyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
+
   protected DataBaseFunction<Path extends (keyof Store)>(path: Path): any
   // Not working in ts yet | alternative above
   // private DataBaseFunction<Path extends (keyof Store)>(path: Path): RecursivePathPluckDatabase<Store, [Path]>
@@ -536,7 +565,8 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   // Not working in ts yet | alternative above
   // private DataBaseFunction<Paths extends (string | number)[]>(...paths: Paths): RecursivePathPluckDatabase<Store, Paths>
 
-  protected DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NoUndefinedField<NewStore> & Store>
+  protected DataBaseFunction<NewStore>(data: NewStore, strict: true): DataBase<Merge<FilterT<NewStore, DefinedFieldUnion<NewStore>>, FilterT<Store, DefinedFieldUnion<NewStore>>>>
+  protected DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: false): DataBase<Merge<FilterT<NewStore, DefinedFieldUnion<NewStore>>, FilterT<Store, DefinedFieldUnion<NewStore>>>>
   
   // Not working in ts yet
   // private DataBaseFunction<Paths extends any[]>(...paths: DataSetify<Paths> & PathSegment[]): RecursivePathPluck<Store, List.Flatten<Paths>>
