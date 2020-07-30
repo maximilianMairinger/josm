@@ -382,8 +382,27 @@ type MaybeDataBase<Type> = Type extends object ? DataBase<Type> : Data<Type>
 // e.qwe
 
 
+type NotUndefinedKeyVal<V, K> = V extends undefined ? never : K
 
+type FilterForDefinedField<T> = { [P in keyof T]: NotUndefinedKeyVal<T[P], P> };
 
+type DefinedFieldUnion<T> = FilterForDefinedField<T>[keyof FilterForDefinedField<T>]
+
+type NoUndefinedField<T> = { [K in DefinedFieldUnion<T>]: T[K] extends object ? NoUndefinedField<T[K]> : T[K] }
+
+// type q = never | 2
+
+// type e = NoUndefinedField<{
+//   e: string,
+//   q: never,
+//   w: number,
+//   n: {
+//     w: number,
+//     e: string,
+//     ww: undefined,
+//     www: undefined
+//   }
+// }>
 
 //@ts-ignore
 const entireDataBaseLinkFunction = DataBaseLink.prototype.LinkFunctionWrapper.toString(); 
@@ -507,7 +526,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   
   protected DataBaseFunction(): Readonly<Store>
   
-  protected DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notfiyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
+  protected DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notifyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
   protected DataBaseFunction<Path extends (keyof Store)>(path: Path): any
   // Not working in ts yet | alternative above
   // private DataBaseFunction<Path extends (keyof Store)>(path: Path): RecursivePathPluckDatabase<Store, [Path]>
@@ -517,16 +536,16 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   // Not working in ts yet | alternative above
   // private DataBaseFunction<Paths extends (string | number)[]>(...paths: Paths): RecursivePathPluckDatabase<Store, Paths>
 
-  protected DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NewStore & Store>
+  protected DataBaseFunction<NewStore extends ComplexData>(data: NewStore, strict?: boolean): DataBase<NoUndefinedField<NewStore> & Store>
   
   // Not working in ts yet
   // private DataBaseFunction<Paths extends any[]>(...paths: DataSetify<Paths> & PathSegment[]): RecursivePathPluck<Store, List.Flatten<Paths>>
-  protected DataBaseFunction(path_data_subscription?: Data | DataCollection | ComplexData | ((store: Store) => void) | boolean, notfiyAboutChangesOfChilds_path_strict?: Data | DataCollection | boolean | PrimitivePathSegment, ...paths: any[]) {
+  protected DataBaseFunction(path_data_subscription?: Data | DataCollection | ComplexData | ((store: Store) => void) | boolean, notifyAboutChangesOfChilds_path_strict?: Data | DataCollection | boolean | PrimitivePathSegment, ...paths: any[]) {
     const funcThis = this.funcThis
 
     
     if (path_data_subscription instanceof Data || path_data_subscription instanceof DataCollection || typeof path_data_subscription === "string" || typeof path_data_subscription === "number") {
-      let dataSegments = (notfiyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription] : [path_data_subscription, notfiyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
+      let dataSegments = (notifyAboutChangesOfChilds_path_strict === undefined ? [path_data_subscription] : [path_data_subscription, notifyAboutChangesOfChilds_path_strict, ...paths]) as PathSegment[]
       let hasData = (dataSegments as any).ea((e) => {
         if (e instanceof Data || e instanceof DataCollection) return true
       })
@@ -568,7 +587,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
     
     else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
-      let notfiyAboutChangesOfChilds = (notfiyAboutChangesOfChilds_path_strict === undefined ? true : notfiyAboutChangesOfChilds_path_strict) as boolean
+      let notfiyAboutChangesOfChilds = (notifyAboutChangesOfChilds_path_strict === undefined ? true : notifyAboutChangesOfChilds_path_strict) as boolean
       let subscription = path_data_subscription
       let initialize: boolean = paths[0] === undefined ? true : paths[0]
 
@@ -588,7 +607,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     }
     else if (typeof path_data_subscription === objectString) {
       let newData = path_data_subscription as ComplexData
-      let strict = notfiyAboutChangesOfChilds_path_strict === undefined ? false : notfiyAboutChangesOfChilds_path_strict
+      let strict = notifyAboutChangesOfChilds_path_strict === undefined ? false : notifyAboutChangesOfChilds_path_strict
 
       let parsingId = (paths[0] !== undefined ? paths[0] : Symbol("parsingId")) as any
       
@@ -645,7 +664,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               let duringActivationNotificationBundler = () => {
                 notifyFromThis = true
               }
-              // cache all changes comming from below (children) so that only one change event gets emmited
+              // cache all changes coming from below (children) so that only one change event gets emitted
               let db = prop[internalDataBaseBridge]
               db.removeNotifyParentOfChangeCb(this.boundNotifyFromChild)
               db.addNotifyParentOfChangeCb(duringActivationNotificationBundler)
