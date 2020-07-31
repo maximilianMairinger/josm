@@ -114,7 +114,6 @@ currentLangKey.set("de")
 
 
 
-
 // let historyIndex = constructIndex((a: any) => {return {} as {[timestamp: number]: {[index: number]: string}}})
 
 
