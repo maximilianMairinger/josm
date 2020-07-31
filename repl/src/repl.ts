@@ -5,6 +5,13 @@ import clone from "fast-copy"
 
 
 
+let dd = new Data(2)
+dd.get((e) => {
+  console.log(e === 2, e)
+})
+
+
+
 
 
 let d = new Data(2)
@@ -40,7 +47,7 @@ d.set(312)
 
 
 
-
+console.log("done")
 
 
 
