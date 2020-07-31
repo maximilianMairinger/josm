@@ -1,4 +1,4 @@
-import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribeableMixin } from "./data"
+import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin } from "./data"
 
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: Subscription<Values>[] = []
@@ -6,12 +6,27 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   private datas: FuckedUpDataSetify<Values> = []
   private store: Values
 
+  private locSubNsReg: {destroy: () => void}[] = []
+
   private observers: Subscription<[Value]>[] = []
 
   constructor(...datas: FuckedUpDataSetify<Values>) {
     //@ts-ignore
     this.set(...datas)
   }
+
+  protected __call(...subs: Subscription<Values>[]) {
+    subs.Call(...this.get())
+  }
+
+  protected destroy() {
+    this.locSubNsReg.Inner("destroy", [])
+    this.locSubNsReg.clear()
+    for (const key in this) {
+      delete this[key]
+    }
+  }
+
 
   public set(...datas: FuckedUpDataSetify<Values>) {
     this.datas.ea((data, i) => {
@@ -42,8 +57,8 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     //@ts-ignore
     if (subscription === undefined) return this.datas.Inner("get", [])
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge].activate()
+      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
+      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge]
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
@@ -62,4 +77,4 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
 
 } 
 
-attachSubscribeableMixin(DataCollection)
+attachSubscribableMixin(DataCollection)

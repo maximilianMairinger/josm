@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace } from "./data"
+import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace, needFallbackForSubs, registerSubscriptionNamespace } from "./data"
 import { DataCollection } from "./dataCollection"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
@@ -451,18 +451,21 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   private subscriptionsOfChildChanges: DataSubscription<[Readonly<Store>]>[]
   private subscriptionsOfThisChanges: DataSubscription<[Readonly<Store>]>[]
 
-  private boundNotifyFromChild: () => void
+  private boundCall: () => void
+
+  private locSubNsReg: any[]
 
   constructor(store: Store, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     this.funcThis = this.bind(this)
 
     this.linksOfMe = []
+    this.locSubNsReg = []
     this.notifyParentOfChangeCbs = []
     this.subscriptionsOfChildChanges = []
     this.subscriptionsOfThisChanges = []
     this.beforeDestroyCbs = new Map
-    this.boundNotifyFromChild = this.notifyFromChild.bind(this)
+    this.boundCall = this.call.bind(this)
     this.initFuncProps(store, parsingId)
 
     if (notifyParentOfChange) this.addNotifyParentOfChangeCb(notifyParentOfChange)
@@ -517,6 +520,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
           this.funcThis[key].destroy(this)
         }
         else {
+          // TODO: WHAT????
           this.funcThis[key][internalDataBaseBridge].destroy(this)  
         this.funcThis[key][internalDataBaseBridge].destroy(this)
           this.funcThis[key][internalDataBaseBridge].destroy(this)  
@@ -528,6 +532,8 @@ class InternalDataBase<Store extends ComplexData> extends Function {
   
       this.linksOfMe.Inner("destroy", [])
       this.linksOfMe.clear()
+      this.locSubNsReg.Inner("destroy", [])
+      this.locSubNsReg.clear()
   
       for (const key in this) {
         //@ts-ignore
@@ -619,20 +625,13 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
     
     else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
-      let notfiyAboutChangesOfChilds = (notifyAboutChangesOfChilds_path_strict === undefined ? true : notifyAboutChangesOfChilds_path_strict) as boolean
+      let notifyAboutChangesOfChilds = (notifyAboutChangesOfChilds_path_strict === undefined ? true : notifyAboutChangesOfChilds_path_strict) as boolean
       let subscription = path_data_subscription
       let initialize: boolean = paths[0] === undefined ? true : paths[0]
 
-      if (notfiyAboutChangesOfChilds) { 
-        if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-        else if (this.subscriptionsOfChildChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
-        else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notfiyAboutChangesOfChilds)
-      }
-      else {
-        if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-        else if (this.subscriptionsOfThisChanges.contains(subscription as any)) return subscription[dataSubscriptionCbBridge].activate()
-        else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notfiyAboutChangesOfChilds)
-      }
+      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
+      else if ((notifyAboutChangesOfChilds ? this.subscriptionsOfChildChanges : this.subscriptionsOfThisChanges).contains(subscription as any)) return subscription[dataSubscriptionCbBridge]
+      else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notifyAboutChangesOfChilds)
     }
     else if (path_data_subscription === undefined) {
       return this.store
@@ -660,7 +659,6 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
         if (newVal === undefined) {
           explicitDeleteKeys.add(key)
-          notifyFromThis = true
           continue
         }
         if (prop !== undefined) {
@@ -675,12 +673,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
                 //@ts-ignore
                 prop.destroy()
 
-                constructAttatchToPrototype([newVal, funcThis])(parsingId, new InternalDataBase(newVal, parsingId, this.boundNotifyFromChild))
+                constructAttatchToPrototype([newVal, funcThis])(parsingId, new InternalDataBase(newVal, parsingId, this.boundCall))
                 newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                   delete newVal[parsingId]
                   delete funcThis[key]
                   delete newData[key]
-                  this.notifyFromThis()
+                  this.call(undefined, true)
                 })
               }
               else {
@@ -698,11 +696,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               }
               // cache all changes coming from below (children) so that only one change event gets emitted
               let db = prop[internalDataBaseBridge]
-              db.removeNotifyParentOfChangeCb(this.boundNotifyFromChild)
+              db.removeNotifyParentOfChangeCb(this.boundCall)
               db.addNotifyParentOfChangeCb(duringActivationNotificationBundler)
               prop(newVal, strict, parsingId)
               db.removeNotifyParentOfChangeCb(duringActivationNotificationBundler)
-              db.addNotifyParentOfChangeCb(this.boundNotifyFromChild)
+              db.addNotifyParentOfChangeCb(this.boundCall)
             }
             else {
               //@ts-ignore
@@ -714,12 +712,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
                 delete newVal[parsingId]
                 delete funcThis[key]
                 delete newData[key]
-                this.notifyFromThis()
+                this.call(undefined, true)
               })
               funcThis[key].get((e) => {
                 //@ts-ignore
                 this.store[key] = e
-                this.notifyFromChild()
+                this.call(undefined, false)
               }, false)
 
               notifyFromThis = true
@@ -729,13 +727,13 @@ class InternalDataBase<Store extends ComplexData> extends Function {
         else {
           if (typeof newVal === "object") {
             if (newVal[parsingId] === undefined) {
-              constructAttatchToPrototype([newVal, funcThis])(parsingId, new InternalDataBase(newVal, parsingId, this.boundNotifyFromChild))
+              constructAttatchToPrototype([newVal, funcThis])(parsingId, new InternalDataBase(newVal, parsingId, this.boundCall))
               funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                 
                 delete newVal[parsingId]
                 delete funcThis[key]
                 delete newData[key]
-                this.notifyFromThis()
+                this.call(undefined, true)
               })
               //@ts-ignore
               this.store[key] = newVal
@@ -754,12 +752,12 @@ class InternalDataBase<Store extends ComplexData> extends Function {
               delete newVal[parsingId]
               delete funcThis[key]
               delete newData[key]
-              this.notifyFromThis()
+              this.call(undefined, true)
             })
             funcThis[key].get((e) => {
               //@ts-ignore
               this.store[key] = e
-              this.notifyFromChild()
+              this.call(undefined, false)
             }, false)
           }
           notifyFromThis = true
@@ -769,10 +767,10 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       const destroyFunc = (key: string) => {
         if (funcThis[key] instanceof Data) funcThis[key].destroy()
         else funcThis[key][internalDataBaseBridge].destroy(this)
+        notifyFromThis = true
       }
 
       for (const key of explicitDeleteKeys) {
-        
         destroyFunc(key)
       }
 
@@ -784,7 +782,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
       this.inBulkChange = false
 
-      if (notifyFromThis) this.notifyFromThis()
+      if (notifyFromThis) this.call(undefined, true)
 
       return funcThis
     }
@@ -793,20 +791,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     
   }
 
-  private notifyFromChild() {
-    this.notifyParentOfChangeCbs.Call()
-    //@ts-ignore
-    this.subscriptionsOfChildChanges.Call(this.store)
-  }
 
-  private inBulkChange: boolean
-  private notifyFromThis() {
-    if (!this.inBulkChange) {
-      this.notifyFromChild()
-      //@ts-ignore
-      this.subscriptionsOfThisChanges.Call(this.store)
-    }
-  }
 
   private initFuncProps(store: Store, parsingId: any) {
     this.store = store
@@ -818,13 +803,13 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       if (typeof val !== "function") {
         
         if (typeof val === objectString) {
-          if (val[parsingId] === undefined) constructAttatchToPrototype([funcThis])(key, constructAttatchToPrototype([val])(parsingId, new InternalDataBase(val, parsingId, this.boundNotifyFromChild)))
+          if (val[parsingId] === undefined) constructAttatchToPrototype([funcThis])(key, constructAttatchToPrototype([val])(parsingId, new InternalDataBase(val, parsingId, this.boundCall)))
           else funcThis[key] = val[parsingId]
           funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
 
             delete funcThis[key]
             delete store[key]
-            this.notifyFromThis()
+            this.call(undefined, true)
           })
         }
         else {
@@ -833,11 +818,11 @@ class InternalDataBase<Store extends ComplexData> extends Function {
 
             delete funcThis[key]
             delete store[key]
-            this.notifyFromThis()
+            this.call(undefined, true)
           })
           funcThis[key].get((e) => {
             this.store[key] = e
-            this.notifyFromChild()
+            this.call(undefined, false)
           }, false)
         }
       }
@@ -869,6 +854,33 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     //@ts-ignore
     this.subscriptionsOfThisChanges.rmV(subscription)
   }
+  __call(...subs: Subscription<[Readonly<Store>]>[]) {
+    subs.Call(this.store)
+  }
+  call(s: any, fromThis: boolean = false) {
+    let { subs, need } = needFallbackForSubs(s)
+    if (need) {
+      if (fromThis) {
+        if (!this.inBulkChange) {
+          registerSubscriptionNamespace(() => {
+            this.__call(this.subscriptionsOfThisChanges as any)
+          }, this.locSubNsReg)
+        }
+      }
+      
+      // ---- from child ----
+      this.notifyParentOfChangeCbs.Call()
+      registerSubscriptionNamespace(() => {
+        this.__call(this.subscriptionsOfChildChanges as any)
+      }, this.locSubNsReg)
+      
+    }
+    else {
+      this.__call(subs)
+    }
+    
+  }
+  private inBulkChange: boolean
 
   isSubscribed(subscription: Subscription<[Readonly<Store>]>): boolean {
     //@ts-ignore

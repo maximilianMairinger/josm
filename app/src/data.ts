@@ -36,6 +36,10 @@ export class Data<Value = unknown> {
 
   public constructor(private value?: Value) {}
 
+  protected __call(subs?: Subscription<[Value]>[]) {
+    subs.Call(this.value)
+  }
+
   
   public get(): Value
   public get(subscription: Subscription<[Value]>, initialize?: boolean): DataSubscription<[Value]>
@@ -43,8 +47,8 @@ export class Data<Value = unknown> {
   public get(subscription?: Subscription<[Value]> | DataSubscription<[Value]>, initialize: boolean = true): Value | DataSubscription<[Value]> {
     if (subscription === undefined) return this.value
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, initialize)
-      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge].activate()
+      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
+      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge]
       //@ts-ignore
       else return new DataSubscription(this, subscription, true, initialize)
     }
@@ -69,6 +73,8 @@ export class Data<Value = unknown> {
     this.beforeDestroyCbs.clear()
     this.linksOfMe.Inner("destroy", [])
     this.linksOfMe.clear()
+    this.locSubNsReg.Inner("destroy", [])
+    this.locSubNsReg.clear()
     for (const key in this) {
       delete this[key]
     }
@@ -78,21 +84,7 @@ export class Data<Value = unknown> {
   public set(value: Value): Value {
     if (value === this.value) return value
     this.value = value
-
-    this.locSubNsReg.Inner("destroy", [])
-
-    let last = localSubscriptionNamespace.register
-    localSubscriptionNamespace.register = (me) => {
-      this.locSubNsReg.add(me)
-    }
-
-
-    for (let subscription of this.subscriptions) {
-      subscription(value)
-    }
-
-    localSubscriptionNamespace.register = last
-
+    this.call()
     return value
   }
 
@@ -106,6 +98,7 @@ export class Data<Value = unknown> {
   protected subscribeToChildren(subscription: Subscription<[Value]>, initialize: boolean) {}
   protected unsubscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
   protected unsubscribeToChildren(subscription: Subscription<[Value]>, initialize: boolean) {}
+  protected call(...subscription: Subscription<[Value]>[]) {}
 
   public toString() {
     return "Data: " + this.value
@@ -135,26 +128,51 @@ function unsubscribe(subscription: any) {
 
 function subscribe(subscription: any, initialize: any) {
   this.subscriptions.add(subscription)
-  if (initialize) {
-    let last = localSubscriptionNamespace.register
-    localSubscriptionNamespace.register = (me) => {
-      this.locSubNsReg.add(me)
-    }
-    subscription(this.value)
-    localSubscriptionNamespace.register = last
-  }
+  if (initialize) this.call(subscription)
+}
+
+function call(s: any) {
+  let { subs, need } = needFallbackForSubs(s)
+  if (need) subs = this.subscriptions
+  registerSubscriptionNamespace(() => {
+    this.__call(subs)
+  }, this.locSubNsReg)
 }
 
 
-export function attachSubscribeableMixin(to: any) {
+export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]) {
+  locSubNsReg.Inner("destroy", [])
+  locSubNsReg.clear()
+
+  let last = localSubscriptionNamespace.register
+  localSubscriptionNamespace.register = (me) => {
+    locSubNsReg.add(me)
+  }
+  go()
+  localSubscriptionNamespace.register = last
+}
+
+export function needFallbackForSubs(subs: any) {
+  let need = false
+  if (subs !== undefined) {
+    if (!(subs instanceof Array)) subs = [subs]
+    else if (subs.empty) need = true
+  }
+  else need = true
+  return {subs, need}
+}
+
+
+export function attachSubscribableMixin(to: any) {
   const attach = constructAttatchToPrototype(to.prototype)
 
+  attach("call", call)
   attach("isSubscribed", isSubscribed)
   attach(["unsubscribeToThis", "unsubscribeToChildren"], unsubscribe)
   attach(["subscribeToThis", "subscribeToChildren"], subscribe)
 }
 
-attachSubscribeableMixin(Data)
+attachSubscribableMixin(Data)
 
 
 
@@ -174,14 +192,14 @@ type OptionalifyTuple<Tuple extends any[]> = {
 }
 
 
-type ProperSubscribable<Values extends any[]> = {subscribeToThis: (subscription: Subscription<Values>, initialize?: boolean) => void, subscribeToChildren: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribeToThis: (subscription: Subscription<Values>) => void, unsubscribeToChildren: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean}
+type ProperSubscribable<Values extends any[]> = {subscribeToThis: (subscription: Subscription<Values>, initialize?: boolean) => void, subscribeToChildren: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribeToThis: (subscription: Subscription<Values>) => void, unsubscribeToChildren: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean, call: (subscription?: Subscription<Values>[] | Subscription<Values>, notifyChilds?: boolean) => void}
 export type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
 
 
 export const dataSubscriptionCbBridge = Symbol("dataSubscriptionCbBridge")
 
 export class DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
-  private _notfiyAboutChangesOfChilds: boolean
+  private _notifyAboutChangesOfChilds: boolean
 
   private _subscription: ConcreteSubscription
   private _data: ConcreteData
@@ -196,27 +214,30 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false)
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean)
 
-  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription?: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, inititalize?: boolean, notfiyAboutChangesOfChilds: boolean = true) {
+  constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription?: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, initialize?: boolean, notfiyAboutChangesOfChilds: boolean = true) {
     //@ts-ignore
     this._data = data
     //@ts-ignore
     this._subscription = subscription
-    this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
+    this._notifyAboutChangesOfChilds = notfiyAboutChangesOfChilds
     subscription[dataSubscriptionCbBridge] = this
 
     localSubscriptionNamespace.register(this as any)
-    this.active(activate, inititalize)
-
+    this.active(activate as any, initialize)
   }
 
   public active(): boolean
   public active(activate: false): this
   public active(activate: true, initialize?: boolean): this
-  public active(activate: boolean, initialize?: boolean): this
   public active(activate?: boolean, initialize: boolean = true): this | boolean {
     if (activate === undefined) return (this._data as ProperSubscribable<Values>).isSubscribed(this._subscription)
     if (activate) this.activate(initialize)
     else this.deactivate()
+    return this
+  }
+
+  public call(sure = true) {
+    if (sure) (this._data as any).call(this._subscription, this._notifyAboutChangesOfChilds)
     return this
   }
 
@@ -265,11 +286,12 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
   public notfiyAboutChangesOfChilds(): boolean
   public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds: boolean): this
   public notfiyAboutChangesOfChilds(notfiyAboutChangesOfChilds?: boolean) {
-    if (notfiyAboutChangesOfChilds === undefined) return this._notfiyAboutChangesOfChilds
+    if (notfiyAboutChangesOfChilds === undefined) return this._notifyAboutChangesOfChilds
     
-    if (this._notfiyAboutChangesOfChilds !== notfiyAboutChangesOfChilds) {
+    if (this._notifyAboutChangesOfChilds !== notfiyAboutChangesOfChilds) {
       this.deactivate()
-      this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
+      this._notifyAboutChangesOfChilds = notfiyAboutChangesOfChilds
+      // TODO: check if there is a diff, when yes we must initialize
       this.active(false)
     }
 
@@ -278,7 +300,7 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
 
   public activate(initialize: boolean = true): this {  
     if (this.active()) return this;
-    if (this._notfiyAboutChangesOfChilds) {
+    if (this._notifyAboutChangesOfChilds) {
       (this._data as any).subscribeToChildren(this._subscription, initialize)
     }
     else {
@@ -289,7 +311,7 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
 
   public deactivate(): this {
     if (!this.active()) return this;
-    if (this._notfiyAboutChangesOfChilds) (this._data as any).unsubscribeToChildren(this._subscription)
+    if (this._notifyAboutChangesOfChilds) (this._data as any).unsubscribeToChildren(this._subscription)
     else (this._data as any).unsubscribeToThis(this._subscription)
     return this
   }
@@ -313,6 +335,8 @@ export interface DataSubscription<Values extends Value[], TupleValue extends [Va
   active(activate: false): this
   active(activate: true, initialize?: boolean): this
   active(activate: boolean, initialize?: boolean): this
+
+  call(sure?: boolean): this
 }
 
 
