@@ -920,7 +920,3 @@ export type DataBase<Store extends {[key in string]: any} = unknown, S extends R
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new <Store extends object = any>(store: Store): DataBase<Store> })
-
-
-let d = new InternalDataBase({q: "qwe"})
-// d.DataBaseFunction(new Data("q"))
