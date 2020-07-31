@@ -54,7 +54,7 @@ export class Data<Value = unknown> {
   // Return false when not successfull; dont throw (maybe in general Xrray)
   public got(subscription: Subscription<[Value]> | DataSubscription<[Value]>): DataSubscription<[Value]> {
     return (subscription instanceof DataSubscription) ? subscription.deactivate()
-    : subscription[dataSubscriptionCbBridge].deacivate()
+    : subscription[dataSubscriptionCbBridge].deactivate()
   }
   
 
@@ -216,12 +216,12 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
   public active(activate?: boolean, initialize: boolean = true): this | boolean {
     if (activate === undefined) return (this._data as ProperSubscribable<Values>).isSubscribed(this._subscription)
     if (activate) this.activate(initialize)
-    else this.deacivate()
+    else this.deactivate()
     return this
   }
 
   private destroy() {
-    this.deacivate()
+    this.deactivate()
 
     for (let key in this) {
       delete this[key]
@@ -238,7 +238,7 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
         let isActive = this.active()
         let prevData: any
         if (initialize) prevData = clone((this._data as ProperSubscribable<Values>).get())
-        this.deacivate()
+        this.deactivate()
         this._data = data
         if (isActive) this.activate(initialize && (!circularDeepEqual(prevData, (data as ProperSubscribable<Values>).get())))
       }
@@ -253,7 +253,7 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
     else {
       if (subscription === this._subscription) return this
       let isActive = this.active()
-      this.deacivate()
+      this.deactivate()
       delete this._subscription[dataSubscriptionCbBridge]
       this._subscription = subscription
       subscription[dataSubscriptionCbBridge] = this
@@ -268,7 +268,7 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
     if (notfiyAboutChangesOfChilds === undefined) return this._notfiyAboutChangesOfChilds
     
     if (this._notfiyAboutChangesOfChilds !== notfiyAboutChangesOfChilds) {
-      this.deacivate()
+      this.deactivate()
       this._notfiyAboutChangesOfChilds = notfiyAboutChangesOfChilds
       this.active(false)
     }
@@ -287,7 +287,7 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
     return this
   }
 
-  public deacivate(): this {
+  public deactivate(): this {
     if (!this.active()) return this;
     if (this._notfiyAboutChangesOfChilds) (this._data as any).unsubscribeToChildren(this._subscription)
     else (this._data as any).unsubscribeToThis(this._subscription)
