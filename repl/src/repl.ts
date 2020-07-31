@@ -3,100 +3,165 @@ import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
 
-let ob = {}
-constructAttatchToPrototype(ob)("ok", () => {
-  console.log("qwe")
-})
-
-console.log(ob)
 
 
 
-const DATA = setDataDerivativeIndex(
-  class Num extends Data<number> {
-    inc(by: number = 1) {
-      this.set(this.get() + by)
-    }
-    dec(by: number = 1) {
-      this.set(this.get() - by)
-    }
-  },
-  class Str extends Data<string> {
-    append(txt: string) {
-      this.set(this.get() + txt)
-    }
-  }
-)
 
-let d = new DATA(2)
-d.get(console.log)
-d.inc(2)
-d.dec(4)
+let d = new Data(2)
 
-let ds = new DATA("qq")
-ds.get(console.log)
-ds.append("ss")
+let i = 0
+let f = d.get((e) => {
+  i++
+  if (i === 1) {if (e !== 4) throw ""}
+  else if (i === 2) {if (e !== 2) throw ""}
+  else if (i === 3) {if (e !== 4) throw ""}
+  else if (i === 4) {throw ""}
+}, false)
+
+console.log("test")
+
+d.set(4)
+d.got(f)
+d.set(123)
+d.set(321)
+d.set(321)
+d.get(f, false)
+d.set(2)
+d.set(2)
+d.got(f)
+d.set(4)
+d.get(f)
+d.set(4)
+d.got(f)
+d.set(312)
 
 
 
 
 
-interface Person {
-  age: number,
-  firstName: string,
-  lastName: string
-}
-
-const DATABASE = setDataBaseDerivativeIndex(
-  class Pers extends DataBase<Person> {
-    happyBirthday() {
-      (this.age as any).inc()
-    }
-  }
-)
-
-let person = new DATABASE({
-  age: 18,
-  firstName: "Max",
-  lastName: "Someone"
-})
-
-person(console.log)
-
-person.happyBirthday()
-
-
-
-let db = new DataBase({key1: 1, key2: 2, nested: ["a", "b"]})
-db((e) => console.log(clone(e)))
-
-db.nested[1].set("c")
-
-let db2 = db({key2: undefined, key4: 44, key1: "qwe"})
-let e = db2.key1
 
 
 
 
 
-console.log("------------------------------------lang--------------------------------")
-let lang = new DataBase({
-  en: {
-    greeting: "Hello",
-    appName: "Cool.oi"
-  },
-  de: {
-    greeting: "Hallo",
-    appName: "Cool.io"
-  }
-})
 
-let currentLangKey = new Data("en")
 
-lang(currentLangKey).appName.get(console.log)   // "Cool.oi"  // initially english
-currentLangKey.set("de")                        // "Cool.io"  // now german
-lang.en.appName.set("Cool.io")
-currentLangKey.set("de")    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// let ob = {}
+// constructAttatchToPrototype(ob)("ok", () => {
+//   console.log("qwe")
+// })
+
+// console.log(ob)
+
+
+
+// const DATA = setDataDerivativeIndex(
+//   class Num extends Data<number> {
+//     inc(by: number = 1) {
+//       this.set(this.get() + by)
+//     }
+//     dec(by: number = 1) {
+//       this.set(this.get() - by)
+//     }
+//   },
+//   class Str extends Data<string> {
+//     append(txt: string) {
+//       this.set(this.get() + txt)
+//     }
+//   }
+// )
+
+// let d = new DATA(2)
+// d.get(console.log)
+// d.inc(2)
+// d.dec(4)
+
+// let ds = new DATA("qq")
+// ds.get(console.log)
+// ds.append("ss")
+
+
+
+
+
+// interface Person {
+//   age: number,
+//   firstName: string,
+//   lastName: string
+// }
+
+// const DATABASE = setDataBaseDerivativeIndex(
+//   class Pers extends DataBase<Person> {
+//     happyBirthday() {
+//       (this.age as any).inc()
+//     }
+//   }
+// )
+
+// let person = new DATABASE({
+//   age: 18,
+//   firstName: "Max",
+//   lastName: "Someone"
+// })
+
+// person(console.log)
+
+// person.happyBirthday()
+
+
+
+// let db = new DataBase({key1: 1, key2: 2, nested: ["a", "b"]})
+// db((e) => console.log(clone(e)))
+
+// db.nested[1].set("c")
+
+// let db2 = db({key2: undefined, key4: 44, key1: "qwe"})
+// let e = db2.key1
+
+
+
+
+
+// console.log("------------------------------------lang--------------------------------")
+// let lang = new DataBase({
+//   en: {
+//     greeting: "Hello",
+//     appName: "Cool.oi"
+//   },
+//   de: {
+//     greeting: "Hallo",
+//     appName: "Cool.io"
+//   }
+// })
+
+// let currentLangKey = new Data("en")
+
+// lang(currentLangKey).appName.get(console.log)   // "Cool.oi"  // initially english
+// currentLangKey.set("de")                        // "Cool.io"  // now german
+// lang.en.appName.set("Cool.io")
+// currentLangKey.set("de")    
 
 
 
