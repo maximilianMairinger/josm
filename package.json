@@ -9,7 +9,7 @@
     "dev": "npm run webDev",
     "webDev": "rollup --config rollup.web.dev.config.js -w",
     "nodeDev": "rollup --config rollup.node.dev.config.js -w",
-    "deploy": "npm run build && npm publish",
+    "deploy": "npm run test && npm run build && npm publish",
     "repl": "node repl/dist/josm-repl.js",
     "buildTest": "rollup --config rollup.node.test.config.js",
     "test": "npm run buildTest && jest"
