@@ -1,53 +1,88 @@
-import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection } from "../../app/src/josm"
+import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection, DataSubscription } from "../../app/src/josm"
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
 
 
 
-let dd = new Data(2)
-dd.get((e) => {
-  console.log(e === 2, e)
+
+
+
+
+
+
+
+
+new DataSubscription(new DataCollection(new Data(1), new Data("2")), (...a) => {
+  debugger
+  
 })
 
 
 
 
 
-let d = new Data(2)
-
-let i = 0
-let f = d.get((e) => {
-  i++
-  if (i === 1) {if (e !== 4) throw ""}
-  else if (i === 2) {if (e !== 2) throw ""}
-  else if (i === 3) {if (e !== 4) throw ""}
-  else if (i === 4) {throw ""}
-}, false)
-
-console.log("test")
-
-d.set(4)
-d.got(f)
-d.set(123)
-d.set(321)
-d.set(321)
-d.get(f, false)
-d.set(2)
-d.set(2)
-d.got(f)
-d.set(4)
-d.get(f)
-d.set(4)
-d.got(f)
-d.set(312)
 
 
 
 
 
 
-console.log("done")
+
+
+
+
+
+
+
+
+
+
+
+
+// let dd = new Data(2)
+// dd.get((e) => {
+//   console.log(e === 2, e)
+// })
+
+
+
+
+
+// let d = new Data(2)
+
+// let i = 0
+// let f = d.get((e) => {
+//   i++
+//   if (i === 1) {if (e !== 4) throw ""}
+//   else if (i === 2) {if (e !== 2) throw ""}
+//   else if (i === 3) {if (e !== 4) throw ""}
+//   else if (i === 4) {throw ""}
+// }, false)
+
+// console.log("test")
+
+// d.set(4)
+// d.got(f)
+// d.set(123)
+// d.set(321)
+// d.set(321)
+// d.get(f, false)
+// d.set(2)
+// d.set(2)
+// d.got(f)
+// d.set(4)
+// d.get(f)
+// d.set(4)
+// d.got(f)
+// d.set(312)
+
+
+
+
+
+
+console.log("doneee")
 
 
 

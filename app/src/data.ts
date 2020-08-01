@@ -36,7 +36,7 @@ export class Data<Value = unknown> {
 
   public constructor(private value?: Value) {}
 
-  protected __call(subs?: Subscription<[Value]>[]) {
+  protected __call(subs: Subscription<[Value]>[]) {
     subs.Call(this.value)
   }
 
@@ -168,8 +168,8 @@ export function attachSubscribableMixin(to: any) {
 
   attach("call", call)
   attach("isSubscribed", isSubscribed)
-  attach(["unsubscribeToThis", "unsubscribeToChildren"], unsubscribe)
-  attach(["subscribeToThis", "subscribeToChildren"], subscribe)
+  attach(["unsubscribeToThis", "unsubscribeToChildren", "unsubscribe"], unsubscribe)
+  attach(["subscribeToThis", "subscribeToChildren", "subscribe"], subscribe)
 }
 
 attachSubscribableMixin(Data)

@@ -854,7 +854,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
     //@ts-ignore
     this.subscriptionsOfThisChanges.rmV(subscription)
   }
-  __call(...subs: Subscription<[Readonly<Store>]>[]) {
+  __call(subs: Subscription<[Readonly<Store>]>[]) {
     subs.Call(this.store)
   }
   call(s: any, fromThis: boolean = false) {

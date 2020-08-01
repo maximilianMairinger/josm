@@ -15,7 +15,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     this.set(...datas)
   }
 
-  protected __call(...subs: Subscription<Values>[]) {
+  protected __call(subs: Subscription<Values>[]) {
     subs.Call(...this.get())
   }
 
