@@ -126,24 +126,36 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
           
         })
       }
+
     
       public set(value: Value): Value
       public set(value: Value, proxyParams : {timeStamp: number, name: string, args: any[], force?: boolean}): Value
       public set(value: Value, proxyParams?: {timeStamp: number, name: string, args: any[], force?: boolean}): Value {
         this.link.deactivate()
-        
+
         if (proxyParams !== undefined) {
-          let localArgsIndex = this.historyIndex(proxyParams.timeStamp)(functionNameToIdIndex[proxyParams.name])
-          if (!localArgsIndex.empty && !proxyParams.force) throw new LocalHistoryInconsistencyWithServer()
+          let thisProxyFunctionName = functionNameToIdIndex[proxyParams.name]
+          let localArgsIndex = this.historyIndex(proxyParams.timeStamp)(thisProxyFunctionName)
+          let currentHistoryIndex = this.historyIndex()
+
+          if (+Object.keys(currentHistoryIndex).last === proxyParams.timeStamp) {
+            currentHistoryIndex[proxyParams.timeStamp][thisProxyFunctionName].add(proxyParams.args)
+            this.data[thisProxyFunctionName](proxyParams.args)
+            this.value = this.data.get()
+          }
+          else if (!localArgsIndex.empty && !proxyParams.force) throw new LocalHistoryInconsistencyWithServer()
           else {
             
             let morphData = new Data(this.get())
-            let currentHistoryIndex = this.historyIndex()
 
             let timeStamps = Object.keys(currentHistoryIndex)
             let givenTimeStamp = proxyParams.timeStamp
+            let givenTimeStampIndex: number
             for (let i = timeStamps.length - 1; i >= 0; i--) {
-              if (givenTimeStamp >= +timeStamps[i]) break
+              if (givenTimeStamp >= +timeStamps[i]) {
+                givenTimeStampIndex = i + 1
+                break
+              }
               let functionIndex = currentHistoryIndex[timeStamps[i]]
               for (let functionName in functionIndex) {
                 let argsLs = functionIndex[functionName] as any[][]
@@ -152,16 +164,30 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
                 }
               }
             }
+
+
+            this.historyIndex(proxyParams.timeStamp)(thisProxyFunctionName, proxyParams.args)
+            for (let args of proxyParams.args) {
+              morphData[thisProxyFunctionName](args)  
+            }
             
             
+
+            for (let i = givenTimeStampIndex; i < timeStamps.length; i++) {
+              let functionIndex = currentHistoryIndex[timeStamps[i]]
+              for (let functionName in functionIndex) {
+                let argsLs = functionIndex[functionName] as any[][]
+                for (let i = 0; i < argsLs.length; i++) {
+                  morphData[functionName](...argsLs[i])
+                }
+              }
+            }
+            
+            this.value = this.data.set(morphData.get())
           }
         }
-        else {
-          this.value = value
-          this.data.set(value)
-        }
-    
-        
+        else this.value = this.data.set(value)
+
         this.link.activate()
         return value
       }
