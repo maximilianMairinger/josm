@@ -34,7 +34,7 @@ export class Data<Value = unknown> {
 
   private locSubNsReg: {destroy: () => void}[] = []
 
-  public constructor(private value?: Value) {}
+  public constructor(protected value?: Value) {}
 
   protected __call(subs: Subscription<[Value]>[]) {
     subs.Call(this.value)
@@ -80,7 +80,6 @@ export class Data<Value = unknown> {
     }
   }
 
-  public set(value: Value): Value
   public set(value: Value): Value {
     if (value === this.value) return value
     this.value = value
