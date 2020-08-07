@@ -1,4 +1,4 @@
-import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection, DataSubscription } from "../../app/src/josm"
+import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection, DataSubscription, Return } from "../../app/src/josm"
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
@@ -11,7 +11,7 @@ let historyIndex = constructIndex((a: any) => {return {} as {[timestamp: number]
 
 let DATA = setDataDerivativeIndex(
   class Num extends Data<number> {
-    static id = "Num"
+
     inc(by: number = 1) {
       this.set(this.get() + by)
     }
@@ -20,36 +20,118 @@ let DATA = setDataDerivativeIndex(
     }
   },
   class Str extends Data<string> {
-    static id = "Str"
 
     inject(injection: string, atIndex: number = this.get().length) {
       this.set(this.get().splice(atIndex as any, 0, injection))
+      let offset = {}
+      offset[atIndex] = injection.length
+      return new Return(undefined, undefined, offset)
     }
-    undoInject(injection: string, atIndex: number = this.get().length) {
-      this.set(this.get().splice(atIndex + injection.length, injection.length))
+    del(length: number, atIndex: number) {
+      let offset = {}
+      offset[atIndex] = length
+      let ret = new Return(undefined, this.get().substring(atIndex, length), offset)
+      this.set(this.get().splice(atIndex, length))
+      return ret
     }
   }
-).proxy()
+).proxy(
+  class UndoNum extends Data<number> {
+
+    inc(by = 1) {
+      //@ts-ignore
+      this.dec(by)
+    }
+    dec(by = 1) {
+      //@ts-ignore
+      this.inc(by)
+    }
+  },
+  class UndoStr extends Data<string> {
+
+    inject(injection: string, atIndex: number = this.get().length - injection.length) {
+      this.set(this.get().splice(atIndex, injection.length))
+    }
+    del(length: number, atIndex: number, deleted: string) {
+      this.set(this.get().splice(atIndex, 0, deleted))
+    }
+  }
+).contextualIndexing(
+  class ContextualStr extends Data<string> {
+    stringIndex(len: Length, ind: Index, offsetNote: {[key in Index]: Length}) {
+      let del = []
+      let add = []
+      for (let index in offsetNote) {
+        let i = +index
+        if (ind >= i) ind += offsetNote[index]
+        else {
+          del.add(i)
+          i += len
+          add.add({i, n: offsetNote[index]})
+        }
+      }
+  
+      del.ea((e) => {
+        delete offsetNote[e]
+      })
+      add.ea((e) => {
+        offsetNote[e.i] = e.n
+      })
+      
+      return [len, ind]
+    }
+  
+    inject(injection: string, atIndex: number = this.get().length - injection.length, offsetNote: {[key in Index]: Length}) {
+      return [injection, this.stringIndex(injection.length, atIndex, offsetNote)[1]]
+    }
+  
+    del(length: number, atIndex: number, offsetNote: {[key in Index]: Length}) {
+      return [length, this.stringIndex(length, atIndex, offsetNote)[1]]
+    }
+  }
+)
+
+type Index = number
+type Length = number
+
+
 
 let w = 5000
 
 Date.now = () => {
-  // w++
+  w++
+  w++
+  w++
+  w++
+  w++
   return w
 }
  
 
 
-let d = new DATA("____")
-d.get(console.log)
-d.inject("injected", 2)
-d.undoInject("injected", 2)
-
-let dd = new DATA(2)
+const { HistoryIndex } = DATA
 
 
+let s = new DATA("Hello")
+let h = new HistoryIndex(s)
+
+//@ts-ignore
+let ind = window.ind = function() {
+  console.log((h as any).historyIndex())
+}
+
+//@ts-ignore
+window.s = s
+//@ts-ignore
+window.h = h
 
 
+
+s.append("world")
+s.get(console.log)
+ind()
+debugger
+// h.apply({timeStamp: 5003, id: 7, args: [ "" ]})
 
 
 
