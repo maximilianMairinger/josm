@@ -34,35 +34,39 @@ function now() {
 
 
 function constructProxyInjectionPrototype() {
-  let historyBridge = Symbol("history")
+  let historyIndexBridge = Symbol("history")
   let idToFunctionNameIndex: {[id in number]: string} = {0: "set"}
   let functionNameToIdIndex: {[functionName in string]: number} = {set: 0}
   let currentId = 1
-  let contextualNoteBridge = Symbol("contextualNote")
 
+  let currentContextualNote = {
+    note: undefined
+  }
 
   return {
-    historyBridge,
+    historyIndexBridge,
     idToFunctionNameIndex,
     functionNameToIdIndex,
     proxyInjectionPrototype,
-    contextualNoteBridge
+    currentContextualNote
   }
 
     
 
   function proxyInjectionPrototype(functionIndex: any, functionNames = Object.keys(functionIndex)) {
+    let directCall = true
+    let me = false
+
+    let ret: any
+    let isReturn: boolean
+    let r: any
 
     for (let name of functionNames) {
       idToFunctionNameIndex[functionNameToIdIndex[name] = currentId++] = name
       let defaultFunc = functionIndex[name]
-      let directCall = true
-      let me = false
-      let ret: any
-      let isReturn: boolean
-      let r: any
+
       functionIndex[name] = function(...args: any) {
-        if (this[historyBridge] !== undefined && directCall) {
+        if (this[historyIndexBridge] !== undefined && directCall) {
           directCall = false
           me = true
         }
@@ -76,10 +80,11 @@ function constructProxyInjectionPrototype() {
           directCall = true
           
           if (isReturn) {
-            args.add(ret.historyNote)
-            r[contextualNoteBridge] = ret.contextualNote
+            if (ret.historyNote) args = ret.historyNote
+            currentContextualNote.note = ret.contextualNote
           }
-          this[historyBridge](now())(functionNameToIdIndex[name]).add(args)
+
+          this[historyIndexBridge](now())(functionNameToIdIndex[name]).add(args)
         }
 
         
@@ -93,15 +98,15 @@ function constructProxyInjectionPrototype() {
 
 
 export interface HistoryIndexAbstract<Value> extends Data<Value> {
-  apply(o: {timeStamp: number, id: number, args: any[], force?: boolean}): void
+  apply(o: {timeStamp: number, id: number | string, args: any[], force?: boolean}): void
 }
 
-function classLsToFunctionIndex(...clsLs: any[]): any {
+function classLsToFunctionIndex(clsLs: any[]): any {
   let o = {}
-  clsLs.ea((cl) => {
-    let functionNames = Object.getOwnPropertyNames(cl).rmV("constructor")
+  clsLs.ea(({prototype: p}) => {
+    let functionNames = Object.getOwnPropertyNames(p).rmV("constructor")
     for (let fnName of functionNames) {
-      o[fnName] = cl.prototype[fnName]
+      o[fnName] = p[fnName]
     }
   })
   return o
@@ -127,8 +132,8 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 
   let end: any = Object.getPrototypeOf(classLs.first)
   end.proxy = (...undoClsLs: any[]) => {
-    const { proxyInjectionPrototype, idToFunctionNameIndex, historyBridge, contextualNoteBridge } = constructProxyInjectionPrototype()
-    let undoFunctionIndex = classLsToFunctionIndex(...undoClsLs)
+    const { proxyInjectionPrototype, idToFunctionNameIndex, historyIndexBridge, functionNameToIdIndex, currentContextualNote } = constructProxyInjectionPrototype()
+    let undoFunctionIndex = classLsToFunctionIndex(undoClsLs)
     let undoFunctionNames = Object.keys(undoFunctionIndex)
     proxyInjectionPrototype(functionIndex, undoFunctionNames)
     attachToData()
@@ -143,12 +148,14 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
         super(data.get())
         this.link = data.get(super.set.bind(this), false)
     
-        this[historyBridge] = this.historyIndex
+        data[historyIndexBridge] = this.historyIndex
+        this.historyIndex(now())(functionNameToIdIndex["set"]).add([data.get()])
       }
 
 
       public apply({timeStamp, id, args, force}: {timeStamp: number, id: number, args: any[], force?: boolean}) {
         this.link.deactivate()
+        id = typeof id === "string" ? functionNameToIdIndex[id] : id
         let thisProxyFunctionName = idToFunctionNameIndex[id]
         let localArgsIndex = this.historyIndex(timeStamp)(id)
         let currentHistoryIndex = this.historyIndex()
@@ -174,36 +181,46 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
             for (let id in functionIndex) {
               let args = functionIndex[id] as any[][]
 
-              undoFunctionIndex[idToFunctionNameIndex[id]].apply(morphData, args)
+              for (let arg of args) {
+                undoFunctionIndex[idToFunctionNameIndex[id]].apply(morphData, arg)
+              }
             }
           }
 
           let contextualNote: any
+          debugger
+
+          // History gets injected in proxy
+          morphData[historyIndexBridge] = this.historyIndex
 
           if (force) {
             // There cannot be two changes at the same index!
-            currentHistoryIndex[timeStamp][id] = args
             contextualNote = []
             for (let arg of args) {
-              contextualNote.add(morphData[thisProxyFunctionName](arg)[contextualNoteBridge])
+              morphData[thisProxyFunctionName](...arg)
+              contextualNote.add(currentContextualNote.note)
             }
           }
           else {
-            currentHistoryIndex[timeStamp][id].add(args)
-            contextualNote = morphData[thisProxyFunctionName](args)[contextualNoteBridge]
+            morphData[thisProxyFunctionName](...args)
+            contextualNote = currentContextualNote.note
           }
 
           
           
           
           
-
+          debugger
           for (let i = givenTimeStampIndex; i < timeStamps.length; i++) {
             let functionIndex = currentHistoryIndex[timeStamps[i]]
             for (let id in functionIndex) {
               let args = functionIndex[id] as any[][]
               let fnName = idToFunctionNameIndex[id]
-              morphData[fnName](...(contextualIndexFunctionIndex ? contextualIndexFunctionIndex[fnName].apply(morphData, args) : args))
+
+              for (let arg of args) {
+                morphData[fnName](...(contextualIndexFunctionIndex ? contextualIndexFunctionIndex[fnName](...(contextualNote ? arg.add(contextualNote) : arg)) : arg))
+              }
+              
             }
           }
           
@@ -221,8 +238,10 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 
     end.HistoryIndex = HistoryIndex
     delete end.proxy
-    end.contextualIndexing = (...clsLs: any[]) => {
-      contextualIndexFunctionIndex = classLsToFunctionIndex(...clsLs)
+    end.contextualIndexing = (_contextualIndexFunctionIndex: any) => {
+      contextualIndexFunctionIndex = _contextualIndexFunctionIndex
+      delete end.contextualIndexing
+      return end
     }
     return end
   }

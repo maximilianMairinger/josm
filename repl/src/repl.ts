@@ -14,23 +14,25 @@ let DATA = setDataDerivativeIndex(
 
     inc(by: number = 1) {
       this.set(this.get() + by)
+      return new Return(undefined, [by])
     }
     dec(by: number = 1) {
       this.set(this.get() - by)
+      return new Return(undefined, [by])
     }
   },
   class Str extends Data<string> {
-
+    
     inject(injection: string, atIndex: number = this.get().length) {
       this.set(this.get().splice(atIndex as any, 0, injection))
       let offset = {}
       offset[atIndex] = injection.length
-      return new Return(undefined, undefined, offset)
+      return new Return(undefined, [injection, atIndex], offset)
     }
     del(length: number, atIndex: number) {
       let offset = {}
       offset[atIndex] = length
-      let ret = new Return(undefined, this.get().substring(atIndex, length), offset)
+      let ret = new Return(undefined, [length, atIndex, this.get().substring(atIndex, length)], offset)
       this.set(this.get().splice(atIndex, length))
       return ret
     }
@@ -38,72 +40,66 @@ let DATA = setDataDerivativeIndex(
 ).proxy(
   class UndoNum extends Data<number> {
 
-    inc(by = 1) {
+    inc(by) {
       //@ts-ignore
       this.dec(by)
     }
-    dec(by = 1) {
+    dec(by) {
       //@ts-ignore
       this.inc(by)
     }
   },
   class UndoStr extends Data<string> {
 
-    inject(injection: string, atIndex: number = this.get().length - injection.length) {
+    inject(injection: string, atIndex: number) {
       this.set(this.get().splice(atIndex, injection.length))
     }
     del(length: number, atIndex: number, deleted: string) {
       this.set(this.get().splice(atIndex, 0, deleted))
     }
   }
-).contextualIndexing(
-  class ContextualStr extends Data<string> {
-    stringIndex(len: Length, ind: Index, offsetNote: {[key in Index]: Length}) {
-      let del = []
-      let add = []
-      for (let index in offsetNote) {
-        let i = +index
-        if (ind >= i) ind += offsetNote[index]
-        else {
-          del.add(i)
-          i += len
-          add.add({i, n: offsetNote[index]})
-        }
+).contextualIndexing({
+  stringIndex(len: Length, ind: Index, offsetNote: {[key in Index]: Length}) {
+    let del = []
+    let add = []
+    for (let index in offsetNote) {
+      let i = +index
+      if (ind >= i) ind += offsetNote[index]
+      else {
+        del.add(i)
+        i += len
+        add.add({i, n: offsetNote[index]})
       }
-  
-      del.ea((e) => {
-        delete offsetNote[e]
-      })
-      add.ea((e) => {
-        offsetNote[e.i] = e.n
-      })
-      
-      return [len, ind]
     }
-  
-    inject(injection: string, atIndex: number = this.get().length - injection.length, offsetNote: {[key in Index]: Length}) {
-      return [injection, this.stringIndex(injection.length, atIndex, offsetNote)[1]]
-    }
-  
-    del(length: number, atIndex: number, offsetNote: {[key in Index]: Length}) {
-      return [length, this.stringIndex(length, atIndex, offsetNote)[1]]
-    }
+
+    del.ea((e) => {
+      delete offsetNote[e]
+    })
+    add.ea((e) => {
+      offsetNote[e.i] = e.n
+    })
+    
+    return [len, ind]
+  },
+
+  inject(injection: string, atIndex: number, offsetNote: {[key in Index]: Length}) {
+    return [injection, this.stringIndex(injection.length, atIndex, offsetNote)[1]]
+  },
+
+  del(length: number, atIndex: number, offsetNote: {[key in Index]: Length}) {
+    return [length, this.stringIndex(length, atIndex, offsetNote)[1]]
   }
-)
+})
 
 type Index = number
 type Length = number
 
 
 
-let w = 5000
+let w = 5000 - 5
 
 Date.now = () => {
-  w++
-  w++
-  w++
-  w++
-  w++
+  w += 5
   return w
 }
  
@@ -127,11 +123,12 @@ window.h = h
 
 
 
-s.append("world")
 s.get(console.log)
+// debugger
+s.inject("world")
 ind()
-debugger
-// h.apply({timeStamp: 5003, id: 7, args: [ "" ]})
+// debugger
+h.apply({timeStamp: 5003, id: "inject", args: [ " " ]})
 
 
 
