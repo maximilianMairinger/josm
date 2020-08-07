@@ -129,14 +129,23 @@ s.inject("world")
 ind()
 // debugger
 h.apply({timeStamp: 5003, id: "inject", args: [ " " ]})
+ind()
+// debugger
+h.apply({timeStamp: 5009, id: "inject", args: [ "! Over tere." ]})
+ind()
+// debugger
+h.apply({timeStamp: 5050, id: "inject", args: [ " My name is Tom." ]})
+ind()
+// debugger
+h.apply({timeStamp: 5040, id: "inject", args: [ "h", 19 ]})
+ind()
 
 
+h.apply({timeStamp: 5044, id: "del", args: [ 1, 23 ]})
+h.apply({timeStamp: 5045, id: "inject", args: [ "!!!!", 23 ]})
 
-
-
-
-
-
+h.apply({timeStamp: 5020, id: "del", args: [ 1, 8 ]})
+// todo multiculti
 
 
 
