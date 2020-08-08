@@ -142,7 +142,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
     proxyInjectionPrototype(functionIndex, undoFunctionNames)
     attachToData()
 
-    let contextualIndexFunctionIndex: any
+    let contextualIndexFunctionIndex: any = {}
 
     class HistoryIndex<Value = unknown> extends Data<Value> implements HistoryIndexAbstract<Value> {
       private link: DataSubscription<[Value]>
@@ -153,7 +153,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
         this.link = data.get(super.set.bind(this), false)
     
         data[historyIndexBridge] = this.historyIndex
-        this.historyIndex(now())(functionNameToIdIndex["set"]).add([data.get()])
+        this.historyIndex(now())(functionNameToIdIndex.set).add([data.get()])
       }
 
 
@@ -167,7 +167,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
         if (+Object.keys(currentHistoryIndex).last === timeStamp) {
           delete this.data[historyIndexBridge]
           this.data[thisProxyFunctionName](...args)
-          currentHistoryIndex[timeStamp][id].add(currentHistory.note)
+          localArgsIndex.add(currentHistory.note)
           this.data[historyIndexBridge] = this.historyIndex
           this.value = this.data.get()
         }
@@ -211,7 +211,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
           else {
             morphData[thisProxyFunctionName](...args)
             contextualNote = currentContextual.note
-            currentHistoryIndex[timeStamp][id].add(currentHistory.note)
+            localArgsIndex.add(currentHistory.note)
           }
 
           
@@ -225,7 +225,8 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
               let fnName = idToFunctionNameIndex[id]
 
               for (let arg of args) {
-                morphData[fnName](...(contextualIndexFunctionIndex ? contextualIndexFunctionIndex[fnName](...(contextualNote ? arg.Add(contextualNote) : arg)) : arg))
+                if (contextualIndexFunctionIndex[fnName]) arg.set(contextualIndexFunctionIndex[fnName](arg, contextualNote))
+                morphData[fnName](...arg)
               }
               
             }

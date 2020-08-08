@@ -2,7 +2,7 @@ import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, Dat
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
-
+import { constructObjectIndex } from "key-index"
 
 
 
@@ -31,8 +31,8 @@ let DATA = setDataDerivativeIndex(
     }
     del(length: number, atIndex: number) {
       let offset = {}
-      offset[atIndex] = length
-      let ret = new Return(undefined, [length, atIndex, this.get().substring(atIndex, length)], offset)
+      offset[atIndex] = -length
+      let ret = new Return(undefined, [length, atIndex, this.get().substr(atIndex, length)], offset)
       this.set(this.get().splice(atIndex, length))
       return ret
     }
@@ -58,8 +58,9 @@ let DATA = setDataDerivativeIndex(
       this.set(this.get().splice(atIndex, 0, deleted))
     }
   }
-).contextualIndexing({
-  stringIndex(len: Length, ind: Index, offsetNote: {[key in Index]: Length}) {
+).contextualIndexing((() => {
+
+  function stringIndex(len: Length, ind: Index, offsetNote: {[key in Index]: Length}) {
     let del = []
     let add = []
     for (let index in offsetNote) {
@@ -79,17 +80,27 @@ let DATA = setDataDerivativeIndex(
       offsetNote[e.i] = e.n
     })
     
-    return [len, ind]
-  },
-
-  inject(injection: string, atIndex: number, offsetNote: {[key in Index]: Length}) {
-    return [injection, this.stringIndex(injection.length, atIndex, offsetNote)[1]]
-  },
-
-  del(length: number, atIndex: number, offsetNote: {[key in Index]: Length}) {
-    return [length, this.stringIndex(length, atIndex, offsetNote)[1]]
+    return ind
   }
-})
+
+
+
+  return {
+    inject([injection, atIndex, ...rest]: [string, number], offsetNote: {[key in Index]: Length}) {
+      return [injection, stringIndex(injection.length, atIndex, offsetNote), ...rest]
+    },
+  
+    del([length, atIndex, ...rest]: [number, number], offsetNote: {[key in Index]: Length}) {
+      return [length, stringIndex(length, atIndex, offsetNote), ...rest]
+    }
+  }
+})())
+
+
+
+
+
+
 
 type Index = number
 type Length = number
@@ -122,6 +133,13 @@ window.s = s
 window.h = h
 
 
+// debugger
+// let index = constructObjectIndex((time) => constructObjectIndex((id) => []))
+// index(5000)(3).add(22)
+// index()[5000][3].set([1,2,3])
+// console.log(index())
+
+
 
 s.get(console.log)
 // debugger
@@ -140,11 +158,15 @@ ind()
 h.apply({timeStamp: 5040, id: "inject", args: [ "h", 19 ]})
 ind()
 
-
+// debugger
 h.apply({timeStamp: 5044, id: "del", args: [ 1, 23 ]})
+ind()
+// debugger
 h.apply({timeStamp: 5045, id: "inject", args: [ "!!!!", 23 ]})
-
+ind()
+// debugger
 h.apply({timeStamp: 5020, id: "del", args: [ 1, 8 ]})
+// ind()
 // todo multiculti
 
 
