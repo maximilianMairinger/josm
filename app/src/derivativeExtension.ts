@@ -88,7 +88,7 @@ function constructProxyInjectionPrototype() {
           me = false
           directCall = true
 
-          this[historyIndexBridge](now())(functionNameToIdIndex[name]).add(args)
+          if (args && !args.empty) this[historyIndexBridge](now())(functionNameToIdIndex[name]).add(args)
         }
 
         
@@ -161,17 +161,13 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
         this.link.deactivate()
         id = typeof id === "string" ? functionNameToIdIndex[id] : id
         let thisProxyFunctionName = idToFunctionNameIndex[id]
-        let localArgsIndex = this.historyIndex(timeStamp)(id)
         let currentHistoryIndex = this.historyIndex()
 
         if (+Object.keys(currentHistoryIndex).last === timeStamp) {
-          delete this.data[historyIndexBridge]
           this.data[thisProxyFunctionName](...args)
-          localArgsIndex.add(currentHistory.note)
-          this.data[historyIndexBridge] = this.historyIndex
           this.value = this.data.get()
         }
-        else if (!localArgsIndex.empty && !force) throw new LocalHistoryInconsistencyWithServer()
+        else if ((currentHistoryIndex[timeStamp] && currentHistoryIndex[timeStamp][id] && !currentHistoryIndex[timeStamp][id].empty) && !force) throw new LocalHistoryInconsistencyWithServer()
         else {
           
           let morphData = new Data(this.get())
@@ -211,7 +207,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
           else {
             morphData[thisProxyFunctionName](...args)
             contextualNote = currentContextual.note
-            localArgsIndex.add(currentHistory.note)
+            if (currentHistory.note && !currentHistory.note.empty) this.historyIndex(timeStamp)(id).add(currentHistory.note)
           }
 
           
