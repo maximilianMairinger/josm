@@ -24,12 +24,14 @@ let DATA = setDataDerivativeIndex(
   class Str extends Data<string> {
     
     inject(injection: string, atIndex: number = this.get().length) {
+      if (injection.length === 0) return new Return(undefined, null)
       this.set(this.get().splice(atIndex as any, 0, injection))
       let offset = {}
       offset[atIndex] = injection.length
       return new Return(undefined, [injection, atIndex], offset)
     }
     del(length: number, atIndex: number) {
+      if (length < 1) return new Return(undefined, null)
       let offset = {}
       offset[atIndex] = -length
       let ret = new Return(undefined, [length, atIndex, this.get().substr(atIndex, length)], offset)
@@ -141,36 +143,117 @@ window.h = h
 
 
 
-s.get(console.log)
-// debugger
-s.inject("world")
-ind()
-// debugger
-h.apply({timeStamp: 5003, id: "inject", args: [ " " ]})
-ind()
-// debugger
-h.apply({timeStamp: 5009, id: "inject", args: [ "! Over tere." ]})
-ind()
-// debugger
-h.apply({timeStamp: 5050, id: "inject", args: [ " My name is Tom." ]})
-ind()
-// debugger
-h.apply({timeStamp: 5040, id: "inject", args: [ "h", 19 ]})
-ind()
+let txt = document.getElementById("txt") as HTMLTextAreaElement
 
-// debugger
-h.apply({timeStamp: 5044, id: "del", args: [ 1, 23 ]})
-ind()
-// debugger
-h.apply({timeStamp: 5045, id: "inject", args: [ "!!!!", 23 ]})
-ind()
-// debugger
-h.apply({timeStamp: 5020, id: "del", args: [ 1, 8 ]})
+let modes = ["insertFromPaste", "insertText", "deleteContentBackward", "deleteContentForward", "deleteByCut", "deleteByDrag", "insertFromDrop", "deleteWordBackward", "deleteWordForward "]
+
+function inject(injection: string, at: number) {
+  if (injection.length === 0) return
+  console.log("inj", injection, at)
+}
+
+function del(del: number, at: number) {
+  if (del === 0) return
+  console.log("del", del, at)
+}
+
+function set(set: string) {
+  console.log("set", set)
+}
+
+let prevText: string
+let selection: {start?: number, end?: number} = {}
+let exception = false
+let dele = false
+let type: string
+txt.addEventListener("beforeinput", (e: InputEvent) => {
+  selection.start = txt.selectionStart
+  selection.end = txt.selectionEnd
+  type = e.inputType
+  prevText = txt.value
+
+  try {
+    if (type.startsWith("insert")) {
+      if (e.data !== null) {
+        del(selection.end - selection.start, selection.start)
+        inject(e.data, selection.start)
+      }
+      else throw new Error()
+    }
+    else if (type.startsWith("delete")) {
+      let diff = selection.end - selection.start
+      if (diff > 0) del(diff, selection.start)
+      else {
+        dele = true
+      }
+    }
+
+  }
+  catch(ex) {
+    console.warn("Unable to inject modification with inputType: \"" + e.inputType + "\"\n", "Event: ", e)
+    exception = true
+  }
+
+  
+  
+  // console.log(e)
+})
+let text: string
+txt.addEventListener("input", (e) => {
+  text = txt.value
+  try {
+    if (dele) {
+      dele = false
+      let diff = prevText.length - text.length
+      if (type.endsWith("Backward")) del(diff, selection.start - diff)
+      else if (type.endsWith("Forward")) del(diff, selection.start)
+      else throw new Error()
+    }
+  }
+  catch(e) {
+    exception = true
+  }
+  
+  if (exception) {
+    exception = false
+    set(text)
+  }
+})
+txt.focus()
+
+
+
+
+// s.get(console.log)
+// // debugger
+// s.inject("world")
 // ind()
-// todo multiculti
+// // debugger
+// h.apply({timeStamp: 5003, id: "inject", args: [ " " ]})
+// ind()
+// // debugger
+// h.apply({timeStamp: 5009, id: "inject", args: [ "! Over tere." ]})
+// ind()
+// // debugger
+// h.apply({timeStamp: 5050, id: "inject", args: [ " My name is Tom." ]})
+// ind()
+// // debugger
+// h.apply({timeStamp: 5040, id: "inject", args: [ "h", 19 ]})
+// ind()
+
+// // debugger
+// h.apply({timeStamp: 5044, id: "del", args: [ 1, 23 ]})
+// ind()
+// // debugger
+// h.apply({timeStamp: 5045, id: "inject", args: [ "!!!!", 23 ]})
+// ind()
+// // debugger
+// h.apply({timeStamp: 5020, id: "del", args: [ 1, 8 ]})
+// // ind()
+// // todo multiculti
 
 
-
+console.log("go")
 
 
 
