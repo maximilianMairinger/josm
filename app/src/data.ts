@@ -24,7 +24,7 @@ export const localSubscriptionNamespace = {
 }
 
 
-export type Subscription<Values extends any[]> = (...value: Values) => void | Promise<void>
+export type Subscription<Values extends any[]> = (...value: Values) => void
 
 
 
@@ -40,6 +40,13 @@ export class Data<Value = unknown> {
     subs.Call(this.value)
   }
 
+  public tunnel<Ret>(func: (val: Value) => Ret): Data<Ret> {
+    let d: Data<Ret> = new Data()
+    this.get((val) => {
+      d.set(func(val))
+    })
+    return d
+  }
   
   public get(): Value
   public get(subscription: Subscription<[Value]>, initialize?: boolean): DataSubscription<[Value]>
