@@ -33,8 +33,11 @@ export class Data<Value = unknown> {
   private linksOfMe = []
 
   private locSubNsReg: {destroy: () => void}[] = []
+  protected value: Value
 
-  public constructor(protected value?: Value) {}
+  public constructor(value?: Value) {
+    this.set(value)
+  }
 
   protected __call(subs: Subscription<[Value]>[]) {
     subs.Call(this.value)
