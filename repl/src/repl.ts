@@ -9,7 +9,7 @@ import clone from "fast-copy"
 let historyIndex = constructIndex((a: any) => {return {} as {[timestamp: number]: {[index: number]: string}}})
 
 
-let DATA = setDataDerivativeIndex(
+let { Data: DATA } = setDataDerivativeIndex(
   class Num extends Data<number> {
     static id = "Num"
     inc(by: number = 1) {
@@ -50,7 +50,8 @@ let dd = new DATA(2)
 
 
 
-
+let q = new DataBase({q: "qwe", qq: {q: 2}})
+q.qq.q.get()
 
 
 
