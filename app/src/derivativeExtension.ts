@@ -6,7 +6,6 @@ import { Data } from "./josm"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import keyIndex, { constructObjectIndex } from "key-index"
 import { Subscription, DataSubscription } from "./data"
-import { AnyNaptrRecord } from "dns"
 
 
 
@@ -35,85 +34,117 @@ function now() {
 
 
 function constructProxyInjectionPrototype() {
-  let initialProxySymbol = Symbol("initialProxy")
-  let idToFunctionNameIndex: {[id in number]: string} = {}
-    let functionNameToIdIndex: {[functionName in string]: number} = {}
-  let proxy = false
+  let historyIndexBridge = Symbol("history")
+  let idToFunctionNameIndex: {[id in number]: string} = {0: "set"}
+  let functionNameToIdIndex: {[functionName in string]: number} = {set: 0}
+  let currentId = 1
+
+  let currentContextual = {
+    note: undefined
+  }
+  let currentHistory = {
+    note: undefined
+  }
+
   return {
-    initialProxySymbol,
+    historyIndexBridge,
     idToFunctionNameIndex,
     functionNameToIdIndex,
-    setProxy,
-    proxyInjectionPrototype
+    proxyInjectionPrototype,
+    currentContextual,
+    currentHistory
   }
 
-  function setProxy(to: boolean) {
-    proxy = to
-  }
-
-  let currentId = 0
     
 
-  function proxyInjectionPrototype(Class: {prototype: any}) {
-    let proto = Class.prototype
-    let o = {} as any
-    let functionNames = Object.getOwnPropertyNames(proto).rmV("constructor")
+  function proxyInjectionPrototype(functionIndex: any, functionNames = Object.keys(functionIndex)) {
+    let directCall = true
+    let me = false
 
-    if (!proxy) {
-      for (let key of functionNames) {
-        o[key] = proto[key]
-      }
-    }
-    else {
-      for (let name of functionNames) {
-        idToFunctionNameIndex[functionNameToIdIndex[name] = currentId++] = name
-        let isInitialProxy: boolean = false
-        o[name] = function(...args: any) {
-          if (this[initialProxySymbol as any] === undefined) {
-            this[initialProxySymbol as any] = {name, args}
-            isInitialProxy = true
-          }
-          proto[name].apply(this, args)
-          if (isInitialProxy) {
-            isInitialProxy = false
-            delete this[initialProxySymbol as any]
-          }
+    let ret: any
+    let r: any
+
+    for (let name of functionNames) {
+      idToFunctionNameIndex[functionNameToIdIndex[name] = currentId++] = name
+      let defaultFunc = functionIndex[name]
+
+      functionIndex[name] = function(...args: any) {
+        if (this[historyIndexBridge] !== undefined && directCall) {
+          directCall = false
+          me = true
         }
+
+        ret = defaultFunc.apply(this, args)
+        if (ret instanceof Return) {
+          if (ret.historyNote) args = ret.historyNote
+          currentHistory.note = args
+          currentContextual.note = ret.contextualNote
+          ret = ret.ret
+        }
+
+        
+
+        if (me) {
+          me = false
+          directCall = true
+
+          if (args && !args.empty) this[historyIndexBridge](now())(functionNameToIdIndex[name]).add(args)
+        }
+
+        
+        return ret
       }
     }
-    return o
+
+    return functionIndex
   }
 }
 
 
-interface HistoryIndexAbstract<Value> extends Data<Value> {
-  set(value: Value): Value
-  set(value: Value, proxyParams: {timeStamp: number, name: string, args: any[], force?: boolean}): Value
+export interface HistoryIndexAbstract<Value> extends Data<Value> {
+  apply(o: {timeStamp: number, id: number | string, args: any[], force?: boolean}): void
+}
+
+function classLsToFunctionIndex(clsLs: any[]): any {
+  let o = {}
+  clsLs.ea(({prototype: p}) => {
+    let functionNames = Object.getOwnPropertyNames(p).rmV("constructor")
+    for (let fnName of functionNames) {
+      o[fnName] = p[fnName]
+    }
+  })
+  return o
 }
 
 
 type MergedDataDerivative<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]> = { new<Q> (a: Q): { [key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never }[number] extends never ? Data<Q> : { [key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never }[number] }
-export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): MergedDataDerivative<T, W> & { proxy: () => {Data: MergedDataDerivative<T, W>, HistoryIndex: { new<Value>(data: Data<Value>): HistoryIndexAbstract<Value> }} }  {
-  let { setProxy, proxyInjectionPrototype, idToFunctionNameIndex, functionNameToIdIndex, initialProxySymbol } = constructProxyInjectionPrototype()
+export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...classLs: T): MergedDataDerivative<T, W> & { proxy: (...settings: any[]) => (MergedDataDerivative<T, W> & { HistoryIndex: { new<Value>(data: Data<Value>): HistoryIndexAbstract<Value> }, contextualIndexing: (...a: any[]) => (MergedDataDerivative<T, W> & { HistoryIndex: { new<Value>(data: Data<Value>): HistoryIndexAbstract<Value> } })})}  {
 
-  function apply() {
-    const attach = constructAttatchToPrototype(dataDerivativeLiableIndex.Inner("prototype"))
-    collection.ea((e) => {
-      const q = proxyInjectionPrototype(e)
-      for (let key in q) {
-        attach(key, q[key])
+  
+  const functionIndex = classLsToFunctionIndex(classLs)
+  const attachToData = (() => {
+    const a = constructAttatchToPrototype(dataDerivativeLiableIndex.Inner("prototype"))
+    return function attachToData() {
+      for (let functionName in functionIndex) {
+        a(functionName, functionIndex[functionName])
       }
-    })
-  }
-  apply()
+    }
+  })()
 
-  let end: any = Object.getPrototypeOf(collection.first)
-  end.proxy = () => {
-    setProxy(true)
-    apply()
+  attachToData()
+  
 
+  let end: any = Object.getPrototypeOf(classLs.first)
+  end.proxy = (...undoClsLs: any[]) => {
+    const { proxyInjectionPrototype, idToFunctionNameIndex, historyIndexBridge, functionNameToIdIndex, currentContextual, currentHistory } = constructProxyInjectionPrototype()
+    let undoFunctionIndex = classLsToFunctionIndex(undoClsLs)
+    let undoFunctionNames = Object.keys(undoFunctionIndex)
+    proxyInjectionPrototype(functionIndex, undoFunctionNames)
+    attachToData()
 
-    class HistoryIndex<Value = unknown> extends Data<Value> {
+    let contextualIndexFunctionIndex: any = {}
+
+    class HistoryIndex<Value = unknown> extends Data<Value> implements HistoryIndexAbstract<Value> {
       private link: DataSubscription<[Value]>
       private historyIndex = constructObjectIndex((timeStamp: number) => constructObjectIndex((functionId: number) => {return [] as Args[]}))
     
@@ -121,86 +152,110 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
         super(data.get())
         this.link = data.get(super.set.bind(this), false)
     
-        this.get(() => {
-          let thisInitProxy: {name: string, args: any[]} = this.data[initialProxySymbol] !== undefined ? this.data[initialProxySymbol] : "get"
-          
-        })
+        data[historyIndexBridge] = this.historyIndex
+        this.historyIndex(now())(functionNameToIdIndex.set).add([data.get()])
       }
 
-    
-      public set(value: Value): Value
-      public set(value: Value, proxyParams : {timeStamp: number, name: string, args: any[], force?: boolean}): Value
-      public set(value: Value, proxyParams?: {timeStamp: number, name: string, args: any[], force?: boolean}): Value {
+
+      public apply({timeStamp, id, args, force}: {timeStamp: number, id: number, args: any[], force?: boolean}) {
         this.link.deactivate()
+        id = typeof id === "string" ? functionNameToIdIndex[id] : id
+        let thisProxyFunctionName = idToFunctionNameIndex[id]
+        let currentHistoryIndex = this.historyIndex()
 
-        if (proxyParams !== undefined) {
-          let thisProxyFunctionName = functionNameToIdIndex[proxyParams.name]
-          let localArgsIndex = this.historyIndex(proxyParams.timeStamp)(thisProxyFunctionName)
-          let currentHistoryIndex = this.historyIndex()
-
-          if (+Object.keys(currentHistoryIndex).last === proxyParams.timeStamp) {
-            currentHistoryIndex[proxyParams.timeStamp][thisProxyFunctionName].add(proxyParams.args)
-            this.data[thisProxyFunctionName](proxyParams.args)
-            this.value = this.data.get()
-          }
-          else if (!localArgsIndex.empty && !proxyParams.force) throw new LocalHistoryInconsistencyWithServer()
-          else {
-            
-            let morphData = new Data(this.get())
-
-            let timeStamps = Object.keys(currentHistoryIndex)
-            let givenTimeStamp = proxyParams.timeStamp
-            let givenTimeStampIndex: number
-            for (let i = timeStamps.length - 1; i >= 0; i--) {
-              if (givenTimeStamp >= +timeStamps[i]) {
-                givenTimeStampIndex = i + 1
-                break
-              }
-              let functionIndex = currentHistoryIndex[timeStamps[i]]
-              for (let functionName in functionIndex) {
-                let argsLs = functionIndex[functionName] as any[][]
-                for (let i = argsLs.length; i >= 0; i--) {
-                  morphData[calculateReverseFunctionName(functionName)](...argsLs[i])  
-                }
-              }
-            }
-
-
-            this.historyIndex(proxyParams.timeStamp)(thisProxyFunctionName, proxyParams.args)
-            for (let args of proxyParams.args) {
-              morphData[thisProxyFunctionName](args)  
-            }
-            
-            
-
-            for (let i = givenTimeStampIndex; i < timeStamps.length; i++) {
-              let functionIndex = currentHistoryIndex[timeStamps[i]]
-              for (let functionName in functionIndex) {
-                let argsLs = functionIndex[functionName] as any[][]
-                for (let i = 0; i < argsLs.length; i++) {
-                  morphData[functionName](...argsLs[i])
-                }
-              }
-            }
-            
-            this.value = this.data.set(morphData.get())
-          }
+        if (+Object.keys(currentHistoryIndex).last === timeStamp) {
+          this.data[thisProxyFunctionName](...args)
+          this.value = this.data.get()
         }
-        else this.value = this.data.set(value)
+        else if ((currentHistoryIndex[timeStamp] && currentHistoryIndex[timeStamp][id] && !currentHistoryIndex[timeStamp][id].empty) && !force) throw new LocalHistoryInconsistencyWithServer()
+        else {
+          
+          let morphData = new Data(this.get())
+
+          let timeStamps = Object.keys(currentHistoryIndex)
+          let givenTimeStampIndex: number
+          for (let i = timeStamps.length - 1; i >= 0; i--) {
+            if (timeStamp >= +timeStamps[i]) {
+              givenTimeStampIndex = i + 1
+              break
+            }
+            let functionIndex = currentHistoryIndex[timeStamps[i]]
+            for (let id in functionIndex) {
+              let args = functionIndex[id] as any[][]
+
+              for (let arg of args) {
+                undoFunctionIndex[idToFunctionNameIndex[id]].apply(morphData, arg)
+              }
+            }
+          }
+
+          let contextualNote: any
+
+
+
+          if (force) {
+            // There cannot be two changes at the same index!
+            contextualNote = []
+            let historyArgs = currentHistoryIndex[timeStamp][id] = []
+            for (let arg of args) {
+              
+              morphData[thisProxyFunctionName](...arg)
+              contextualNote.add(currentContextual.note)
+              historyArgs.add(currentHistory.note)
+            }
+          }
+          else {
+            morphData[thisProxyFunctionName](...args)
+            contextualNote = currentContextual.note
+            if (currentHistory.note && !currentHistory.note.empty) this.historyIndex(timeStamp)(id).add(currentHistory.note)
+          }
+
+          
+          
+          
+          
+          for (let i = givenTimeStampIndex; i < timeStamps.length; i++) {
+            let functionIndex = currentHistoryIndex[timeStamps[i]]
+            for (let id in functionIndex) {
+              let args = functionIndex[id] as any[][]
+              let fnName = idToFunctionNameIndex[id]
+
+              for (let arg of args) {
+                if (contextualIndexFunctionIndex[fnName]) arg.set(contextualIndexFunctionIndex[fnName](arg, contextualNote))
+                morphData[fnName](...arg)
+              }
+              
+            }
+          }
+          
+          this.value = this.data.set(morphData.get())
+        }
 
         this.link.activate()
-        return value
+      }
+    
+      public set(value: Value): Value {
+        return this.value = this.data.set(value)
       }
     }
     
 
-
-    return {
-      Data: end,
-      HistoryIndex
+    end.HistoryIndex = HistoryIndex
+    delete end.proxy
+    end.contextualIndexing = (_contextualIndexFunctionIndex: any) => {
+      contextualIndexFunctionIndex = _contextualIndexFunctionIndex
+      delete end.contextualIndexing
+      return end
     }
+    return end
   }
   return end
+}
+
+
+
+export class Return<Ret> {
+  constructor(public ret?: Ret, public historyNote?: any, public contextualNote?: any) {}
 }
 
 
@@ -223,9 +278,3 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 type Args = any[]
 
 export class LocalHistoryInconsistencyWithServer extends Error {}
-
-const reverseKeyword = "undo"
-function calculateReverseFunctionName(name: string) {
-  if (name.startsWith(reverseKeyword) && name.charAt(4).isUpperCase()) return name.charAt(4).toLowerCase() + name.substring(5)
-  else return reverseKeyword + name.capitalize()
-}
