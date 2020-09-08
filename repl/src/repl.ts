@@ -104,7 +104,8 @@ let DATA = setDataDerivativeIndex(
 
 
 
-
+let q = new DataBase({q: "qwe", qq: {q: 2}})
+q.qq.q.get()
 
 
 
@@ -137,7 +138,6 @@ let ind = window.ind = function() {
 window.s = s
 //@ts-ignore
 window.h = h
-
 
 // debugger
 // let index = constructObjectIndex((time) => constructObjectIndex((id) => []))
