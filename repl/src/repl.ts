@@ -6,6 +6,10 @@ import { constructObjectIndex } from "key-index"
 
 
 
+
+
+
+
 let historyIndex = constructIndex((a: any) => {return {} as {[timestamp: number]: {[index: number]: string}}})
 
 
@@ -144,20 +148,36 @@ window.h = h
 
 
 let txt = document.getElementById("txt") as HTMLTextAreaElement
+let txt2 = document.getElementById("txt2") as HTMLTextAreaElement
 
 let modes = ["insertFromPaste", "insertText", "deleteContentBackward", "deleteContentForward", "deleteByCut", "deleteByDrag", "insertFromDrop", "deleteWordBackward", "deleteWordForward "]
 
+let d = new DATA(txt.value)
+let hi = new HistoryIndex(d)
+d.get((b) => {
+  txt2.value = b
+})
+
+//@ts-ignore
+window.hi = hi
+
+
+
 function inject(injection: string, at: number) {
+  debugger
+  d.inject(injection, at)
   if (injection.length === 0) return
   console.log("inj", injection, at)
 }
 
 function del(del: number, at: number) {
+  d.del(del, at)
   if (del === 0) return
   console.log("del", del, at)
 }
 
 function set(set: string) {
+  d.set(set)
   console.log("set", set)
 }
 
@@ -171,6 +191,8 @@ txt.addEventListener("beforeinput", (e: InputEvent) => {
   selection.end = txt.selectionEnd
   type = e.inputType
   prevText = txt.value
+
+  // enter
 
   try {
     if (type.startsWith("insert")) {

@@ -39,11 +39,11 @@ function constructProxyInjectionPrototype() {
   let functionNameToIdIndex: {[functionName in string]: number} = {set: 0}
   let currentId = 1
 
-  let currentContextual = {
-    note: undefined
-  }
-  let currentHistory = {
-    note: undefined
+  const note = {
+    history: undefined,
+    context: undefined,
+    initProxyFuncIndex: undefined,
+    func: undefined
   }
 
   return {
@@ -51,8 +51,7 @@ function constructProxyInjectionPrototype() {
     idToFunctionNameIndex,
     functionNameToIdIndex,
     proxyInjectionPrototype,
-    currentContextual,
-    currentHistory
+    note
   }
 
     
@@ -75,14 +74,13 @@ function constructProxyInjectionPrototype() {
         }
 
         ret = defaultFunc.apply(this, args)
+        
         if (ret instanceof Return) {
-          if (ret.historyNote) args = ret.historyNote
-          currentHistory.note = args
-          currentContextual.note = ret.contextualNote
+          if (ret.historyNote !== undefined) args = ret.historyNote
+          note.history = args
+          note.context = ret.contextualNote
           ret = ret.ret
         }
-
-        
 
         if (me) {
           me = false
@@ -136,7 +134,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 
   let end: any = Object.getPrototypeOf(classLs.first)
   end.proxy = (...undoClsLs: any[]) => {
-    const { proxyInjectionPrototype, idToFunctionNameIndex, historyIndexBridge, functionNameToIdIndex, currentContextual, currentHistory } = constructProxyInjectionPrototype()
+    const { proxyInjectionPrototype, idToFunctionNameIndex, historyIndexBridge, functionNameToIdIndex, note } = constructProxyInjectionPrototype()
     let undoFunctionIndex = classLsToFunctionIndex(undoClsLs)
     let undoFunctionNames = Object.keys(undoFunctionIndex)
     proxyInjectionPrototype(functionIndex, undoFunctionNames)
@@ -200,14 +198,14 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
             for (let arg of args) {
               
               morphData[thisProxyFunctionName](...arg)
-              contextualNote.add(currentContextual.note)
-              historyArgs.add(currentHistory.note)
+              contextualNote.add(note.context)
+              historyArgs.add(note.history)
             }
           }
           else {
             morphData[thisProxyFunctionName](...args)
-            contextualNote = currentContextual.note
-            if (currentHistory.note && !currentHistory.note.empty) this.historyIndex(timeStamp)(id).add(currentHistory.note)
+            contextualNote = note.context
+            if (note.history && !note.history.empty) this.historyIndex(timeStamp)(id).add(note.history)
           }
 
           
