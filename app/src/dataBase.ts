@@ -7,6 +7,7 @@ import { dbDerivativeLiableIndex } from "./derivativeExtension"
 import xrray from "xrray"
 xrray(Array)
 import xtring from "xtring"
+import { tunnelSubscription, justInheritanceFlag } from "./data"
 xtring()
 
 
@@ -19,33 +20,41 @@ interface Link {
   updatePathResolvement(wrapper?: DataBase<any>): void
 } 
 
-export class DataLink implements Link {
+
+export class DataLink extends Data implements Link {
   private pathSubscriptions: DataSubscription<PathSegment[]>[] | PrimitivePathSegment[] = []
   private wrapper: DataBase<any>
   private data: Data<any>
-  private subscriptions: DataSubscription<any>[] = []
+  private subs: DataSubscription<any>[] = []
 
   private currentPathIndex: PrimitivePathSegment[]
 
   constructor(wrapper: DataBase<any>, private paths: DataSet<PrimitivePathSegment[]>[] | PrimitivePathSegment[]) {
+    super(justInheritanceFlag)
     this.dataChange(wrapper)
   }
   destroy() {
     this.destroyPathSubscriptions()
 
-    this.subscriptions.Inner("deactivate", [])
-    this.subscriptions.clear()
+    this.subs.Inner("deactivate", [])
+    this.subs.clear()
 
     for (let key in this) {
       delete this[key]
     }
   }
 
+  tunnel(func: Function): any {
+    let d = this.data.tunnel(func as any)
+    this.subs.add(d[tunnelSubscription])
+    return d
+  }
+
   
   get(cb?: Function | DataSubscription<any>, init?: boolean) {
     if (cb) {
       let sub = this.data.get(cb as any, init)
-      this.subscriptions.add(sub)
+      this.subs.add(sub)
       return sub
     }
     else return this.data.get()
@@ -64,7 +73,7 @@ export class DataLink implements Link {
     //@ts-ignore
     this.data.unsubscribe(...a)
   }
-
+  //@ts-ignore
   isSubscribed(...a: any) {
     //@ts-ignore
     this.data.isSubscribed(...a)
@@ -82,7 +91,7 @@ export class DataLink implements Link {
   got(...a: any) {
     //@ts-ignore
     let sub = this.data.got(...a)
-    this.subscriptions.rmV(sub)
+    this.subs.rmV(sub)
     return sub
   }
 
@@ -100,7 +109,7 @@ export class DataLink implements Link {
       this.data = parent
       //@ts-ignore
       this.data.linksOfMe.add(this)
-      this.subscriptions.Inner("data", [parent, true])
+      this.subs.Inner("data", [parent, true])
     }
   }
   destroyPathSubscriptions() {}
