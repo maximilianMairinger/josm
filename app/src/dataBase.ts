@@ -803,7 +803,7 @@ class InternalDataBase<Store extends ComplexData> extends Function {
       if (typeof val !== "function") {
         
         if (typeof val === objectString) {
-          if (val[parsingId] === undefined) constructAttatchToPrototype([funcThis])(key, constructAttatchToPrototype([val])(parsingId, new InternalDataBase(val, parsingId, this.boundCall)))
+          if (val[parsingId] === undefined) funcThis[key] = constructAttatchToPrototype(val)(parsingId, new InternalDataBase(val, parsingId, this.boundCall))
           else funcThis[key] = val[parsingId]
           funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
 
