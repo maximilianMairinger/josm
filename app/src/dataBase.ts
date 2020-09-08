@@ -21,6 +21,18 @@ interface Link {
 } 
 
 
+function forwardLink(source: any, target: any, forwards: string[]) {
+  let src = source.prototype
+  let t = target.prototype
+
+  forwards.ea((functionName) => {
+    t[functionName] = (...a) => {
+      src[functionName](...a)
+    }
+  })
+}
+
+//@ts-ignore
 export class DataLink extends Data implements Link {
   private pathSubscriptions: DataSubscription<PathSegment[]>[] | PrimitivePathSegment[] = []
   private wrapper: DataBase<any>
@@ -64,28 +76,10 @@ export class DataLink extends Data implements Link {
     return this.data.valueOf()
   }
 
-  subscribe(...a: any) {
-    //@ts-ignore
-    this.data.subscribe(...a)
-  }
-
-  unsubscribe(...a: any) {
-    //@ts-ignore
-    this.data.unsubscribe(...a)
-  }
-  //@ts-ignore
-  isSubscribed(...a: any) {
-    //@ts-ignore
-    this.data.isSubscribed(...a)
-  }
 
   set(...a: any) {
     //@ts-ignore
     return this.data.set(...a)
-  }
-
-  toString() {
-    return this.data.toString()
   }
 
   got(...a: any) {
@@ -120,6 +114,19 @@ export class DataLink extends Data implements Link {
     this.resolvePath()
   }
 }
+
+
+forwardLink(Data, DataLink, [
+  "valueOf",
+  "subscribe",
+  "unsubscribe",
+  "isSubscribed",
+  "subscribeToThis",
+  "subscribeToChildren",
+  "unsubscribeToThis",
+  "unsubscribeToChildren",
+  "toString"
+])
 
 
 class DataBaseLink extends Function implements Link {
