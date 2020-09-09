@@ -24,12 +24,12 @@ interface Link {
 function forwardLink(source: any, target: any, forwards: string[]) {
   let src = source.prototype
   let t = target.prototype
-
-  forwards.ea((functionName) => {
-    t[functionName] = (...a) => {
+  const attach = constructAttatchToPrototype(t)
+  for (let functionName of forwards) {
+    attach(functionName, (...a) => {
       src[functionName](...a)
-    }
-  })
+    })
+  }
 }
 
 //@ts-ignore
@@ -114,7 +114,6 @@ export class DataLink extends Data implements Link {
     this.resolvePath()
   }
 }
-
 
 forwardLink(Data, DataLink, [
   "valueOf",
@@ -214,21 +213,22 @@ class DataBaseLink extends Function implements Link {
 
   initFuncProps() {
     for (let key in this.dataBaseFunc) {
-      let link: Link
+      
       Object.defineProperty(this.funcThis, key, {
         get: () => {
-          if (link === undefined) {
-            if (this.dataBaseFunc[key] instanceof Data) link = new DataLink(this.dataBaseFunc as any, [key])
-            else link = new DataBaseLink(this.dataBaseFunc as any, [key])
-            localSubscriptionNamespace.register({destroy: () => {
-              link.destroy()
-              link = undefined
-            }})
-            this.distributedLinks.add(link)
-          }
+          let linkInstance: any
+          let link: Link
+          if (this.dataBaseFunc[key] instanceof Data) linkInstance = link = new DataLink(this.dataBaseFunc as any, [key])
+          else linkInstance = (link = new DataBaseLink(this.dataBaseFunc as any, [key]))[internalDataBaseBridge]
+          localSubscriptionNamespace.register({destroy: () => {
+            linkInstance.destroy()
+            delete this.funcThis[key]
+          }})
+          this.distributedLinks.add(linkInstance)
+          Object.defineProperty(this.funcThis, key, {value: link, configurable: true})
           return link
         }
-      })
+      , configurable: true})
       
     }
   }
