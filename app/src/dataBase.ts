@@ -127,7 +127,7 @@ export class DataLink extends Data implements Link {
   }
 }
 
-forwardLink(Data, DataLink)
+forwardLink(DataLink, "data", Data)
 
 
 class DataBaseLink extends Function implements Link {
