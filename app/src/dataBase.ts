@@ -21,22 +21,25 @@ interface Link {
 } 
 
 
-function forwardLink(source: any, target: any, forwards: string[] = []) {
-  let src = source.prototype
-  let srcProps = Object.getOwnPropertyNames(src).rmV("constructor")
-  let tar = target.prototype
-  let tarProps = Object.getOwnPropertyNames(tar).rmV("constructor")
-
-  if (forwards.empty) {
-    for (let k of srcProps) {
-      if (!tarProps.includes(k)) forwards.add(k)
+function forwardLink(target: any, instancePath: string, forwards: string[])
+function forwardLink(target: any, instancePath: string, source: any)
+function forwardLink(target: any, instancePath: string, source_forwards: any | string[]) {
+  let tarProto = target.prototype
+  let forwards: string[]
+  if (source_forwards instanceof Array) forwards = source_forwards
+  else {
+    let src = Object.getOwnPropertyNames(source_forwards.prototype).rmV("constructor")
+    let tar = Object.getOwnPropertyNames(tarProto).rmV("constructor")
+    forwards = []
+    for (let k of src) {
+      if (!tar.includes(k)) forwards.add(k)
     }
   }
   
-  const attach = constructAttatchToPrototype(tar)
+  const attach = constructAttatchToPrototype(tarProto)
   for (let functionName of forwards) {
-    attach(functionName, (...a) => {
-      src[functionName](...a)
+    attach(functionName, function (...a) {
+      this[instancePath](...a)
     })
   }
 }
