@@ -39,7 +39,7 @@ function forwardLink(target: any, instancePath: string, source_forwards: any | s
   const attach = constructAttatchToPrototype(tarProto)
   for (let functionName of forwards) {
     attach(functionName, function (...a) {
-      this[instancePath](...a)
+      this[instancePath][functionName](...a)
     })
   }
 }
