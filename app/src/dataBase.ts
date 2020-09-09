@@ -21,10 +21,19 @@ interface Link {
 } 
 
 
-function forwardLink(source: any, target: any, forwards: string[]) {
+function forwardLink(source: any, target: any, forwards: string[] = []) {
   let src = source.prototype
-  let t = target.prototype
-  const attach = constructAttatchToPrototype(t)
+  let srcProps = Object.getOwnPropertyNames(src).rmV("constructor")
+  let tar = target.prototype
+  let tarProps = Object.getOwnPropertyNames(tar).rmV("constructor")
+
+  if (forwards.empty) {
+    for (let k of srcProps) {
+      if (!tarProps.includes(k)) forwards.add(k)
+    }
+  }
+  
+  const attach = constructAttatchToPrototype(tar)
   for (let functionName of forwards) {
     attach(functionName, (...a) => {
       src[functionName](...a)
@@ -115,17 +124,7 @@ export class DataLink extends Data implements Link {
   }
 }
 
-forwardLink(Data, DataLink, [
-  "valueOf",
-  "subscribe",
-  "unsubscribe",
-  "isSubscribed",
-  "subscribeToThis",
-  "subscribeToChildren",
-  "unsubscribeToThis",
-  "unsubscribeToChildren",
-  "toString"
-])
+forwardLink(Data, DataLink)
 
 
 class DataBaseLink extends Function implements Link {
