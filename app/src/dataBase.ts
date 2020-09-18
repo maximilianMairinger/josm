@@ -473,7 +473,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
   private locSubNsReg: any[]
 
-  constructor(store: Store, private Default: Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
+  constructor(store: Store, private Default?: Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     this.funcThis = this.bind(this)
 
@@ -572,7 +572,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
 
 
-
+  private inBulkChange: boolean
   
   
   protected DataBaseFunction(): Readonly<Store>
@@ -669,7 +669,9 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
       if (strict) handledKeys = []
       let explicitDeleteKeys = []
 
-      for (const key in newData) {
+      let keysOfNewData = Object.keys(newData)
+
+      for (const key of keysOfNewData) {
         if (strict) handledKeys.add(key)
 
         const prop = funcThis[key]
@@ -697,6 +699,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
                   delete newVal[parsingId]
                   delete funcThis[key]
                   delete newData[key]
+                  delete this.store[key]
                   this.call(undefined, true)
                 })
               }
@@ -731,6 +734,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
                 delete newVal[parsingId]
                 delete funcThis[key]
                 delete newData[key]
+                delete this.store[key]
                 this.call(undefined, true)
               })
               funcThis[key].get((e) => {
@@ -752,6 +756,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
                 delete newVal[parsingId]
                 delete funcThis[key]
                 delete newData[key]
+                delete this.store[key]
                 this.call(undefined, true)
               })
               //@ts-ignore
@@ -771,6 +776,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
               delete newVal[parsingId]
               delete funcThis[key]
               delete newData[key]
+              delete this.store[key]
               this.call(undefined, true)
             })
             funcThis[key].get((e) => {
@@ -799,6 +805,8 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
         }
       }
 
+      this.defaultProps(keysOfNewData, parsingId)
+
       this.inBulkChange = false
 
       if (notifyFromThis) this.call(undefined, true)
@@ -816,7 +824,10 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
     this.store = store
     if (parsingId === undefined) parsingId = Symbol("parsingId")
     const funcThis = this.funcThis
-    for (const key in store) {
+    let newStoreKeys = Object.keys(store)
+    
+
+    for (const key of newStoreKeys) {
       const val = store[key] as any
       const defaultVal = this.Default !== undefined ? this.Default[key] : undefined
       // TODO: Is this needed or can you just make all functions non iteratable
@@ -841,12 +852,52 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
             this.call(undefined, true)
           })
           funcThis[key].get((e) => {
+            //@ts-ignore
             this.store[key] = e
             this.call(undefined, false)
           }, false)
         }
       }
       
+    }
+
+    this.defaultProps(newStoreKeys, parsingId)
+  }
+
+  private defaultProps(newStoreKeys: string[], parsingId: Symbol) {
+    let funcThis = this.funcThis
+    let def = this.Default
+    if (def) {
+      let defaultKeys = Object.keys(def)
+      
+      for (let key of defaultKeys) {
+        if (!newStoreKeys.includes(key)) {
+          if (typeof def[key] === "object") {
+            funcThis[key] = new InternalDataBase({}, def[key], parsingId, this.boundCall)
+            funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+              delete funcThis[key]
+              delete this.store[key]
+              this.call(undefined, true)
+            })
+            this.store[key as any] = new def[key].constructor
+          }
+          else {
+            funcThis[key] = new Data(undefined, def[key])
+            funcThis[key].addBeforeDestroyCb(this, () => {
+              delete funcThis[key]
+              delete this.store[key]
+              this.call(undefined, true)
+            })
+            funcThis[key].get((e) => {
+              //@ts-ignore
+              this.store[key] = e
+              this.call(undefined, false)
+            }, false)
+            
+            this.store[key as any] = funcThis[key].get()
+          }
+        }
+      }
     }
   }
 
@@ -878,29 +929,27 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
     subs.Call(this.store)
   }
   call(s: any, fromThis: boolean = false) {
-    let { subs, need } = needFallbackForSubs(s)
-    if (need) {
-      if (fromThis) {
-        if (!this.inBulkChange) {
+    if (!this.inBulkChange) {
+      let { subs, need } = needFallbackForSubs(s)
+      if (need) {
+        if (fromThis) {
           registerSubscriptionNamespace(() => {
             this.__call(this.subscriptionsOfThisChanges as any)
           }, this.locSubNsReg)
         }
+        
+        
+        // ---- from child ----
+        this.notifyParentOfChangeCbs.Call()
+        registerSubscriptionNamespace(() => {
+          this.__call(this.subscriptionsOfChildChanges as any)
+        }, this.locSubNsReg)
       }
-      
-      // ---- from child ----
-      this.notifyParentOfChangeCbs.Call()
-      registerSubscriptionNamespace(() => {
-        this.__call(this.subscriptionsOfChildChanges as any)
-      }, this.locSubNsReg)
-      
+      else {
+        this.__call(subs)
+      }
     }
-    else {
-      this.__call(subs)
-    }
-    
   }
-  private inBulkChange: boolean
 
   isSubscribed(subscription: Subscription<[Readonly<Store>]>): boolean {
     //@ts-ignore
@@ -951,4 +1000,4 @@ type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionP
 export type DataBase<Store extends {[key in string]: any} = unknown, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
 
 //@ts-ignore
-export const DataBase = InternalDataBase as ({ new <Store extends object = any>(store: Store): DataBase<Store> })
+export const DataBase = InternalDataBase as ({ new <Store extends object = any, Default extends {[key in string]: any} = Store>(store: Store, Default?: Default): DataBase<Store> })

@@ -46,7 +46,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
   }
 
   protected __call(subs: Subscription<[Value]>[]) {
-    subs.Call(this.value !== undefined ? this.value : this.Default)
+    subs.Call(this.value)
   }
 
   public tunnel<Ret>(func: (val: Value) => Ret): Data<Ret> {
@@ -97,6 +97,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
   }
 
   public set(value: Value): Value {
+    value = value !== undefined ? value : this.Default
     if (value === this.value) return value
     this.value = value
     this.call()
