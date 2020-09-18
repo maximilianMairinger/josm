@@ -29,14 +29,14 @@ export type Subscription<Values extends any[]> = (...value: Values) => void
 
 export const justInheritanceFlag = Symbol("justInheritanceFlag")
 export const tunnelSubscription = Symbol("tunnelSubscription")
-export class Data<Value = unknown> {
+export class Data<Value = unknown, Default extends Value = Value> {
   private subscriptions: Subscription<[Value]>[]
   protected linksOfMe: any[]
 
   private locSubNsReg: { destroy: () => void }[]
   protected value: Value
 
-  public constructor(value?: Value) {
+  public constructor(value?: Value, private Default?: Default) {
     if (value !== justInheritanceFlag as any) {
       this.linksOfMe = []
       this.subscriptions = []
@@ -46,7 +46,7 @@ export class Data<Value = unknown> {
   }
 
   protected __call(subs: Subscription<[Value]>[]) {
-    subs.Call(this.value)
+    subs.Call(this.value !== undefined ? this.value : this.Default)
   }
 
   public tunnel<Ret>(func: (val: Value) => Ret): Data<Ret> {
