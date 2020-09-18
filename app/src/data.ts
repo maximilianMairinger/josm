@@ -28,19 +28,19 @@ export type Subscription<Values extends any[]> = (...value: Values) => void
 
 
 
-export class Data<Value = unknown> {
+export class Data<Value = unknown, Default extends Value = Value> {
   private subscriptions: Subscription<[Value]>[] = []
   private linksOfMe = []
 
   private locSubNsReg: {destroy: () => void}[] = []
   protected value: Value
 
-  public constructor(value?: Value) {
+  public constructor(value?: Value, private Default?: Default) {
     this.set(value)
   }
 
   protected __call(subs: Subscription<[Value]>[]) {
-    subs.Call(this.value)
+    subs.Call(this.value !== undefined ? this.value : this.Default)
   }
 
   public tunnel<Ret>(func: (val: Value) => Ret): Data<Ret> {
@@ -196,7 +196,7 @@ type FnWithArgs<T extends unknown[]> = (...args: T) => void;
 type TailArgs<T> = T extends (x: unknown, ...args: infer T) => unknown ? T : never;
 type Tail<T extends unknown[]> = TailArgs<FnWithArgs<T>>;
 
-type OptionalifyTuple<Tuple extends any[]> = {
+type OptionalifyTuple<Tuple extends any[]> = { 
   [key in keyof Tuple]?: Tuple[key]
 }
 
