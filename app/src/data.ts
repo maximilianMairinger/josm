@@ -49,10 +49,10 @@ export class Data<Value = unknown, Default extends Value = Value> {
     subs.Call(this.value)
   }
 
-  public tunnel<Ret>(func: (val: Value) => Ret): Data<Ret> {
-    let d = new (this as any).constructor as Data<Ret>
+  public tunnel<Ret>(func: (val: Value) => Ret): this {
+    let d = new (this as any).constructor as this
     d[tunnelSubscription] = this.get((val) => {
-      d.set(func(val))
+      d.set((func as any)(val))
     })
     return d
   }
