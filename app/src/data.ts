@@ -50,7 +50,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
   }
 
   public tunnel<Ret>(func: (val: Value) => Ret): Data<Ret> {
-    let d: Data<Ret> = new Data()
+    let d = new (this as any).constructor as Data<Ret>
     d[tunnelSubscription] = this.get((val) => {
       d.set(func(val))
     })
