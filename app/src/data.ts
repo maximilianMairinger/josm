@@ -4,6 +4,7 @@ import { Concat } from 'typescript-tuple'
 import { DataBase } from './josm'
 import clone from "fast-copy"
 import { DataCollection } from "./dataCollection"
+import keyIndex from "key-index"
 
 import xrray from "xrray"
 xrray(Array)
@@ -21,7 +22,9 @@ export const localSubscriptionNamespace = {
   register: (me: {destroy: () => void, _data: any}) => {
 
   },
-  dont: []
+  dont: (that: any) => {
+
+  }
 }
 
 
@@ -39,7 +42,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
 
   public constructor(value?: Value, private Default?: Default) {
     if (value !== justInheritanceFlag as any) {
-      localSubscriptionNamespace.dont.add(this)
+      localSubscriptionNamespace.dont(this)
       this.linksOfMe = []
       this.subscriptions = []
       this.locSubNsReg = []
@@ -154,21 +157,27 @@ function call(s: any) {
   if (need) subs = this.subscriptions
   registerSubscriptionNamespace(() => {
     this.__call(subs)
-  }, this.locSubNsReg)
+  }, this.locSubNsReg, this)
 }
 
 
-export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]) {
+export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[], that: any) {
   locSubNsReg.Inner("destroy", [])
   locSubNsReg.clear()
-  localSubscriptionNamespace.dont.clear()
 
-  let last = localSubscriptionNamespace.register
+  let dont = []
+
+  let lastReg = localSubscriptionNamespace.register
+  let lastDont = localSubscriptionNamespace.dont
   localSubscriptionNamespace.register = (me) => {
-    if (!localSubscriptionNamespace.dont.includes(me._data)) locSubNsReg.add(me)
+    if (!dont.includes(me._data)) locSubNsReg.add(me)
+  }
+  localSubscriptionNamespace.dont = (that) => {
+    dont.add(that)
   }
   go()
-  localSubscriptionNamespace.register = last
+  localSubscriptionNamespace.register = lastReg
+  localSubscriptionNamespace.dont = lastDont
 }
 
 export function needFallbackForSubs(subs: any) {
