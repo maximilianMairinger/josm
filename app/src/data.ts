@@ -18,9 +18,10 @@ import constructAttatchToPrototype from 'attatch-to-prototype'
 
 
 export const localSubscriptionNamespace = {
-  register: (me: {destroy: () => void}) => {
+  register: (me: {destroy: () => void, _data: any}) => {
 
-  }
+  },
+  dont: []
 }
 
 
@@ -38,6 +39,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
 
   public constructor(value?: Value, private Default?: Default) {
     if (value !== justInheritanceFlag as any) {
+      localSubscriptionNamespace.dont.add(this)
       this.linksOfMe = []
       this.subscriptions = []
       this.locSubNsReg = []
@@ -159,10 +161,11 @@ function call(s: any) {
 export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]) {
   locSubNsReg.Inner("destroy", [])
   locSubNsReg.clear()
+  localSubscriptionNamespace.dont.clear()
 
   let last = localSubscriptionNamespace.register
   localSubscriptionNamespace.register = (me) => {
-    locSubNsReg.add(me)
+    if (!localSubscriptionNamespace.dont.includes(me._data)) locSubNsReg.add(me)
   }
   go()
   localSubscriptionNamespace.register = last
@@ -196,6 +199,8 @@ attachSubscribableMixin(Data)
 //@ts-ignore
 export type DataSet<Values extends any[], DataOrDataCol extends Values[0] | Values = Values[0] | Values, DataOrDataColTuple extends Concat<[Values[0]], OptionalifyTuple<Tail<Values>>> | Values = Concat<[Values[0]], OptionalifyTuple<Tail<Values>>> | Values> = {
   get(): DataOrDataCol
+  // TODO: Fix types
+  //@ts-ignore
   get(subscription: Subscription<DataOrDataColTuple> | DataSubscription<DataOrDataColTuple>, initialize?: boolean): DataSubscription<DataOrDataColTuple>
 }
 

@@ -1,13 +1,16 @@
-import { Data, DataBase, setDataDerivativeIndex, setDataBaseDerivativeIndex, DataCollection, DataSubscription, Return } from "../../app/src/josm"
+import { Data, DataBase, DataCollection, DataSubscription } from "../../app/src/josm"
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
 import { constructObjectIndex } from "key-index"
 
 
-let d = new DataBase({key1: "val1", key2: {key3: "key3", key4: "key4"}}, {key1: "def1", key5: "def5", key2: {key3: "def3"}})
-d(console.log)
-d.key1.set("val11")
-debugger
-//@ts-ignore
-d.key2({}, true)
+let data1 = new Data("1")
+let data2 = new Data("2")
+data1.get(() => {
+  data2.get(console.log)
+})
+
+
+data2.set("22")
+data1.set("11")

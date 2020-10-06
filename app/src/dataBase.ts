@@ -48,7 +48,7 @@ function forwardLink(target: any, instancePath: string, source_forwards: any | s
 export class DataLink extends Data implements Link {
   private pathSubscriptions: DataSubscription<PathSegment[]>[] | PrimitivePathSegment[] = []
   private wrapper: DataBase<any>
-  private data: Data<any>
+  private _data: Data<any>
   private subs: DataSubscription<any>[] = []
 
   private currentPathIndex: PrimitivePathSegment[]
@@ -69,7 +69,7 @@ export class DataLink extends Data implements Link {
   }
 
   tunnel(func: Function): any {
-    let d = this.data.tunnel(func as any)
+    let d = this._data.tunnel(func as any)
     this.subs.add(d[tunnelSubscription])
     return d
   }
@@ -77,26 +77,26 @@ export class DataLink extends Data implements Link {
   
   get(cb?: Function | DataSubscription<any>, init?: boolean) {
     if (cb) {
-      let sub = this.data.get(cb as any, init)
+      let sub = this._data.get(cb as any, init)
       this.subs.add(sub)
       return sub
     }
-    else return this.data.get()
+    else return this._data.get()
   }
 
   public valueOf() {
-    return this.data.valueOf()
+    return this._data.valueOf()
   }
 
 
   set(...a: any) {
     //@ts-ignore
-    return this.data.set(...a)
+    return this._data.set(...a)
   }
 
   got(...a: any) {
     //@ts-ignore
-    let sub = this.data.got(...a)
+    let sub = this._data.got(...a)
     this.subs.rmV(sub)
     return sub
   }
@@ -109,12 +109,12 @@ export class DataLink extends Data implements Link {
     })
 
     //@ts-ignore
-    if (this.data) this.data.linksOfMe.rmV(this)
+    if (this._data) this._data.linksOfMe.rmV(this)
 
-    if (this.data !== parent) {
-      this.data = parent
+    if (this._data !== parent) {
+      this._data = parent
       //@ts-ignore
-      this.data.linksOfMe.add(this)
+      this._data.linksOfMe.add(this)
       this.subs.Inner("data", [parent, true])
     }
   }
@@ -142,6 +142,9 @@ class DataBaseLink extends Function implements Link {
   private subscriptions: DataSubscription<any>[]
 
   private pathSubscriptions: DataSubscription<PathSegment[]>[]
+
+  // needed registration api
+  private _data: any
 
   
 
@@ -196,7 +199,7 @@ class DataBaseLink extends Function implements Link {
     if (this.dataBaseFunc !== parent) {
       this.dataBaseFunc = parent
       //@ts-ignore
-      this.dataBase = this.dataBaseFunc[internalDataBaseBridge]
+      this._data = this.dataBase = this.dataBaseFunc[internalDataBaseBridge]
 
 
       this.dataBase.linksOfMe.add(this)
@@ -222,15 +225,18 @@ class DataBaseLink extends Function implements Link {
           let link: Link
           if (this.dataBaseFunc[key] instanceof Data) linkInstance = link = new DataLink(this.dataBaseFunc as any, [key])
           else linkInstance = (link = new DataBaseLink(this.dataBaseFunc as any, [key]))[internalDataBaseBridge]
-          localSubscriptionNamespace.register({destroy: () => {
-            linkInstance.destroy()
+          let des = linkInstance.destroy.bind(linkInstance)
+          linkInstance.destroy = () => {
+            des()
             delete this.funcThis[key]
-          }})
+          }
+          localSubscriptionNamespace.register(linkInstance)
           this.distributedLinks.add(linkInstance)
           Object.defineProperty(this.funcThis, key, {value: link, configurable: true})
           return link
-        }
-      , configurable: true})
+        }, 
+        configurable: true
+      })
       
     }
   }
@@ -475,6 +481,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
   constructor(store: Store, private Default?: Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
+    localSubscriptionNamespace.dont.add(this)
     this.funcThis = this.bind(this)
 
     this.linksOfMe = []
