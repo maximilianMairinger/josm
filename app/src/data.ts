@@ -157,11 +157,11 @@ function call(s: any) {
   if (need) subs = this.subscriptions
   registerSubscriptionNamespace(() => {
     this.__call(subs)
-  }, this.locSubNsReg, this)
+  }, this.locSubNsReg)
 }
 
 
-export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[], that: any) {
+export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]) {
   locSubNsReg.Inner("destroy", [])
   locSubNsReg.clear()
 

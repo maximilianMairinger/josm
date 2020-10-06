@@ -481,7 +481,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
   constructor(store: Store, private Default?: Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
-    localSubscriptionNamespace.dont.add(this)
+    localSubscriptionNamespace.dont(this)
     this.funcThis = this.bind(this)
 
     this.linksOfMe = []
