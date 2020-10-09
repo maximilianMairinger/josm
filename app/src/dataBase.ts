@@ -327,7 +327,7 @@ attachToLinks("resolvePath", function() {
 
   
 
-  this.updatePathResolvement()
+  this.updatePathResolvent()
 })
 
 
