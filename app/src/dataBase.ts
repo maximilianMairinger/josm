@@ -21,9 +21,9 @@ interface Link {
 } 
 
 
-function forwardLink(target: any, instancePath: string, forwards: string[])
-function forwardLink(target: any, instancePath: string, source: any)
-function forwardLink(target: any, instancePath: string, source_forwards: any | string[]) {
+function forwardLink(target: any, forwards: string[], instancePath: string): void
+function forwardLink(target: any, source: any, instancePath: string): void
+function forwardLink(target: any, source_forwards: any | string[], instancePath: string = "_data") {
   let tarProto = target.prototype
   let forwards: string[]
   if (source_forwards instanceof Array) forwards = source_forwards
@@ -127,7 +127,7 @@ export class DataLink extends Data implements Link {
   }
 }
 
-forwardLink(DataLink, "data", Data)
+forwardLink(DataLink, Data)
 
 
 class DataBaseLink extends Function implements Link {
