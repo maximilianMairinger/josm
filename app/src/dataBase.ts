@@ -17,7 +17,7 @@ interface Link {
   resolvePath(): void
   destroyPathSubscriptions(): void
   dataChange(wrapper: DataBase<any>): void
-  updatePathResolvement(wrapper?: DataBase<any>): void
+  updatePathResolvent(wrapper?: DataBase<any>): void
 } 
 
 
@@ -102,7 +102,7 @@ export class DataLink extends Data implements Link {
   }
 
 
-  updatePathResolvement(wrapper: DataBase<any> = this.wrapper) {
+  updatePathResolvent(wrapper: DataBase<any> = this.wrapper) {
     let parent = this.wrapper = wrapper as any
     this.currentPathIndex.ea((path) => {
       parent = parent[path]
@@ -188,7 +188,7 @@ class DataBaseLink extends Function implements Link {
 
   destroyPathSubscriptions() {}
   resolvePath() {}
-  updatePathResolvement(wrapper: DataBase<any> = this.wrapper) {
+  updatePathResolvent(wrapper: DataBase<any> = this.wrapper) {
     if (this.dataBase) this.dataBase.linksOfMe.rmV(this)
 
     let parent = this.wrapper = wrapper as any
