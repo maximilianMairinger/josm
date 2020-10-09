@@ -21,8 +21,8 @@ interface Link {
 } 
 
 
-function forwardLink(target: any, forwards: string[], instancePath: string): void
-function forwardLink(target: any, source: any, instancePath: string): void
+function forwardLink(target: any, forwards: string[], instancePath?: string): void
+function forwardLink(target: any, source: any, instancePath?: string): void
 function forwardLink(target: any, source_forwards: any | string[], instancePath: string = "_data") {
   let tarProto = target.prototype
   let forwards: string[]
