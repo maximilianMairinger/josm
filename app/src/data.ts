@@ -89,7 +89,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
     this.beforeDestroyCbs.add(cb)
   }
 
-  private destroy() {
+  protected destroy() {
     this.beforeDestroyCbs.Call()
     this.beforeDestroyCbs.clear()
     this.linksOfMe.Inner("destroy", [])

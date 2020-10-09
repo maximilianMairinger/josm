@@ -57,7 +57,7 @@ export class DataLink extends Data implements Link {
     super(justInheritanceFlag)
     this.dataChange(wrapper)
   }
-  destroy() {
+  protected destroy() {
     this.destroyPathSubscriptions()
 
     this.subs.Inner("deactivate", [])
