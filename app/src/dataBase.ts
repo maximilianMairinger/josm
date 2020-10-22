@@ -17,13 +17,13 @@ interface Link {
   resolvePath(): void
   destroyPathSubscriptions(): void
   dataChange(wrapper: DataBase<any>): void
-  updatePathResolvement(wrapper?: DataBase<any>): void
+  updatePathResolvent(wrapper?: DataBase<any>): void
 } 
 
 
-function forwardLink(target: any, instancePath: string, forwards: string[])
-function forwardLink(target: any, instancePath: string, source: any)
-function forwardLink(target: any, instancePath: string, source_forwards: any | string[]) {
+function forwardLink(target: any, forwards: string[], instancePath?: string): void
+function forwardLink(target: any, source: any, instancePath?: string): void
+function forwardLink(target: any, source_forwards: any | string[], instancePath: string = "_data") {
   let tarProto = target.prototype
   let forwards: string[]
   if (source_forwards instanceof Array) forwards = source_forwards
@@ -57,7 +57,7 @@ export class DataLink extends Data implements Link {
     super(justInheritanceFlag)
     this.dataChange(wrapper)
   }
-  destroy() {
+  protected destroy() {
     this.destroyPathSubscriptions()
 
     this.subs.Inner("deactivate", [])
@@ -102,7 +102,7 @@ export class DataLink extends Data implements Link {
   }
 
 
-  updatePathResolvement(wrapper: DataBase<any> = this.wrapper) {
+  updatePathResolvent(wrapper: DataBase<any> = this.wrapper) {
     let parent = this.wrapper = wrapper as any
     this.currentPathIndex.ea((path) => {
       parent = parent[path]
@@ -127,7 +127,7 @@ export class DataLink extends Data implements Link {
   }
 }
 
-forwardLink(DataLink, "data", Data)
+forwardLink(DataLink, Data)
 
 
 class DataBaseLink extends Function implements Link {
@@ -188,7 +188,7 @@ class DataBaseLink extends Function implements Link {
 
   destroyPathSubscriptions() {}
   resolvePath() {}
-  updatePathResolvement(wrapper: DataBase<any> = this.wrapper) {
+  updatePathResolvent(wrapper: DataBase<any> = this.wrapper) {
     if (this.dataBase) this.dataBase.linksOfMe.rmV(this)
 
     let parent = this.wrapper = wrapper as any
@@ -327,7 +327,7 @@ attachToLinks("resolvePath", function() {
 
   
 
-  this.updatePathResolvement()
+  this.updatePathResolvent()
 })
 
 

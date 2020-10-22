@@ -55,8 +55,8 @@ export class Data<Value = unknown, Default extends Value = Value> {
   }
 
   public tunnel<Ret>(func: (val: Value) => Ret, init: boolean, useConstructor: true): Data<Ret>
-  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor?: true): Data<Ret> & Omit<this, "tunnel" | "get" | "got" | "set" | "toString" | "valueOf">
-  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor = false): Data<Ret> & Omit<this, "tunnel" | "get" | "got" | "set" | "toString" | "valueOf"> {
+  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor?: true): this extends Data<Ret> ? this : Data<Ret>
+  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor = false): this extends Data<Ret> ? this : Data<Ret> {
     let d = (new (useConstructor ? (this as any).constructor : Data)) as this
     d[tunnelSubscription] = this.get((val) => {
       d.set((func as any)(val))
@@ -91,7 +91,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
     this.beforeDestroyCbs.add(cb)
   }
 
-  private destroy() {
+  protected destroy() {
     this.beforeDestroyCbs.Call()
     this.beforeDestroyCbs.clear()
     this.linksOfMe.Inner("destroy", [])
