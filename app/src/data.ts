@@ -55,7 +55,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
   }
 
   public tunnel<Ret>(func: (val: Value) => Ret, init: boolean, useConstructor: true): Data<Ret>
-  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor?: false): this extends Data<Ret> ? this : Data<Ret>
+  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor?: boolean): this extends Data<Ret> ? this : Data<Ret>
   public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor = false): this extends Data<Ret> ? this : Data<Ret> {
     let d = (new (useConstructor ? (this as any).constructor : Data)) as this
     d[tunnelSubscription] = this.get((val) => {
