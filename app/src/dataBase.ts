@@ -222,7 +222,7 @@ class DataBaseLink extends Function implements Link {
       Object.defineProperty(this.funcThis, key, {
         get: () => {
           let linkInstance: any
-          let link: Link
+          let link: any
           if (this.dataBaseFunc[key] instanceof Data) linkInstance = link = new DataLink(this.dataBaseFunc as any, [key])
           else linkInstance = (link = new DataBaseLink(this.dataBaseFunc as any, [key]))[internalDataBaseBridge]
           let des = linkInstance.destroy.bind(linkInstance)
