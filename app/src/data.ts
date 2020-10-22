@@ -54,8 +54,10 @@ export class Data<Value = unknown, Default extends Value = Value> {
     subs.Call(this.value)
   }
 
-  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean): Data<Ret> & Omit<this, "tunnel" | "get" | "got" | "set" | "toString" | "valueOf"> {
-    let d = new (this as any).constructor as this
+  public tunnel<Ret>(func: (val: Value) => Ret, init: boolean, useConstructor: true): Data<Ret>
+  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor?: true): Data<Ret> & Omit<this, "tunnel" | "get" | "got" | "set" | "toString" | "valueOf">
+  public tunnel<Ret>(func: (val: Value) => Ret, init?: boolean, useConstructor = false): Data<Ret> & Omit<this, "tunnel" | "get" | "got" | "set" | "toString" | "valueOf"> {
+    let d = (new (useConstructor ? (this as any).constructor : Data)) as this
     d[tunnelSubscription] = this.get((val) => {
       d.set((func as any)(val))
     }, init)
