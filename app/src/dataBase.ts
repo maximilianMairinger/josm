@@ -463,7 +463,7 @@ const bodyOfDataBaseLinkFunction = entireDataBaseLinkFunction.slice(entireDataBa
 let internalDataBaseBridge = Symbol("InternalDataBaseBridge")
 
 
-class InternalDataBase<Store extends ComplexData, Default extends Store = Store> extends Function {
+class InternalDataBase<Store extends ComplexData, _Default extends Store = Store> extends Function {
   private funcThis: any
 
   private store: Store
@@ -479,7 +479,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
   private locSubNsReg: any[]
 
-  constructor(store: Store, private Default?: Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
+  constructor(store: Store, private _Default?: _Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
     this.funcThis = this.bind(this)
@@ -683,7 +683,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
         const prop = funcThis[key]
         const newVal = newData[key]
-        const defaultVal = this.Default !== undefined ? this.Default[key] : undefined
+        const defaultVal = this._Default !== undefined ? this._Default[key] : undefined
 
         if (newVal === undefined) {
           explicitDeleteKeys.add(key)
@@ -836,7 +836,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
     for (const key of newStoreKeys) {
       const val = store[key] as any
-      const defaultVal = this.Default !== undefined ? this.Default[key] : undefined
+      const defaultVal = this._Default !== undefined ? this._Default[key] : undefined
       // TODO: Is this needed or can you just make all functions non iteratable
       if (typeof val !== "function") {
         
@@ -873,7 +873,7 @@ class InternalDataBase<Store extends ComplexData, Default extends Store = Store>
 
   private defaultProps(newStoreKeys: string[], parsingId: Symbol) {
     let funcThis = this.funcThis
-    let def = this.Default
+    let def = this._Default
     if (def) {
       let defaultKeys = Object.keys(def)
       
@@ -1007,4 +1007,4 @@ type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionP
 export type DataBase<Store extends {[key in string]: any} = unknown, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
 
 //@ts-ignore
-export const DataBase = InternalDataBase as ({ new <Store extends object = any, Default extends {[key in string]: any} = Store>(store: Store, Default?: Default): DataBase<Store> })
+export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Store>(store: Store, _Default?: _Default): DataBase<Store> })

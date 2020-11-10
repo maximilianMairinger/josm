@@ -33,14 +33,14 @@ export type Subscription<Values extends any[]> = (...value: Values) => void
 
 export const justInheritanceFlag = Symbol("justInheritanceFlag")
 export const tunnelSubscription = Symbol("tunnelSubscription")
-export class Data<Value = unknown, Default extends Value = Value> {
+export class Data<Value = unknown, _Default extends Value = Value> {
   private subscriptions: Subscription<[Value]>[]
   protected linksOfMe: any[]
 
   private locSubNsReg: { destroy: () => void }[]
   protected value: Value
 
-  public constructor(value?: Value, private Default?: Default) {
+  public constructor(value?: Value, private _default?: _Default) {
     if (value !== justInheritanceFlag as any) {
       localSubscriptionNamespace.dont(this)
       this.linksOfMe = []
@@ -104,7 +104,7 @@ export class Data<Value = unknown, Default extends Value = Value> {
   }
 
   public set(value: Value): Value {
-    value = value !== undefined ? value : this.Default
+    value = value !== undefined ? value : this._default
     if (value === this.value) return value
     this.value = value
     this.call()
