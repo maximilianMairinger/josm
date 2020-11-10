@@ -1,6 +1,6 @@
 {
   "name": "josm",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "description": "",
   "main": "app/dist/josm.js",
   "types": "app/dist/josm.d.ts",
