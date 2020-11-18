@@ -170,7 +170,6 @@ export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]
   let lastReg = localSubscriptionNamespace.register
   let lastDont = localSubscriptionNamespace.dont
   localSubscriptionNamespace.register = (me) => {
-    console.log("me", me)
     if (!dont.includes(me._data)) locSubNsReg.add(me)
   }
   localSubscriptionNamespace.dont = (that) => {
