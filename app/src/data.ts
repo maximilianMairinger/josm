@@ -98,9 +98,7 @@ export class Data<Value = unknown, _Default extends Value = Value> {
     this.linksOfMe.clear()
     this.locSubNsReg.Inner("destroy", [])
     this.locSubNsReg.clear()
-    for (const key in this) {
-      delete this[key]
-    }
+    this.subscriptions.clear()
   }
 
   public set(value: Value): Value {
@@ -172,6 +170,7 @@ export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]
   let lastReg = localSubscriptionNamespace.register
   let lastDont = localSubscriptionNamespace.dont
   localSubscriptionNamespace.register = (me) => {
+    console.log("me", me)
     if (!dont.includes(me._data)) locSubNsReg.add(me)
   }
   localSubscriptionNamespace.dont = (that) => {
