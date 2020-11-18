@@ -225,12 +225,12 @@ class DataBaseLink extends Function implements Link {
           let link: any
           if (this.dataBaseFunc[key] instanceof Data) linkInstance = link = new DataLink(this.dataBaseFunc as any, [key])
           else linkInstance = (link = new DataBaseLink(this.dataBaseFunc as any, [key]))[internalDataBaseBridge]
-          let des = linkInstance.destroy.bind(linkInstance)
-          linkInstance.destroy = () => {
-            des()
-            delete this.funcThis[key]
-          }
-          localSubscriptionNamespace.register(linkInstance)
+          // let des = linkInstance.destroy.bind(linkInstance)
+          // linkInstance.destroy = () => {
+          //   des()
+          //   delete this.funcThis[key]
+          // }
+          // localSubscriptionNamespace.register(linkInstance)
           this.distributedLinks.add(linkInstance)
           Object.defineProperty(this.funcThis, key, {value: link, configurable: true})
           return link
@@ -536,20 +536,12 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     this.beforeDestroyCbs.delete(from)
 
     if (this.beforeDestroyCbs.size === 0) {
-      this.beforeDestroyCbs.forEach((val) => {
-        val()
-      })
       this.notifyParentOfChangeCbs.clear()
       for (const key in this.funcThis) {
         if (this.funcThis[key] instanceof Data) {
           this.funcThis[key].destroy(this)
         }
         else {
-          // TODO: WHAT????
-          this.funcThis[key][internalDataBaseBridge].destroy(this)  
-        this.funcThis[key][internalDataBaseBridge].destroy(this)
-          this.funcThis[key][internalDataBaseBridge].destroy(this)  
-        this.funcThis[key][internalDataBaseBridge].destroy(this)
           this.funcThis[key][internalDataBaseBridge].destroy(this)  
         }
         delete this.funcThis[key]
@@ -843,7 +835,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         if (typeof val === objectString) {
           if (val[parsingId] === undefined) funcThis[key] = constructAttatchToPrototype(val)(parsingId, new InternalDataBase(val, defaultVal, parsingId, this.boundCall))
           else funcThis[key] = val[parsingId]
-          funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+          funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, (only) => {
 
             delete funcThis[key]
             delete store[key]
