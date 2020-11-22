@@ -478,8 +478,9 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   private boundCall: () => void
 
   private locSubNsReg: any[]
+  private _Default?: _Default
 
-  constructor(store: Store, private _Default?: _Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
+  constructor(store: Store, _Default?: _Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
     this.funcThis = this.bind(this)
@@ -491,7 +492,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     this.subscriptionsOfThisChanges = []
     this.beforeDestroyCbs = new Map
     this.boundCall = this.call.bind(this)
-    this.initFuncProps(store, parsingId)
+    this.initFuncProps(store, _Default, parsingId)
 
     if (notifyParentOfChange) this.addNotifyParentOfChangeCb(notifyParentOfChange)
     
@@ -819,7 +820,8 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
 
 
-  private initFuncProps(store: Store, parsingId: any) {
+  private initFuncProps(store: Store, _Default: any, parsingId: any) {
+    store = store === undefined ? _Default : store
     this.store = store
     if (parsingId === undefined) parsingId = Symbol("parsingId")
     const funcThis = this.funcThis
