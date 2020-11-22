@@ -478,9 +478,9 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   private boundCall: () => void
 
   private locSubNsReg: any[]
-  private _Default?: _Default
+  private _default?: _Default
 
-  constructor(store: Store, _Default?: _Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
+  constructor(store: Store, _default?: _Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
     this.funcThis = this.bind(this)
@@ -492,7 +492,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     this.subscriptionsOfThisChanges = []
     this.beforeDestroyCbs = new Map
     this.boundCall = this.call.bind(this)
-    this.initFuncProps(store, _Default, parsingId)
+    this.initFuncProps(store, _default, parsingId)
 
     if (notifyParentOfChange) this.addNotifyParentOfChangeCb(notifyParentOfChange)
     
@@ -676,7 +676,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
         const prop = funcThis[key]
         const newVal = newData[key]
-        const defaultVal = this._Default !== undefined ? this._Default[key] : undefined
+        const defaultVal = this._default !== undefined ? this._default[key] : undefined
 
         if (newVal === undefined) {
           explicitDeleteKeys.add(key)
@@ -830,7 +830,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
     for (const key of newStoreKeys) {
       const val = store[key] as any
-      const defaultVal = this._Default !== undefined ? this._Default[key] : undefined
+      const defaultVal = this._default !== undefined ? this._default[key] : undefined
       // TODO: Is this needed or can you just make all functions non iteratable
       if (typeof val !== "function") {
         
@@ -867,7 +867,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
   private defaultProps(newStoreKeys: string[], parsingId: Symbol) {
     let funcThis = this.funcThis
-    let def = this._Default
+    let def = this._default
     if (def) {
       let defaultKeys = Object.keys(def)
       
