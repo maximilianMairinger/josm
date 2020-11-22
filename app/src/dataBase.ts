@@ -480,7 +480,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   private locSubNsReg: any[]
   private _default?: _Default
 
-  constructor(store: Store, _default?: _Default, parsingId?: Symbol, notifyParentOfChange?: () => void) {
+  constructor(store?: Store, _default: _Default = {} as any, parsingId?: Symbol, notifyParentOfChange?: () => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
     this.funcThis = this.bind(this)
@@ -820,12 +820,15 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
 
 
-  private initFuncProps(store: Store, _Default: any, parsingId: any) {
-    store = store === undefined ? _Default : store
+  private initFuncProps(store: Store, _default: any, parsingId: any) {
+    store = store === undefined ? _default : store
     this.store = store
     if (parsingId === undefined) parsingId = Symbol("parsingId")
     const funcThis = this.funcThis
     let newStoreKeys = Object.keys(store)
+    for (let def in _default) {
+      newStoreKeys.gather(def)
+    }
     
 
     for (const key of newStoreKeys) {
