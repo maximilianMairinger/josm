@@ -5,6 +5,21 @@ import clone from "fast-copy"
 import { constructObjectIndex } from "key-index"
 
 
+
+const db = new DataBase({})
+db((e) => {
+  console.log(e)
+})
+
+db({key: {key2: 2}})
+
+
+
+
+
+
+
+
 // let data1 = new Data("1")
 // let data3: Data<string>
 // let d: Data<number>
@@ -28,15 +43,15 @@ import { constructObjectIndex } from "key-index"
 // data3.set("44")
 
 
-let dataA = new Data("a")
-let dataB = new Data("b")
+// let dataA = new Data("a")
+// let dataB = new Data("b")
 
-dataA.get((a) => {
-  console.log(a)
-  dataB.get((b) => {
-    console.log(b)
-  })
-})
+// dataA.get((a) => {
+//   console.log(a)
+//   dataB.get((b) => {
+//     console.log(b)
+//   })
+// })
 
-dataA.set("aa")
-dataB.set("bb")
+// dataA.set("aa")
+// dataB.set("bb")

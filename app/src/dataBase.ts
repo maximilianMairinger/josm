@@ -694,7 +694,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 //@ts-ignore
                 prop.destroy()
 
-                constructAttatchToPrototype([newVal, funcThis])(parsingId, new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall))
+                funcThis[key] = newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall)
                 newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                   delete newVal[parsingId]
                   delete funcThis[key]
@@ -750,7 +750,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         else {
           if (typeof newVal === "object") {
             if (newVal[parsingId] === undefined) {
-              constructAttatchToPrototype([newVal, funcThis])(parsingId, new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall))
+              funcThis[key] = newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall)
               funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                 
                 delete newVal[parsingId]
@@ -838,7 +838,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       if (typeof val !== "function") {
         
         if (typeof val === objectString) {
-          if (val[parsingId] === undefined) funcThis[key] = constructAttatchToPrototype(val)(parsingId, new InternalDataBase(val, defaultVal, parsingId, this.boundCall))
+          if (val[parsingId] === undefined) funcThis[key] = val[parsingId] = new InternalDataBase(val, defaultVal, parsingId, this.boundCall)
           else funcThis[key] = val[parsingId]
           funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, (only) => {
 
