@@ -55,11 +55,11 @@
     "webpack-merge": "^4.2.2"
   },
   "dependencies": {
-    "attatch-to-prototype": "^1.3.2",
-    "fast-copy": "^2.1.0",
+    "attatch-to-prototype": "^1.3.11",
+    "fast-copy": "^2.1.1",
     "fast-equals": "^2.0.0",
-    "key-index": "^1.3.2",
-    "xrray": "^4.6.8",
+    "key-index": "^1.4.9",
+    "xrray": "^4.7.6",
     "xtring": "^1.2.0"
   },
   "ava": {
