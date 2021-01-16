@@ -4,7 +4,7 @@ import { Data } from "./josm"
 
 
 import { constructAttatchToPrototype } from "attatch-to-prototype"
-import keyIndex, { constructObjectIndex } from "key-index"
+import keyIndex from "key-index"
 import { Subscription, DataSubscription } from "./data"
 
 
@@ -144,7 +144,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 
     class HistoryIndex<Value = unknown> extends Data<Value> implements HistoryIndexAbstract<Value> {
       private link: DataSubscription<[Value]>
-      private historyIndex = constructObjectIndex((timeStamp: number) => constructObjectIndex((functionId: number) => {return [] as Args[]}))
+      private historyIndex = keyIndex((timeStamp: number) => keyIndex((functionId: number) => {return [] as Args[]}))
     
       constructor(private data: Data<Value>) {
         super(data.get())
