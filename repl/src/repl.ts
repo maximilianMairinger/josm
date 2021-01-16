@@ -1,4 +1,4 @@
-import { Data, DataBase, DataCollection, DataSubscription } from "../../app/src/josm"
+import { Data, DataBase, DataBaseSubscription, DataCollection, DataSubscription } from "../../app/src/josm"
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
@@ -7,19 +7,37 @@ import { constructObjectIndex } from "key-index"
 
 
 const db = new DataBase({})
-db((e) => {
-  console.log(e)
+const sub = db((e, diff) => {
+  console.log("diff")
+  console.log(diff)
+}, true) as any as DataBaseSubscription<[{a?: string, b?: string, c?: string}]>
+
+db({
+  a: "a",
+  b: "b"
 })
 
-const c = {}
-const h = "2awwqe"
-c[h] = {
-  key2: 2, 
-  name: "name123"
-}
-db(c)
+db({
+  c: "c"
+})
 
-console.log(db[h].name.get())
+console.log("deactiv")
+sub.deactivate()
+
+
+db({
+  a: "aa",
+  c: "cc"
+})
+
+db({
+  c: "ccc"
+})
+
+console.log("active")
+sub.activate()
+
+
 
 
 
