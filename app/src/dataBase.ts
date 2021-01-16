@@ -694,7 +694,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 //@ts-ignore
                 prop.destroy()
 
-                funcThis[key] = newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall)
+                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall)})
                 newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                   delete newVal[parsingId]
                   delete funcThis[key]
@@ -704,7 +704,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 })
               }
               else {
-                funcThis[key] = newVal[parsingId]
+                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId]})
               }
 
               notifyFromThis = true
@@ -728,7 +728,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               //@ts-ignore
               this.store[key] = newVal
               prop.destroy(this)
-              funcThis[key] = new Data(newVal, defaultVal)
+              constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal)})
               funcThis[key].addBeforeDestroyCb(this, () => {
                 
                 delete newVal[parsingId]
@@ -750,7 +750,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         else {
           if (typeof newVal === "object") {
             if (newVal[parsingId] === undefined) {
-              funcThis[key] = newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall)
+              constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.boundCall)})
               funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                 
                 delete newVal[parsingId]
@@ -763,14 +763,14 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               this.store[key] = newVal
             }
             else {
-              funcThis[key] = newVal[parsingId]
+              constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId]})
             }
             
           }
           else {
             //@ts-ignore
             this.store[key] = newVal
-            funcThis[key] = new Data(newVal, defaultVal)
+            constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal)})
             funcThis[key].addBeforeDestroyCb(this, () => {
 
               delete newVal[parsingId]
@@ -836,10 +836,11 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       const defaultVal = this._default !== undefined ? this._default[key] : undefined
       // TODO: Is this needed or can you just make all functions non iteratable
       if (typeof val !== "function") {
-        
+        const _setToThis = constructAttatchToPrototype(funcThis)
+        const setToThis = (e) => _setToThis(key, {value: e})
         if (typeof val === objectString) {
-          if (val[parsingId] === undefined) funcThis[key] = val[parsingId] = new InternalDataBase(val, defaultVal, parsingId, this.boundCall)
-          else funcThis[key] = val[parsingId]
+          if (val[parsingId] === undefined) setToThis(val[parsingId] = new InternalDataBase(val, defaultVal, parsingId, this.boundCall))
+          else setToThis(val[parsingId])
           funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, (only) => {
 
             delete funcThis[key]
@@ -848,7 +849,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           })
         }
         else {
-          funcThis[key] = new Data(val, defaultVal)
+          setToThis(new Data(val, defaultVal))
           funcThis[key].addBeforeDestroyCb(this, () => {
 
             delete funcThis[key]
@@ -876,8 +877,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       
       for (let key of defaultKeys) {
         if (!newStoreKeys.includes(key)) {
+          const _setToThis = constructAttatchToPrototype(funcThis)
+          const setToThis = (e) => _setToThis(key, {value: e})
           if (typeof def[key] === "object") {
-            funcThis[key] = new InternalDataBase({}, def[key], parsingId, this.boundCall)
+            setToThis(new InternalDataBase({}, def[key], parsingId, this.boundCall))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
               delete funcThis[key]
               delete this.store[key]
@@ -886,7 +889,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
             this.store[key as any] = new def[key].constructor
           }
           else {
-            funcThis[key] = new Data(undefined, def[key])
+            setToThis(new Data(undefined, def[key]))
             funcThis[key].addBeforeDestroyCb(this, () => {
               delete funcThis[key]
               delete this.store[key]
