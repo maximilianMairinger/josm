@@ -11,8 +11,15 @@ db((e) => {
   console.log(e)
 })
 
-db({key: {key2: 2}})
+const c = {}
+const h = "2awwqe"
+c[h] = {
+  key2: 2, 
+  name: "name123"
+}
+db(c)
 
+console.log(db[h].name.get())
 
 
 
