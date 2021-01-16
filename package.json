@@ -56,8 +56,10 @@
   },
   "dependencies": {
     "attatch-to-prototype": "^1.3.11",
+    "deep-object-diff": "^1.1.0",
     "fast-copy": "^2.1.1",
     "fast-equals": "^2.0.0",
+    "fast-object-diff": "^1.0.0",
     "key-index": "^1.4.9",
     "xrray": "^4.7.6",
     "xtring": "^1.2.0"
