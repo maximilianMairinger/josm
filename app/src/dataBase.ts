@@ -724,7 +724,6 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           else {
             if (typeof newVal === "object") {
               let duringActivationNotificationBundler = (_diff: any) => {
-                notifyFromThis = true
                 for (const key in _diff) {
                   diff[key] = _diff
                 }
