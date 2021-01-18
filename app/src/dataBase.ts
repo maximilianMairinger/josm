@@ -723,9 +723,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           }
           else {
             if (typeof newVal === "object") {
-              // TODO
-              let duringActivationNotificationBundler = () => {
-                notifyFromThis = true
+              let duringActivationNotificationBundler = (_diff: any) => {
+                for (const key in _diff) {
+                  diff[key] = _diff
+                }
               }
               // cache all changes coming from below (children) so that only one change event gets emitted
               let db = prop[internalDataBaseBridge]
