@@ -477,7 +477,8 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   private subscriptionsOfChildChanges: DataSubscription<[Readonly<Store>]>[]
   private subscriptionsOfThisChanges: DataSubscription<[Readonly<Store>]>[]
 
-  private callMeWithDiff: (diff: any) => void
+  private callMeWithDiff: (key: string) => (diff: any) => void
+  private callMeWithDiffIndex: Map<string, ((diff: any) => void)> & { activate(): void, deactivate(): void }
 
   private locSubNsReg: any[]
   private _default?: _Default
@@ -493,7 +494,24 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     this.subscriptionsOfChildChanges = []
     this.subscriptionsOfThisChanges = []
     this.beforeDestroyCbs = new Map
-    this.callMeWithDiff = (diff: any) => {this.call(undefined, undefined, diff)}
+
+    this.callMeWithDiffIndex = new Map as any
+    this.callMeWithDiff = (key: string) => {
+      let f = this.callMeWithDiffIndex.get(key)
+      if (f !== undefined) {
+        this.funcThis[key][internalDataBaseBridge].removeNotifyParentOfChangeCb(f)
+      }
+      else {
+        f = (diff: any) => {
+          const nestedDiff = {} 
+          nestedDiff[key] = diff
+          this.call(undefined, undefined, nestedDiff)
+        }
+        this.callMeWithDiffIndex.set(key, f)
+      }
+      
+      return f
+    }
     this.initFuncProps(store, _default, parsingId)
 
     if (notifyParentOfChange) this.addNotifyParentOfChangeCb(notifyParentOfChange)
@@ -520,13 +538,11 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   
 
 
-  addNotifyParentOfChangeCb(cb: (diff: any) => void) {
-    this.notifyParentOfChangeCbs.add(cb)
-    return cb
+  addNotifyParentOfChangeCb(...cb: ((diff: any) => void)[]) {
+    this.notifyParentOfChangeCbs.add(...cb)
   }
-  removeNotifyParentOfChangeCb(cb: (diff: any) => void) {
-    this.notifyParentOfChangeCbs.rmV(cb)
-    return cb
+  removeNotifyParentOfChangeCb(...cb: ((diff: any) => void)[]) {
+    this.notifyParentOfChangeCbs.rmV(...cb)
   }
 
   private addBeforeDestroyCb(from: InternalDataBase<any>, cb: () => void) {
@@ -702,7 +718,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 //@ts-ignore
                 prop.destroy()
 
-                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff)})
+                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key))})
                 newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                   const diff = {}
                   diff[key] = undefined
@@ -723,18 +739,19 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           }
           else {
             if (typeof newVal === "object") {
-              let duringActivationNotificationBundler = (_diff: any) => {
-                for (const key in _diff) {
-                  diff[key] = _diff
-                }
+              const duringActivationNotificationBundler = (_diff: any) => {
+                diff[key] = _diff
               }
               // cache all changes coming from below (children) so that only one change event gets emitted
+
+              const callMeWithDiff = this.callMeWithDiffIndex.get(key)
               let db = prop[internalDataBaseBridge]
-              db.removeNotifyParentOfChangeCb(this.callMeWithDiff)
+
+              db.removeNotifyParentOfChangeCb(callMeWithDiff)
               db.addNotifyParentOfChangeCb(duringActivationNotificationBundler)
               prop(newVal, strict, parsingId)
               db.removeNotifyParentOfChangeCb(duringActivationNotificationBundler)
-              db.addNotifyParentOfChangeCb(this.callMeWithDiff)
+              db.addNotifyParentOfChangeCb(callMeWithDiff)
             }
             else {
               //@ts-ignore
@@ -765,7 +782,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         else {
           if (typeof newVal === "object") {
             if (newVal[parsingId] === undefined) {
-              constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff)})
+              constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key))})
               funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                 const diff = {}
                 diff[key] = undefined
@@ -860,7 +877,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         const setToThis = (e) => _setToThis(key, {value: e})
         if (typeof val === objectString) {
           if (val[parsingId] === undefined) {
-            setToThis(val[parsingId] = new InternalDataBase(val, defaultVal, parsingId, this.callMeWithDiff))
+            setToThis(val[parsingId] = new InternalDataBase(val, defaultVal, parsingId, this.callMeWithDiff(key)))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, (only) => {
               const diff = {}
               diff[key] = undefined
@@ -908,7 +925,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           const _setToThis = constructAttatchToPrototype(funcThis)
           const setToThis = (e) => _setToThis(key, {value: e})
           if (typeof def[key] === "object") {
-            setToThis(new InternalDataBase({}, def[key], parsingId, this.callMeWithDiff))
+            setToThis(new InternalDataBase({}, def[key], parsingId, this.callMeWithDiff(key)))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
               const diff = {}
               diff[key] = undefined
