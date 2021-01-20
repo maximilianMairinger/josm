@@ -683,6 +683,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       let handledKeys: string[]
 
       let notifyFromThis = false
+      let notifyFromChild = false
 
       this.inBulkChange = true
       
@@ -741,6 +742,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
             if (typeof newVal === "object") {
               const duringActivationNotificationBundler = (_diff: any) => {
                 diff[key] = _diff
+                notifyFromChild = true
               }
               // cache all changes coming from below (children) so that only one change event gets emitted
 
@@ -847,6 +849,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       this.inBulkChange = false
 
       if (notifyFromThis) this.call(undefined, true, diff)
+      else if (notifyFromChild) this.call(undefined, false, diff)
 
       return funcThis
     }
