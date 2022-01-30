@@ -229,7 +229,7 @@ export type Subscribable<Values extends any[]> = ProperSubscribable<Values> | Fu
 
 export const dataSubscriptionCbBridge = Symbol("dataSubscriptionCbBridge")
 
-export class DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
+export class _DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
   private _notifyAboutChangesOfChilds: boolean
 
   private _subscription: ConcreteSubscription
@@ -278,6 +278,20 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
     for (let key in this) {
       delete this[key]
     }
+  }
+
+  public setToData(e: any) {
+    this.deactivate();
+    (this as any)._data.set(e)
+    this.activate(false)
+    return this
+  }
+
+  public setToDataBase(e: any) {
+    this.deactivate();
+    (this as any)._data.apply(this._data, [e])
+    this.activate(false)
+    return this
   }
 
   
@@ -348,7 +362,32 @@ export class DataBaseSubscription<Values extends Value[], TupleValue extends [Va
   }
 }
 
+export type DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> = Omit<_DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>, "setToData">
+export const DataBaseSubscription = _DataBaseSubscription as any as {
+  new<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Subscribable<Values>, subscription: Subscription<Values>, activate?: false): 
+    DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
 
+  new<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Subscribable<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean): 
+    DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
+
+  new<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Data<Value>, subscription: Subscription<TupleValue>, activate?: false): 
+    DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
+
+    
+  new<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: Data<Value>, subscription: Subscription<TupleValue>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean): 
+    DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
+
+  new<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: DataCollection<Values>, subscription: Subscription<Values>, activate?: false): 
+    DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
+  new<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
+    (data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean): 
+    DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
+}
 
 export interface DataSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> {
 
@@ -368,6 +407,7 @@ export interface DataSubscription<Values extends Value[], TupleValue extends [Va
   active(activate: boolean, initialize?: boolean): this
 
   call(sure?: boolean): this
+  setToData(val: Value): this 
 }
 
 

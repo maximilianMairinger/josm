@@ -6,36 +6,60 @@ import { constructObjectIndex } from "key-index"
 
 
 
-const db = new DataBase({})
-const sub = db((e, diff) => {
-  console.log("diff")
-  console.log(diff)
-}, true) as any as DataBaseSubscription<[{a?: string, b?: string, c?: string}]>
 
-db({
-  a: "a",
-  b: "b"
+
+
+
+
+const data = new DataBase({lol: "aa"})
+data((e) => {
+  console.log("abc", e)
 })
 
-db({
-  c: "c"
+
+
+const sub = data((e) => {
+  console.log("dontShow", e)
 })
 
-console.log("deactiv")
-sub.deactivate()
+
+data({lol: "bb"})
+
+sub.setToDataBase({lol: "cc"})
 
 
-db({
-  a: "aa",
-  c: "cc"
-})
 
-db({
-  c: "ccc"
-})
 
-console.log("active")
-sub.activate()
+// const db = new DataBase({})
+// const sub = db((e, diff) => {
+//   console.log("diff")
+//   console.log(diff)
+// }, true) as any as DataBaseSubscription<[{a?: string, b?: string, c?: string}]>
+
+// db({
+//   a: "a",
+//   b: "b"
+// })
+
+// db({
+//   c: "c"
+// })
+
+// console.log("deactiv")
+// sub.deactivate()
+
+
+// db({
+//   a: "aa",
+//   c: "cc"
+// })
+
+// db({
+//   c: "ccc"
+// })
+
+// console.log("active")
+// sub.activate()
 
 
 
