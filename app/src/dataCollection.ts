@@ -1,7 +1,8 @@
+import LinkedList from "fast-linked-list"
 import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin } from "./data"
 
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
-  private subscriptions: Subscription<Values>[] = []
+  private subscriptions: LinkedList<Subscription<Values>> = new LinkedList()
   //@ts-ignore
   private datas: FuckedUpDataSetify<Values> = []
   private store: Values
