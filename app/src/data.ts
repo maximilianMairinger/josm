@@ -286,15 +286,25 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
 
   public setToData(e: any) {
     this.deactivate();
-    (this as any)._data.set(e)
-    this.activate(false)
+    try {
+      (this as any)._data.set(e)
+    }
+    finally {
+      this.activate(false)
+    }
+    
     return this
   }
 
   public setToDataBase(e: any) {
     this.deactivate();
-    (this as any)._data.apply(this._data, [e])
-    this.activate(false)
+    try {
+      (this as any)._data.apply(this._data, [e])
+    }
+    finally {
+      this.activate(false)
+    }
+    
     return this
   }
 
