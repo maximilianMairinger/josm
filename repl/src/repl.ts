@@ -12,20 +12,26 @@ import { constructObjectIndex } from "key-index"
 
 
 const data = new DataBase({lol: "aa"})
-data((e) => {
-  console.log("abc", e)
+const sub1 = data((e) => {
+  console.log("sub1", e)
 })
 
-
-
-const sub = data((e) => {
-  console.log("dontShow", e)
+const sub2 = data((e) => {
+  console.log("sub2", e)
 })
+const sub3 = data((e) => {
+  console.log("sub3", e)
+})
+
+debugger
+sub2.deactivate()
+sub1.deactivate()
+sub2.activate()
 
 
 data({lol: "bb"})
 
-sub.setToDataBase({lol: "cc"})
+// sub.setToDataBase({lol: "cc"})
 
 
 

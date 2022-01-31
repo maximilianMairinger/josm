@@ -338,10 +338,11 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     if (notfiyAboutChangesOfChilds === undefined) return this._notifyAboutChangesOfChilds
     
     if (this._notifyAboutChangesOfChilds !== notfiyAboutChangesOfChilds) {
+      const initiallyActive = this.active()
       this.deactivate()
       this._notifyAboutChangesOfChilds = notfiyAboutChangesOfChilds
       // TODO: check if there is a diff, when yes we must initialize
-      this.active(false)
+      if (initiallyActive) this.active(false)
     }
 
     return this
@@ -352,19 +353,45 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     if (this.isActive) return this;
     this.isActive = true
     this.subToken = this._notifyAboutChangesOfChilds ? (this._data as any).subscribeToChildren(this._subscription, initialize) : (this._data as any).subscribeToThis(this._subscription, initialize)
-    this.subToken
     return this
   }
 
   public deactivate(): this {
     if (!this.isActive) return this;
     this.isActive = false;
-    (this as any)._data.unsubscribe(this.subToken)
-    this.activate = () => {
-      return this
+    const tok = this.subToken
+    const {prev, next} = tok;
+    (this as any)._data.unsubscribe(this.subToken) as Token<any>
+    const initNotifyAboutChangesOfChilds = this._notifyAboutChangesOfChilds
+
+    const sibib = (sib: Token<any>, prev: boolean) => {
+      const sibRem = sib.remove.bind(sib)
+
+      const adjecentSib = sib[prev ? "next" : "prev"]
+
+      sib.remove = () => {
+        delete sib.remove
+        if (sib[prev ? "next" : "prev"] === adjecentSib && adjecentSib !== undefined) sibib(adjecentSib, !prev)
+        else delete this.activate
+
+        return sibRem()
+      }
+      this.activate = (initialize = true) => {
+        delete this.activate
+        delete sib.remove
+        if (initNotifyAboutChangesOfChilds !== this._notifyAboutChangesOfChilds) return this.activate(initialize)
+        if (this.isActive) return this;
+        this.isActive = true
+        sib[prev ? "insertTokenAfter" : "insertTokenBefore"](tok)
+        return this
+      }
     }
+    if (prev instanceof Token) sibib(prev, true)
+    else if (next instanceof Token) sibib(next, false)
+
     return this
   }
+
 }
 
 export type DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> = Omit<_DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>, "setToData">
