@@ -16,11 +16,12 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   }
 
   protected __call(subs: Subscription<Values>[]) {
-    subs.Call(...this.get())
+    const get = this.get()
+    for (const sub of subs) sub(...get)
   }
 
   protected destroy() {
-    this.locSubNsReg.Inner("destroy", [])
+    for (const e of this.locSubNsReg) e.destroy()
     this.locSubNsReg.clear()
     for (const key in this) {
       delete this[key]
@@ -43,7 +44,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
       const observer = (...val: Value[]) => {
         if (this.store[i] instanceof Array) this.store[i] = val
         else this.store[i] = val.first
-        this.subscriptions.Call(...this.store)
+        for (const sub of this.subscriptions) sub(...this.store)
       }
       this.observers[i] = observer
       //@ts-ignore
@@ -55,7 +56,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   public get(subscription: Subscription<Values> | DataSubscription<Values>, initialize?: boolean): DataSubscription<Values>
   public get(subscription?: Subscription<Values> | DataSubscription<Values>, initialize: boolean = true): DataSubscription<Values> | Values {
     //@ts-ignore
-    if (subscription === undefined) return this.datas.Inner("get", [])
+    if (subscription === undefined) return this.datas.map((data) => data.get())
     else {
       if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
       else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge]

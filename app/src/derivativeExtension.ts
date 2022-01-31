@@ -86,7 +86,7 @@ function constructProxyInjectionPrototype() {
           me = false
           directCall = true
 
-          if (args && !args.empty) this[historyIndexBridge](now())(functionNameToIdIndex[name]).add(args)
+          if (args && !args.empty) this[historyIndexBridge](now())(functionNameToIdIndex[name]).push(args)
         }
 
         
@@ -121,7 +121,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
   
   const functionIndex = classLsToFunctionIndex(classLs)
   const attachToData = (() => {
-    const a = constructAttatchToPrototype(dataDerivativeLiableIndex.Inner("prototype"))
+    const a = constructAttatchToPrototype(dataDerivativeLiableIndex.map((e) => e.prototype))
     return function attachToData() {
       for (let functionName in functionIndex) {
         a(functionName, functionIndex[functionName])
@@ -151,7 +151,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
         this.link = data.get(super.set.bind(this), false)
     
         data[historyIndexBridge] = this.historyIndex
-        this.historyIndex(now())(functionNameToIdIndex.set).add([data.get()])
+        this.historyIndex(now())(functionNameToIdIndex.set).push([data.get()])
       }
 
 
@@ -198,14 +198,14 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
             for (let arg of args) {
               
               morphData[thisProxyFunctionName](...arg)
-              contextualNote.add(note.context)
-              historyArgs.add(note.history)
+              contextualNote.push(note.context)
+              historyArgs.push(note.history)
             }
           }
           else {
             morphData[thisProxyFunctionName](...args)
             contextualNote = note.context
-            if (note.history && !note.history.empty) this.historyIndex(timeStamp)(id).add(note.history)
+            if (note.history && !note.history.empty) this.historyIndex(timeStamp)(id).push(note.history)
           }
 
           

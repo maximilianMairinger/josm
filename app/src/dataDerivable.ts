@@ -3,4 +3,4 @@ import { dataDerivativeLiableIndex } from "./derivativeExtension";
 export { Data, DataSet, DataBaseSubscription, DataSubscription, Subscription, Subscribable } from "./data";
 
 
-dataDerivativeLiableIndex.add(Data)
+dataDerivativeLiableIndex.push(Data)

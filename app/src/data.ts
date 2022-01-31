@@ -5,6 +5,7 @@ import { DataBase } from './josm'
 import clone from "fast-copy"
 import { DataCollection } from "./dataCollection"
 import keyIndex from "key-index"
+import LinkedList, { Token } from "fast-linked-list"
 
 import xrray from "xrray"
 xrray(Array)
@@ -18,6 +19,8 @@ import { dataDerivativeLiableIndex } from './derivativeExtension'
 import constructAttatchToPrototype from 'attatch-to-prototype'
 
 
+
+// record???
 export const localSubscriptionNamespace = {
   register: (me: {destroy: () => void, _data: any}) => {
 
@@ -34,7 +37,7 @@ export type Subscription<Values extends any[]> = (...value: Values) => void
 export const justInheritanceFlag = Symbol("justInheritanceFlag")
 export const tunnelSubscription = Symbol("tunnelSubscription")
 export class Data<Value = unknown, _Default extends Value = Value> {
-  private subscriptions: Subscription<[Value]>[]
+  private subscriptions: LinkedList<Subscription<[Value]>>
   protected linksOfMe: any[]
 
   private locSubNsReg: { destroy: () => void }[]
@@ -44,14 +47,17 @@ export class Data<Value = unknown, _Default extends Value = Value> {
     if (value !== justInheritanceFlag as any) {
       localSubscriptionNamespace.dont(this)
       this.linksOfMe = []
-      this.subscriptions = []
+      this.subscriptions = new LinkedList()
       this.locSubNsReg = []
       this.set(value)
     }
   }
 
-  protected __call(subs: Subscription<[Value]>[]) {
-    subs.Call(this.value)
+  protected __call(subs: LinkedList<Subscription<[Value]>>) {
+    const v = this.value
+    for (const s of subs) {
+      s(v)
+    }
   }
 
   public tunnel<Ret, Dat extends Data<Ret>>(func: (val: Value) => Ret, init: boolean | undefined, useThisConstructor: {new(...a: any[]): Dat}): Dat
@@ -72,14 +78,14 @@ export class Data<Value = unknown, _Default extends Value = Value> {
     if (subscription === undefined) return this.value
     else {
       if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
-      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge]
+      else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge]
       //@ts-ignore
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
 
 
-  // Return false when not successfull; dont throw (maybe in general Xrray)
+  // TODO: Return false when not successfull; dont throw (maybe in general Xrray)
   public got(subscription: Subscription<[Value]> | DataSubscription<[Value]>): DataSubscription<[Value]> {
     return (subscription instanceof DataSubscription) ? subscription.deactivate()
     : subscription[dataSubscriptionCbBridge].deactivate()
@@ -89,15 +95,15 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   // Datas can only have one parent, thus there is no need to keep track of them. From is just there to match the syntax of InternalDataBase
   private beforeDestroyCbs = []
   private addBeforeDestroyCb(from: any, cb: () => void) {
-    this.beforeDestroyCbs.add(cb)
+    this.beforeDestroyCbs.push(cb)
   }
 
   protected destroy() {
-    this.beforeDestroyCbs.Call()
+    for (const f of this.beforeDestroyCbs) f()
     this.beforeDestroyCbs.clear()
-    this.linksOfMe.Inner("destroy", [])
+    for (const e of this.linksOfMe) e.destroy()
     this.linksOfMe.clear()
-    this.locSubNsReg.Inner("destroy", [])
+    for (const e of this.locSubNsReg) e.destroy()
     this.locSubNsReg.clear()
     this.subscriptions.clear()
   }
@@ -114,18 +120,16 @@ export class Data<Value = unknown, _Default extends Value = Value> {
     return this.get()
   }
 
-  //@ts-ignore
-  protected isSubscribed(subscription: Subscription<[Value]>): boolean {}
-  protected subscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
-  protected subscribeToChildren(subscription: Subscription<[Value]>, initialize: boolean) {}
-  protected unsubscribeToThis(subscription: Subscription<[Value]>, initialize: boolean) {}
-  protected unsubscribeToChildren(subscription: Subscription<[Value]>, initialize: boolean) {}
-  protected call(...subscription: Subscription<[Value]>[]) {}
+  protected subscribeToThis?(subscription: Subscription<[Value]>, initialize: boolean): Token<Subscription<[Value]>>
+  protected subscribeToChildren?(subscription: Subscription<[Value]>, initialize: boolean): Token<Subscription<[Value]>>
+  protected unsubscribe?(subscription: Subscription<[Value]>, initialize: boolean): Token<Subscription<[Value]>>
+  protected call?(...subscription: Subscription<[Value]>[]): void
 
   public toString() {
     return "Data: " + this.value
   }
 }
+
 
 // Why this works is an absolute mirracle to me...
 // In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs), but somehow it works like this
@@ -140,17 +144,16 @@ export type FuckedUpDataSetify<T extends any[]> = {
 }
 
 
-function isSubscribed(subscription: any) {
-  return this.subscriptions.includes(subscription)
-}
 
-function unsubscribe(subscription: any) {
-  this.subscriptions.rmV(subscription)
+function unsubscribe(subscription: Token<any>) {
+  subscription.rm()
+  // (this.subscriptions as LinkedList<any>)
 }
 
 function subscribe(subscription: any, initialize: any) {
-  this.subscriptions.add(subscription)
+  const tok = this.subscriptions.push(subscription)
   if (initialize) this.call(subscription)
+  return tok
 }
 
 function call(s: any) {
@@ -163,7 +166,7 @@ function call(s: any) {
 
 
 export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]) {
-  locSubNsReg.Inner("destroy", [])
+  for (const e of locSubNsReg) e.destroy()
   locSubNsReg.clear()
 
   let dont = []
@@ -171,10 +174,10 @@ export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]
   let lastReg = localSubscriptionNamespace.register
   let lastDont = localSubscriptionNamespace.dont
   localSubscriptionNamespace.register = (me) => {
-    if (!dont.includes(me._data)) locSubNsReg.add(me)
+    if (!dont.includes(me._data)) locSubNsReg.push(me)
   }
   localSubscriptionNamespace.dont = (that) => {
-    dont.add(that)
+    dont.push(that)
   }
   go()
   localSubscriptionNamespace.register = lastReg
@@ -196,8 +199,7 @@ export function attachSubscribableMixin(to: any) {
   const attach = constructAttatchToPrototype(to.prototype)
 
   attach("call", call)
-  attach("isSubscribed", isSubscribed)
-  attach(["unsubscribeToThis", "unsubscribeToChildren", "unsubscribe"], unsubscribe)
+  attach("unsubscribe", unsubscribe)
   attach(["subscribeToThis", "subscribeToChildren", "subscribe"], subscribe)
 }
 
@@ -223,7 +225,7 @@ type OptionalifyTuple<Tuple extends any[]> = {
 }
 
 
-type ProperSubscribable<Values extends any[]> = {subscribeToThis: (subscription: Subscription<Values>, initialize?: boolean) => void, subscribeToChildren: (subscription: Subscription<Values>, initialize?: boolean) => void, unsubscribeToThis: (subscription: Subscription<Values>) => void, unsubscribeToChildren: (subscription: Subscription<Values>) => void, get: () => Values, isSubscribed: (subscription: Subscription<Values>) => boolean, call: (subscription?: Subscription<Values>[] | Subscription<Values>, notifyChilds?: boolean) => void}
+type ProperSubscribable<Values extends any[]> = {subscribeToThis: (subscription: Subscription<Values>, initialize?: boolean) => Token<any>, subscribeToChildren: (subscription: Subscription<Values>, initialize?: boolean) => Token<any>, unsubscribe: (subscription: Token<Subscription<Values>>) => void, get: () => Values, call: (subscription?: Subscription<Values>[] | Subscription<Values>, notifyChilds?: boolean) => void}
 export type Subscribable<Values extends any[]> = ProperSubscribable<Values> | FuckedUpDataSet<Values> | DataBase<Values[0]>
 
 
@@ -257,11 +259,13 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     this.active(activate as any, initialize)
   }
 
+  private isActive: boolean = false
+
   public active(): boolean
   public active(activate: false): this
   public active(activate: true, initialize?: boolean): this
   public active(activate?: boolean, initialize: boolean = true): this | boolean {
-    if (activate === undefined) return (this._data as ProperSubscribable<Values>).isSubscribed(this._subscription)
+    if (activate === undefined) return this.isActive
     if (activate) this.activate(initialize)
     else this.deactivate()
     return this
@@ -343,21 +347,22 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     return this
   }
 
+  private subToken: Token<any>
   public activate(initialize: boolean = true): this {  
-    if (this.active()) return this;
-    if (this._notifyAboutChangesOfChilds) {
-      (this._data as any).subscribeToChildren(this._subscription, initialize)
-    }
-    else {
-      (this._data as any).subscribeToThis(this._subscription, initialize)
-    }
+    if (this.isActive) return this;
+    this.isActive = true
+    this.subToken = this._notifyAboutChangesOfChilds ? (this._data as any).subscribeToChildren(this._subscription, initialize) : (this._data as any).subscribeToThis(this._subscription, initialize)
+    this.subToken
     return this
   }
 
   public deactivate(): this {
-    if (!this.active()) return this;
-    if (this._notifyAboutChangesOfChilds) (this._data as any).unsubscribeToChildren(this._subscription)
-    else (this._data as any).unsubscribeToThis(this._subscription)
+    if (!this.isActive) return this;
+    this.isActive = false;
+    (this as any)._data.unsubscribe(this.subToken)
+    this.activate = () => {
+      return this
+    }
     return this
   }
 }

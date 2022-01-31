@@ -4,4 +4,4 @@ export * from "./dataBase";
 
 
 
-dataDerivativeLiableIndex.add(DataLink)
+dataDerivativeLiableIndex.push(DataLink)

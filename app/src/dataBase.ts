@@ -6,11 +6,14 @@ import { dbDerivativeLiableIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
 import clone from "fast-copy"
 
+import xtring from "xtring"
+xtring()
 import xrray from "xrray"
 xrray(Array)
-import xtring from "xtring"
+
 import { tunnelSubscription, justInheritanceFlag } from "./data"
-xtring()
+import LinkedList, { Token } from "fast-linked-list"
+
 
 
 
@@ -30,11 +33,13 @@ function forwardLink(target: any, source_forwards: any | string[], instancePath:
   let forwards: string[]
   if (source_forwards instanceof Array) forwards = source_forwards
   else {
-    let src = Object.getOwnPropertyNames(source_forwards.prototype).rmV("constructor")
-    let tar = Object.getOwnPropertyNames(tarProto).rmV("constructor")
+    let src = Object.getOwnPropertyNames(source_forwards.prototype)
+    src.splice(src.indexOf("constructor"), 1)
+    let tar = Object.getOwnPropertyNames(tarProto)
+    tar.splice(tar.indexOf("constructor"), 1)
     forwards = []
     for (let k of src) {
-      if (!tar.includes(k)) forwards.add(k)
+      if (!tar.includes(k)) forwards.push(k)
     }
   }
   
@@ -51,7 +56,7 @@ export class DataLink extends Data implements Link {
   private pathSubscriptions: DataSubscription<PathSegment[]>[] | PrimitivePathSegment[] = []
   private wrapper: DataBase<any>
   private _data: Data<any>
-  private subs: DataSubscription<any>[] = []
+  private subs: LinkedList<DataSubscription<any>> = new LinkedList()
 
   private currentPathIndex: PrimitivePathSegment[]
 
@@ -62,7 +67,7 @@ export class DataLink extends Data implements Link {
   protected destroy() {
     this.destroyPathSubscriptions()
 
-    this.subs.Inner("deactivate", [])
+    for (const sub of this.subs) sub.deactivate()
     this.subs.clear()
 
     for (let key in this) {
@@ -72,7 +77,8 @@ export class DataLink extends Data implements Link {
 
   tunnel(func: Function): any {
     let d = this._data.tunnel(func as any)
-    this.subs.add(d[tunnelSubscription])
+    const tok = this.subs.push(d[tunnelSubscription])
+    d[tunnelSubscription][dataLinkTokTunnel] = tok
     return d
   }
 
@@ -80,7 +86,7 @@ export class DataLink extends Data implements Link {
   get(cb?: Function | DataSubscription<any>, init?: boolean) {
     if (cb) {
       let sub = this._data.get(cb as any, init)
-      this.subs.add(sub)
+      this.subs.push(sub)
       return sub
     }
     else return this._data.get()
@@ -99,7 +105,7 @@ export class DataLink extends Data implements Link {
   got(...a: any) {
     //@ts-ignore
     let sub = this._data.got(...a)
-    this.subs.rmV(sub)
+    sub[dataLinkTokTunnel].remove()
     return sub
   }
 
@@ -111,13 +117,13 @@ export class DataLink extends Data implements Link {
     })
 
     //@ts-ignore
-    if (this._data) this._data.linksOfMe.rmV(this)
+    if (this._data) this._data.linksOfMe.splice(this._data.linksOfMe.indexOf(this), 1)
 
     if (this._data !== parent) {
       this._data = parent
       //@ts-ignore
-      this._data.linksOfMe.add(this)
-      this.subs.Inner("data", [parent, true])
+      this._data.linksOfMe.push(this)
+      for (const sub of this.subs) sub.data(parent, true)
     }
   }
   destroyPathSubscriptions() {}
@@ -131,6 +137,8 @@ export class DataLink extends Data implements Link {
 
 forwardLink(DataLink, Data)
 
+
+const dataLinkTokTunnel = Symbol("dataLinkSubTunnel")
 
 class DataBaseLink extends Function implements Link {
   private dataBaseFunc: DataBase<any>
@@ -176,6 +184,7 @@ class DataBaseLink extends Function implements Link {
 
   destroy() {
     // this is only getting called from InternalDataBase.
+    // Todo: are the subscriptions here properly dispached? Like in DataLink.
 
     this.destroyPathSubscriptions()
 
@@ -204,10 +213,10 @@ class DataBaseLink extends Function implements Link {
       this._data = this.dataBase = this.dataBaseFunc[internalDataBaseBridge]
 
 
-      this.dataBase.linksOfMe.add(this)
+      this.dataBase.linksOfMe.push(this)
       //@ts-ignore
-      this.subscriptions.Inner("data", [this.dataBase, true])
-      this.distributedLinks.Inner("dataChange", [this.dataBaseFunc])
+      for (const e of this.subscriptions) e.data(this.dataBase, true)
+      for (const e of this.distributedLinks) e.dataChange(this.dataBaseFunc)
     }
   }
 
@@ -233,7 +242,7 @@ class DataBaseLink extends Function implements Link {
           //   delete this.funcThis[key]
           // }
           // localSubscriptionNamespace.register(linkInstance)
-          this.distributedLinks.add(linkInstance)
+          this.distributedLinks.push(linkInstance)
           Object.defineProperty(this.funcThis, key, {value: link, configurable: true})
           return link
         }, 
@@ -259,14 +268,14 @@ class DataBaseLink extends Function implements Link {
       //@ts-ignore
       let sub = this.dataBaseFunc(...a)
       //@ts-ignore
-      this.subscriptions.add(sub)
+      this.subscriptions.push(sub)
       return sub
     }
     else if (a[0] instanceof Data || a[0] instanceof DataCollection || typeof a[0] === "string" || typeof a[0] === "number") {
       //@ts-ignore
       let link = this.dataBaseFunc(...a)
       //@ts-ignore
-      this.distributedLinks.add(link)
+      this.distributedLinks.push(link)
       return link
     }
     //@ts-ignore
@@ -280,7 +289,7 @@ class DataBaseLink extends Function implements Link {
 
 
 
-const attachToLinks = constructAttatchToPrototype([DataBaseLink, DataLink].inner("prototype"))
+const attachToLinks = constructAttatchToPrototype([DataBaseLink, DataLink].map(e => e.prototype))
 
 
 
@@ -295,7 +304,7 @@ attachToLinks("resolvePath", function() {
     const localTop = top
     
     if (path instanceof Data) {
-      this.pathSubscriptions.add(path.get((e) => {
+      this.pathSubscriptions.push(path.get((e) => {
         this.currentPathIndex[localTop] = e
         this.updatePathResolvement()
       }, false))
@@ -309,7 +318,7 @@ attachToLinks("resolvePath", function() {
     else {
       
 
-      this.pathSubscriptions.add(path.get((...e) => {
+      this.pathSubscriptions.push(path.get((...e) => {
         let maTop = localTop
         e.ea((e) => {
           this.currentPathIndex[maTop] = e
@@ -474,8 +483,8 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
   public linksOfMe: Link[]
 
-  private subscriptionsOfChildChanges: DataSubscription<[Readonly<Store>]>[]
-  private subscriptionsOfThisChanges: DataSubscription<[Readonly<Store>]>[]
+  private subscriptionsOfChildChanges: LinkedList<DataSubscription<[Readonly<Store>]>>
+  private subscriptionsOfThisChanges: LinkedList<DataSubscription<[Readonly<Store>]>>
 
   private callMeWithDiff: (key: string) => (diff: any) => void
   private callMeWithDiffIndex: Map<string, ((diff: any) => void)> & { activate(): void, deactivate(): void }
@@ -491,8 +500,8 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     this.linksOfMe = []
     this.locSubNsReg = []
     this.notifyParentOfChangeCbs = []
-    this.subscriptionsOfChildChanges = []
-    this.subscriptionsOfThisChanges = []
+    this.subscriptionsOfChildChanges = new LinkedList()
+    this.subscriptionsOfThisChanges = new LinkedList()
     this.beforeDestroyCbs = new Map
 
     this.callMeWithDiffIndex = new Map as any
@@ -539,7 +548,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
 
   addNotifyParentOfChangeCb(...cb: ((diff: any) => void)[]) {
-    this.notifyParentOfChangeCbs.add(...cb)
+    this.notifyParentOfChangeCbs.push(...cb)
   }
   removeNotifyParentOfChangeCb(...cb: ((diff: any) => void)[]) {
     this.notifyParentOfChangeCbs.rmV(...cb)
@@ -566,9 +575,9 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         delete this.funcThis[key]
       }
   
-      this.linksOfMe.Inner("destroy", [])
+      for (const e of this.linksOfMe) e.destroy()
       this.linksOfMe.clear()
-      this.locSubNsReg.Inner("destroy", [])
+      for (const e of this.locSubNsReg) e.destroy()
       this.locSubNsReg.clear()
   
       for (const key in this) {
@@ -666,7 +675,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       let initialize: boolean = paths[0] === undefined ? true : paths[0]
 
       if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
-      else if ((notifyAboutChangesOfChilds ? this.subscriptionsOfChildChanges : this.subscriptionsOfThisChanges).contains(subscription as any)) return subscription[dataSubscriptionCbBridge]
+      else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge]
       else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notifyAboutChangesOfChilds)
     }
     else if (path_data_subscription === undefined) {
@@ -693,14 +702,14 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       let keysOfNewData = Object.keys(newData)
 
       for (const key of keysOfNewData) {
-        if (strict) handledKeys.add(key)
+        if (strict) handledKeys.push(key)
 
         const prop = funcThis[key]
         const newVal = newData[key]
         const defaultVal = this._default !== undefined ? this._default[key] : undefined
 
         if (newVal === undefined) {
-          explicitDeleteKeys.add(key)
+          explicitDeleteKeys.push(key)
           continue
         }
         if (prop !== undefined) {
@@ -967,29 +976,25 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   // Functions for Data**Base**Subscription
   // ------------
 
-  subscribeToChildren(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): void {
+  subscribeToChildren(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
     if (initialize) subscription(this.store, diff(subscription[subscriptionDiffSymbol], this.store) as any)
-    //@ts-ignore
-    this.subscriptionsOfChildChanges.add(subscription)
+    return this.subscriptionsOfChildChanges.push(subscription as any)
   }
-  subscribeToThis(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): void {
+  subscribeToThis(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
     if (initialize) subscription(this.store, diff.flat(subscription[subscriptionDiffSymbol], this.store) as any)
-    //@ts-ignore
-    this.subscriptionsOfThisChanges.add(subscription)
+    return this.subscriptionsOfThisChanges.push(subscription as any)
   }
 
-  unsubscribeToChildren(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>): void {
-    subscription[subscriptionDiffSymbol] = clone(this.store)
-    //@ts-ignore
-    this.subscriptionsOfChildChanges.rmV(subscription)
+  unsubscribe(subscriptionToken: Token<Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>>) {
+    subscriptionToken.value[subscriptionDiffSymbol] = clone(this.store)
+    subscriptionToken.remove()
   }
-  unsubscribeToThis(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>): void {
-    subscription[subscriptionDiffSymbol] = clone(this.store)
-    //@ts-ignore
-    this.subscriptionsOfThisChanges.rmV(subscription)
-  }
-  __call(subs: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>[], diff?: any) {
-    subs.Call(this.store, diff)
+
+  __call(subs: LinkedList<Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>>, diff?: any) {
+    const store = this.store
+    for (const sub of subs) {
+      sub(store, diff)
+    }
   }
   call(s: any, fromThis: boolean = false, diff: any) {
     if (!this.inBulkChange) {
@@ -1003,7 +1008,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         
         
         // ---- from child ----
-        this.notifyParentOfChangeCbs.Call(diff)
+        for (const f of this.notifyParentOfChangeCbs) f(diff)
         registerSubscriptionNamespace(() => {
           this.__call(this.subscriptionsOfChildChanges as any, diff)
         }, this.locSubNsReg)
@@ -1012,11 +1017,6 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         this.__call(subs)
       }
     }
-  }
-
-  isSubscribed(subscription: Subscription<[Readonly<Store>]>): boolean {
-    //@ts-ignore
-    return this.subscriptionsOfChildChanges.includes(subscription) || this.subscriptionsOfThisChanges.includes(subscription)
   }
 
   get(): Readonly<Store> {
