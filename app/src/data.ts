@@ -381,7 +381,7 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
 
       sib.remove = () => {
         delete sib.remove
-        if (sib[prev ? "next" : "prev"] === adjecentSib && adjecentSib !== undefined) sibib(adjecentSib, !prev)
+        if (sib[prev ? "next" : "prev"] === adjecentSib && adjecentSib instanceof Token) sibib(adjecentSib, !prev)
         else delete this.activate
 
         return sibRem()
