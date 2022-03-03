@@ -186,6 +186,8 @@ class DataBaseLink extends Function implements Link {
     // this is only getting called from InternalDataBase.
     // Todo: are the subscriptions here properly dispached? Like in DataLink.
 
+    this.funcThis(undefined)
+
     this.destroyPathSubscriptions()
 
     this.distributedLinks.clear()
@@ -490,9 +492,8 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   private callMeWithDiffIndex: Map<string, ((diff: any) => void)> & { activate(): void, deactivate(): void }
 
   private locSubNsReg: any[]
-  private _default?: _Default
 
-  constructor(store?: Store, _default: _Default = {} as any, parsingId?: Symbol, notifyParentOfChange?: (diff: any) => void) {
+  constructor(store?: Store, private _default: _Default = {} as any, parsingId?: Symbol, notifyParentOfChange?: (diff: any) => void) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
     this.funcThis = this.bind(this)
@@ -678,10 +679,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge]
       else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notifyAboutChangesOfChilds)
     }
-    else if (path_data_subscription === undefined) {
+    else if (arguments.length === 0) {
       return this.store
     }
-    else if (typeof path_data_subscription === objectString) {
+    else if (typeof path_data_subscription === objectString || path_data_subscription === undefined) {
       const diff = {}
 
       let newData = path_data_subscription as ComplexData
@@ -699,37 +700,81 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       if (strict) handledKeys = []
       let explicitDeleteKeys = []
 
-      let keysOfNewData = Object.keys(newData)
+      let keysOfNewData: string[]
 
-      for (const key of keysOfNewData) {
-        if (strict) handledKeys.push(key)
 
-        const prop = funcThis[key]
-        const newVal = newData[key]
-        const defaultVal = this._default !== undefined ? this._default[key] : undefined
+      if (newData !== undefined) {
+        keysOfNewData = Object.keys(newData)
 
-        if (newVal === undefined) {
-          explicitDeleteKeys.push(key)
-          continue
-        }
-        if (prop !== undefined) {
-          if (prop instanceof Data) {
-            if (typeof newVal !== "object") {
-              if (newVal !== prop.get()) {
-                notifyFromThis = true
-                diff[key] = newVal
+        for (const key of keysOfNewData) {
+          if (strict) handledKeys.push(key)
+
+          const prop = funcThis[key]
+          const newVal = newData[key]
+          const defaultVal = this._default !== undefined ? this._default[key] : undefined
+
+          if (newVal === undefined) {
+            explicitDeleteKeys.push(key)
+            continue
+          }
+          if (prop !== undefined) {
+            if (prop instanceof Data) {
+              if (typeof newVal !== "object") {
+                if (newVal !== prop.get()) {
+                  notifyFromThis = true
+                  diff[key] = newVal
+                }
+                prop.set(newVal)
               }
-              prop.set(newVal)
+              else {
+                if (newVal[parsingId] === undefined) {
+                  //@ts-ignore
+                  diff[key] = this.store[key] = newVal
+                  //@ts-ignore
+                  prop.destroy()
+
+                  constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key)), enumerable: true})
+                  newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+                    const diff = {}
+                    diff[key] = undefined
+                    delete newVal[parsingId]
+                    delete funcThis[key]
+                    delete newData[key]
+                    delete this.store[key]
+                    this.call(undefined, true, diff)
+                  })
+                }
+                else {
+                  constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId], enumerable: true})
+                }
+
+                notifyFromThis = true
+
+              }
             }
             else {
-              if (newVal[parsingId] === undefined) {
+              if (typeof newVal === "object") {
+                const duringActivationNotificationBundler = (_diff: any) => {
+                  diff[key] = _diff
+                  notifyFromChild = true
+                }
+                // cache all changes coming from below (children) so that only one change event gets emitted
+
+                const callMeWithDiff = this.callMeWithDiffIndex.get(key)
+                let db = prop[internalDataBaseBridge]
+
+                db.removeNotifyParentOfChangeCb(callMeWithDiff)
+                db.addNotifyParentOfChangeCb(duringActivationNotificationBundler)
+                prop(newVal, strict, parsingId)
+                db.removeNotifyParentOfChangeCb(duringActivationNotificationBundler)
+                db.addNotifyParentOfChangeCb(callMeWithDiff)
+              }
+              else {
                 //@ts-ignore
                 diff[key] = this.store[key] = newVal
-                //@ts-ignore
-                prop.destroy()
-
-                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key))})
-                newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+                prop.destroy(this)
+                constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
+                funcThis[key].addBeforeDestroyCb(this, () => {
                   const diff = {}
                   diff[key] = undefined
                   delete newVal[parsingId]
@@ -738,37 +783,43 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                   delete this.store[key]
                   this.call(undefined, true, diff)
                 })
-              }
-              else {
-                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId]})
-              }
+                funcThis[key].get((e) => {
+                  const diff = {}
+                  diff[key] = e
+                  //@ts-ignore
+                  this.store[key] = e
+                  this.call(undefined, false, diff)
+                }, false)
 
-              notifyFromThis = true
-
+                notifyFromThis = true
+              }
             }
           }
           else {
             if (typeof newVal === "object") {
-              const duringActivationNotificationBundler = (_diff: any) => {
-                diff[key] = _diff
-                notifyFromChild = true
+              if (newVal[parsingId] === undefined) {
+                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key)), enumerable: true})
+                funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+                  const diff = {}
+                  diff[key] = undefined
+                  delete newVal[parsingId]
+                  delete funcThis[key]
+                  delete newData[key]
+                  delete this.store[key]
+                  this.call(undefined, true, diff)
+                })
+                //@ts-ignore
+                diff[key] = this.store[key] = newVal
               }
-              // cache all changes coming from below (children) so that only one change event gets emitted
-
-              const callMeWithDiff = this.callMeWithDiffIndex.get(key)
-              let db = prop[internalDataBaseBridge]
-
-              db.removeNotifyParentOfChangeCb(callMeWithDiff)
-              db.addNotifyParentOfChangeCb(duringActivationNotificationBundler)
-              prop(newVal, strict, parsingId)
-              db.removeNotifyParentOfChangeCb(duringActivationNotificationBundler)
-              db.addNotifyParentOfChangeCb(callMeWithDiff)
+              else {
+                constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId], enumerable: true})
+              }
+              
             }
             else {
               //@ts-ignore
               diff[key] = this.store[key] = newVal
-              prop.destroy(this)
-              constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal)})
+              constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
               funcThis[key].addBeforeDestroyCb(this, () => {
                 const diff = {}
                 diff[key] = undefined
@@ -785,58 +836,16 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 this.store[key] = e
                 this.call(undefined, false, diff)
               }, false)
-
-              notifyFromThis = true
             }
+            notifyFromThis = true
           }
-        }
-        else {
-          if (typeof newVal === "object") {
-            if (newVal[parsingId] === undefined) {
-              constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key))})
-              funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
-                const diff = {}
-                diff[key] = undefined
-                delete newVal[parsingId]
-                delete funcThis[key]
-                delete newData[key]
-                delete this.store[key]
-                this.call(undefined, true, diff)
-              })
-              //@ts-ignore
-              diff[key] = this.store[key] = newVal
-            }
-            else {
-              constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId]})
-            }
-            
-          }
-          else {
-            //@ts-ignore
-            diff[key] = this.store[key] = newVal
-            constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal)})
-            funcThis[key].addBeforeDestroyCb(this, () => {
-              const diff = {}
-              diff[key] = undefined
-              delete newVal[parsingId]
-              delete funcThis[key]
-              delete newData[key]
-              delete this.store[key]
-              this.call(undefined, true, diff)
-            })
-            funcThis[key].get((e) => {
-              const diff = {}
-              diff[key] = e
-              //@ts-ignore
-              this.store[key] = e
-              this.call(undefined, false, diff)
-            }, false)
-          }
-          notifyFromThis = true
         }
       }
 
+      
+
       const destroyFunc = (key: string) => {
+        
         if (funcThis[key] instanceof Data) funcThis[key].destroy()
         else funcThis[key][internalDataBaseBridge].destroy(this)
         notifyFromThis = true
@@ -853,7 +862,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         }
       }
 
-      this.defaultProps(keysOfNewData, parsingId)
+      if (newData !== undefined) {
+        this.defaultProps(keysOfNewData, parsingId)
+      }
+
 
       this.inBulkChange = false
 
@@ -885,7 +897,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       const defaultVal = this._default !== undefined ? this._default[key] : undefined
       // TODO: Is this needed or can you just make all functions non iteratable
       if (typeof val !== "function") {
-        const _setToThis = constructAttatchToPrototype(funcThis)
+        const _setToThis = constructAttatchToPrototype(funcThis, {enumerable: true})
         const setToThis = (e) => _setToThis(key, {value: e})
         if (typeof val === objectString) {
           if (val[parsingId] === undefined) {
@@ -934,7 +946,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       
       for (let key of defaultKeys) {
         if (!newStoreKeys.includes(key)) {
-          const _setToThis = constructAttatchToPrototype(funcThis)
+          const _setToThis = constructAttatchToPrototype(funcThis, {enumerable: true})
           const setToThis = (e) => _setToThis(key, {value: e})
           if (typeof def[key] === "object") {
             setToThis(new InternalDataBase({}, def[key], parsingId, this.callMeWithDiff(key)))

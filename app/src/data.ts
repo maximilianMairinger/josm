@@ -99,6 +99,7 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   }
 
   protected destroy() {
+    this.set(undefined)
     for (const f of this.beforeDestroyCbs) f()
     this.beforeDestroyCbs.clear()
     for (const e of this.linksOfMe) e.destroy()

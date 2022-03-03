@@ -6,30 +6,42 @@ import { constructObjectIndex } from "key-index"
 
 
 
-
-
-
-
-
-const data = new DataBase({lol: "aa"})
-const sub1 = data((e) => {
-  console.log("sub1", e)
+const db = new DataBase({
+  helloKey: "HELLO"
+}, {
+  helloKey: "helloDefault"
 })
 
-const sub2 = data((e) => {
-  console.log("sub2", e)
-})
-const sub3 = data((e) => {
-  console.log("sub3", e)
+db((e, q) => {
+  console.log(e, q)
 })
 
-debugger
-sub2.deactivate()
-sub1.deactivate()
-sub2.activate()
+// db.helloKey.set(undefined)
+db(undefined, true)
 
 
-data({lol: "bb"})
+console.log("done")
+
+
+// const data = new DataBase({lol: "aa"})
+// const sub1 = data((e) => {
+//   console.log("sub1", e)o
+// })
+
+// const sub2 = data((e) => {
+//   console.log("sub2", e)
+// })
+// const sub3 = data((e) => {
+//   console.log("sub3", e)
+// })
+
+// debugger
+// sub2.deactivate()
+// sub1.deactivate()
+// sub2.activate()
+
+
+// data({lol: "bb"})
 
 // sub.setToDataBase({lol: "cc"})
 
