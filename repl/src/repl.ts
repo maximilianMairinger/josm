@@ -1,4 +1,4 @@
-import { Data, DataBase, DataBaseSubscription, DataCollection, DataSubscription } from "../../app/src/josm"
+import { Data as DATA, DataBase, DataBaseSubscription, DataCollection, DataSubscription, setDataDerivativeIndex } from "../../app/src/josm"
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
@@ -6,21 +6,70 @@ import { constructObjectIndex } from "key-index"
 
 
 
-const db = new DataBase({
-  helloKey: "HELLO"
-}, {
-  helloKey: "helloDefault"
-})
+const { Data, setDataBaseDerivativeIndex } = setDataDerivativeIndex(
+  class NumberData<T extends number> extends DATA<T> {
+    inc(by: number = 1) {
+      this.set((this.get() as any + by))
+      return this
+    }
+  }
+)
 
-db((e, q) => {
-  console.log(e, q)
-})
+const MyDB = setDataBaseDerivativeIndex(
+  class LelOBase extends DataBase<{lel: number}> {
+    incLel(by: number = 1) {
+      this.lel.inc(by)
+      return this
+    }
+  },
+  class WutOBase extends DataBase<{wut: number}> {
+    incWut(by: number = 1) {
+      this.wut.inc(by)
+      return this
+    }
+  }
+)
 
-// db.helloKey.set(undefined)
-db(undefined, true)
+const db = new MyDB({hehe: {wut: 0}})
 
 
-console.log("done")
+console.log(new Data(2).inc(2).get())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// const db = new DataBase({
+//   helloKey: "HELLO"
+// }, {
+//   helloKey: "helloDefault"
+// })
+
+// db((e, q) => {
+//   console.log(e, q)
+// })
+
+// // db.helloKey.set(undefined)
+// db(undefined, true)
+
+
+// console.log("done")
+
+
+
+
+
+
 
 
 // const data = new DataBase({lol: "aa"})
