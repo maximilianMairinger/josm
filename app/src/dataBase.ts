@@ -1042,6 +1042,9 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
 }
 
+
+export type DataBaseFunction<Store extends {[key in string]: any}> = InternalDataBase<Store>["DataBaseFunction"]
+
 const subscriptionDiffSymbol = Symbol("diff")
 
 

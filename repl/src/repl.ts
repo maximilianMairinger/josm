@@ -30,11 +30,10 @@ const MyDB = setDataBaseDerivativeIndex(
   }
 )
 
-const db = new MyDB({hehe: {wut: 0}})
-
+const db = new MyDB({wut: {wut: 2}})
+db.wut.incWut()
 
 console.log(new Data(2).inc(2).get())
-
 
 
 

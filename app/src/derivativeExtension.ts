@@ -4,6 +4,7 @@ import { Data } from "./josm"
 
 
 import { constructAttatchToPrototype } from "attatch-to-prototype"
+import { DataBaseFunction, RemovePotentialArrayFunctions } from "./dataBase"
 
 
 
@@ -41,12 +42,23 @@ function classLsToFunctionIndex(clsLs: any[]): any {
 }
 
 
-type MergedDataDerivative<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]> = { new<Q> (a: Q): { [key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never }[number] extends never ? Data<Q> : { [key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never }[number] }
+
+type FunctionProperties = "apply" | "call" | "caller" | "bind" | "arguments" | "length" | "prototype" | "name" | "toString"
+type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionProperties>
 
 
 
-export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...classLs: T): {setDataBaseDerivativeIndex: typeof setDataBaseDerivativeIndex, Data: MergedDataDerivative<T, W> & { proxy: (...settings: any[]) => (MergedDataDerivative<T, W> & { HistoryIndex: { new<Value>(data: Data<Value>): HistoryIndexAbstract<Value> }, contextualIndexing: (...a: any[]) => (MergedDataDerivative<T, W> & { HistoryIndex: { new<Value>(data: Data<Value>): HistoryIndexAbstract<Value> } })})}}  {
 
+
+
+type MergeDataDerivativeInstance<T extends DataDerivativeCollectionClasses<W>, W extends unknown[], Q> = { [key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never }[number] extends never ? Data<Q> : { [key in keyof T]: InstanceType<T[key]> extends Data<Q> ? InstanceType<T[key]> : never }[number]
+type MergedDataDerivativeClass<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]> = { new<Q> (a: Q): MergeDataDerivativeInstance<T, W, Q> }
+
+
+
+
+export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...classLs: T): {setDataBaseDerivativeIndex: typeof setDataBaseDerivativeIndex, Data: MergedDataDerivativeClass<T, W>}  {
+  
   
   const functionIndex = classLsToFunctionIndex(classLs)
   const attachToData = (() => {
@@ -60,20 +72,25 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 
   attachToData()
 
-  function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): 
-  { 
-    new<Q> (a: Q): {
+
+  type RecDataBase<Store extends {[key in string]: any}, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]> = OptionallyExtendedDB<Store, T, W> /* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
+
+
+  type DataBaseify<Type extends object, TT extends DataBaseDerivativeCollectionClasses<WW>, WW extends unknown[]> = { 
+    [Key in keyof Type]: Type[Key] extends object ? RecDataBase<RemovePotentialArrayFunctions<Type[Key]>, TT, WW> : MergeDataDerivativeInstance<T, W, Type[Key]>
+  }
+
+  type WithDataExtendedDB<Store extends object, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[], S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S, T, W> & OmitFunctionProperties<DataBaseFunction<Store>>
+
+  type ExtendedDB<Q extends object, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]> = { 
     [key in keyof T]: InstanceType<T[key]> extends DataBase<Q> ? 
-      InstanceType<T[key]> 
+      InstanceType<T[key]>
       : never 
-    }[number] extends never ?
-      DataBase<Q>
-      : { 
-        [key in keyof T]: InstanceType<T[key]> extends DataBase<Q> ? 
-          InstanceType<T[key]>
-          : never 
-      }[number] 
-    } {
+  }[number]
+
+  type OptionallyExtendedDB<Q extends object, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]> = ExtendedDB<Q, T, W> extends never ? WithDataExtendedDB<Q, T, W> : ExtendedDB<Q, T, W>
+
+  function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): { new<Q extends object> (a: Q): WithDataExtendedDB<Q, T, W> } {
 
 
     dbDerivativeCollectionIndex.clear()
