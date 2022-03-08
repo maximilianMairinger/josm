@@ -16,7 +16,8 @@ const { Data, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeInd
 )
 
 const ExDataBase = parseDataBase(DATABASE)
-
+const eee = new ExDataBase({e: {a: 2}, a: 3})
+eee
 
 const MyDB = setDataBaseDerivativeIndex(
   class LelOBase extends ExDataBase<{lel: number}> {
