@@ -1071,7 +1071,7 @@ type DataBaseify<Type extends object> = {
   [Key in keyof Type]: Type[Key] extends object ? RecDataBase<RemovePotentialArrayFunctions<Type[Key]>> : Data<Type[Key]>
 }
 
-type RecDataBase<Store extends {[key in string]: any} = unknown> = DataBaseify<Store>/* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
+type RecDataBase<Store extends {[key in string]: any} = unknown> = DataBase<Store>/* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
 
 // when omiting function props the expression is not callable any more so for now this does nothing (maybe this changes in the future)
 type FunctionProperties = "apply" | "call" | "caller" | "bind" | "arguments" | "length" | "prototype" | "name" | "toString"
