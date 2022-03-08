@@ -10,7 +10,7 @@ import { DataBaseFunction, RemovePotentialArrayFunctions } from "./dataBase"
 
 
 export const dataDerivativeLiableIndex: any[] = []
-export const dbDerivativeCollectionIndex: any[] = []
+export const dbDerivativeCollectionIndex: {index: {[key in string]: any}} = {index: {}}
 
 
 
@@ -109,11 +109,9 @@ export function setDataDerivativeIndex<TT extends DataDerivativeCollectionClasse
 
   function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): { new<Q extends object> (a: Q): OptionallyExtendedDB<Q, T, W, TT, WW> } {
 
-
-    dbDerivativeCollectionIndex.clear()
   
     // DB appends it on its own
-    dbDerivativeCollectionIndex.add(...collection)
+    dbDerivativeCollectionIndex.index = classLsToFunctionIndex(collection)
   
     //@ts-ignore
     return Object.getPrototypeOf(collection.first)

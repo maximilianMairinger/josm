@@ -34,11 +34,16 @@ const MyDB = setDataBaseDerivativeIndex(
   }
 )
 
+
+debugger
 const db = new MyDB({wut: {wut: 2}})
+db((e) => {
+  console.log(JSON.parse(JSON.stringify(e)))
+})
 db.wut.incWut()
 
 
-console.log(new Data(2).inc(2).get())
+// console.log(new Data(2).inc(2).get())
 
 
 

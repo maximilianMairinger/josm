@@ -173,11 +173,11 @@ class DataBaseLink extends Function implements Link {
 
     this.funcThis[internalDataBaseBridge] = this
     const attach = constructAttatchToPrototype(this.funcThis)
-    dbDerivativeCollectionIndex.ea((e) => {
-      for (let key in e) {
-        attach(key, e[key])  
-      }
-    })
+    const { index } = dbDerivativeCollectionIndex
+    for (let key in index) {
+      attach(key, index[key])  
+    }
+
 
     return this.funcThis
   }
@@ -439,7 +439,7 @@ type Merge<A, B> = {[key in keyof A | keyof B]: (key extends keyof A ? A[key] : 
 type S = {key2: undefined, key4: 44}
 
 type e = DataBase<FilterT<S, DefinedFieldUnion<S>>>
-let e: e
+// let e: e
 
 type FilterT<T extends {[key in string | number | symbol]: any}, Filter extends string | number | symbol, ProperFilter extends DefinedFieldUnion<{[key in Filter]: key extends keyof T ? T[key] : undefined}> = DefinedFieldUnion<{[key in Filter]: key extends keyof T ? T[key] : undefined}>> = { [K in ProperFilter]: T[K] extends {[key in string | number | symbol]: any} ? FilterT<T[K], Filter> : T[K] }
 type f = FilterT<{q: number}, "q" | "w">
@@ -449,7 +449,7 @@ type T = {q: number}
 type qq = DefinedFieldUnion<{[key in Filter]: key extends keyof T ? T[key] : undefined}>
 
 type test = DataBase<FilterT<S, DefinedFieldUnion<S>>>
-let t: test
+// let t: test
 
 
 
@@ -533,11 +533,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
 
     this.funcThis[internalDataBaseBridge] = this
     const attach = constructAttatchToPrototype(this.funcThis)
-    dbDerivativeCollectionIndex.ea((e) => {
-      for (let key in e) {
-        attach(key, e[key])  
-      }
-    })
+    const { index } = dbDerivativeCollectionIndex
+    for (let key in index) {
+      attach(key, index[key])  
+    }
 
     
 
