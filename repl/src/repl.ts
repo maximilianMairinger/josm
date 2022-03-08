@@ -1,4 +1,4 @@
-import { Data as DATA, DataBase, DataBaseSubscription, DataCollection, DataSubscription, setDataDerivativeIndex } from "../../app/src/josm"
+import { Data as DATA, DataBase as DATABASE, DataBaseSubscription, DataCollection, DataSubscription, setDataDerivativeIndex } from "../../app/src/josm"
 import constructIndex from "key-index"
 import constructAttatchToPrototype from "attatch-to-prototype"
 import clone from "fast-copy"
@@ -6,7 +6,7 @@ import { constructObjectIndex } from "key-index"
 
 
 
-const { Data, setDataBaseDerivativeIndex } = setDataDerivativeIndex(
+const { Data, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
   class NumberData<T extends number> extends DATA<T> {
     inc(by: number = 1) {
       this.set((this.get() as any + by))
@@ -15,14 +15,17 @@ const { Data, setDataBaseDerivativeIndex } = setDataDerivativeIndex(
   }
 )
 
+const ExDataBase = parseDataBase(DATABASE)
+
+
 const MyDB = setDataBaseDerivativeIndex(
-  class LelOBase extends DataBase<{lel: number}> {
+  class LelOBase extends ExDataBase<{lel: number}> {
     incLel(by: number = 1) {
       this.lel.inc(by)
       return this
     }
   },
-  class WutOBase extends DataBase<{wut: number}> {
+  class WutOBase extends ExDataBase<{wut: number}> {
     incWut(by: number = 1) {
       this.wut.inc(by)
       return this
@@ -32,6 +35,7 @@ const MyDB = setDataBaseDerivativeIndex(
 
 const db = new MyDB({wut: {wut: 2}})
 db.wut.incWut()
+
 
 console.log(new Data(2).inc(2).get())
 

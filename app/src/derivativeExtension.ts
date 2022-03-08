@@ -15,17 +15,10 @@ export const dbDerivativeCollectionIndex: any[] = []
 
 
 type DataDerivativeCollectionClasses<E extends unknown[]> = {
-  [key in keyof E]: { new<T = unknown> (...a: any[]): Data<E[key]>, id?: string }
+  [key in keyof E]: { new<T = unknown> (...a: any[]): Data<E[key]>}
 }
 
 
-type DataBaseDerivativeCollectionClasses<E extends unknown[]> = {
-  [key in keyof E]: { new<T = unknown> (...a: any[]): DataBase<E[key]>, id?: string  }
-}
-
-export interface HistoryIndexAbstract<Value> extends Data<Value> {
-  apply(o: {timeStamp: number, id: number | string, args: any[], force?: boolean}): void
-}
 
 
 
@@ -55,9 +48,7 @@ type MergeDataDerivativeInstance<T extends DataDerivativeCollectionClasses<W>, W
 type MergedDataDerivativeClass<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]> = { new<Q> (a: Q): MergeDataDerivativeInstance<T, W, Q> }
 
 
-
-
-export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...classLs: T): {setDataBaseDerivativeIndex: typeof setDataBaseDerivativeIndex, Data: MergedDataDerivativeClass<T, W>}  {
+export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses<W>, W extends unknown[]>(...classLs: T ): {setDataBaseDerivativeIndex: typeof setDataBaseDerivativeIndex, Data: MergedDataDerivativeClass<T, W>, parseDataBase(DB: typeof DataBase): typeof Otest }  {
   
   
   const functionIndex = classLsToFunctionIndex(classLs)
@@ -72,6 +63,24 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 
   attachToData()
 
+  type RecDataBaseSimple<Store extends {[key in string]: any}> = WithDataExtendedDBSimple<Store> /* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
+
+
+  type DataBaseifySimple<Type extends object> = { 
+    [Key in keyof Type]: Type[Key] extends object ? RecDataBaseSimple<RemovePotentialArrayFunctions<Type[Key]>> : MergeDataDerivativeInstance<T, W, Type[Key]>
+  }
+
+  type WithDataExtendedDBSimple<Store extends {[key in string]: any}> = DataBaseifySimple<Store> & OmitFunctionProperties<DataBaseFunction<Store>>
+
+  const Otest = 2 as any as { new<Q extends object, S extends RemovePotentialArrayFunctions<Q> = RemovePotentialArrayFunctions<Q>>(o: Q): WithDataExtendedDBSimple<S>}
+
+
+
+
+  type DataBaseDerivativeCollectionClasses<E extends unknown[]> = {
+    [key in keyof E]: { new<T> (...a: any[]): DataBase<E[key]> }
+  }
+
 
   type RecDataBase<Store extends {[key in string]: any}, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]> = OptionallyExtendedDB<Store, T, W> /* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
 
@@ -80,7 +89,7 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
     [Key in keyof Type]: Type[Key] extends object ? RecDataBase<RemovePotentialArrayFunctions<Type[Key]>, TT, WW> : MergeDataDerivativeInstance<T, W, Type[Key]>
   }
 
-  type WithDataExtendedDB<Store extends object, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[], S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S, T, W> & OmitFunctionProperties<DataBaseFunction<Store>>
+  type WithDataExtendedDB<Store extends object, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]> = DataBaseify<Store, T, W> & OmitFunctionProperties<DataBaseFunction<Store>>
 
   type ExtendedDB<Q extends object, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]> = { 
     [key in keyof T]: InstanceType<T[key]> extends DataBase<Q> ? 
@@ -90,7 +99,8 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
 
   type OptionallyExtendedDB<Q extends object, T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]> = ExtendedDB<Q, T, W> extends never ? WithDataExtendedDB<Q, T, W> : ExtendedDB<Q, T, W>
 
-  function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): { new<Q extends object> (a: Q): WithDataExtendedDB<Q, T, W> } {
+
+  function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): { new<Q extends object> (a: Q): OptionallyExtendedDB<Q, T, W> } {
 
 
     dbDerivativeCollectionIndex.clear()
@@ -104,7 +114,8 @@ export function setDataDerivativeIndex<T extends DataDerivativeCollectionClasses
   
   return {
     Data: Object.getPrototypeOf(classLs.first),
-    setDataBaseDerivativeIndex
+    setDataBaseDerivativeIndex,
+    parseDataBase: (DataBase: { new<O extends object>(): DataBase<O> }) => DataBase as any
   }
 }
 
