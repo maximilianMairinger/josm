@@ -16,7 +16,6 @@ import LinkedList, { Token } from "fast-linked-list"
 
 
 
-
 interface Link {
   destroy(): void
   resolvePath(): void
@@ -49,6 +48,11 @@ function forwardLink(target: any, source_forwards: any | string[], instancePath:
       return this[instancePath][functionName](...a)
     })
   }
+}
+
+
+function isObjectEmpty(ob: any) {
+  return !ob || Object.keys(ob).length === 0
 }
 
 //@ts-ignore
@@ -604,8 +608,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   
   protected DataBaseFunction(): Readonly<Store>
   
-  protected DataBaseFunction(subscription: DataSubscription<[Readonly<Store>]>, notifyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
-  protected DataBaseFunction(subscription: Function, notifyAboutChangesOfChilds?: boolean, init?: boolean): DataBaseSubscription<[Store]>
+  protected DataBaseFunction(subscription: DataSubscription<[Readonly<Store>, Partial<Readonly<Store>>]> | ((full: Readonly<Store>, diff: Partial<Readonly<Store>>) => void), notifyAboutChangesOfChilds?: true, init?: boolean): DataBaseSubscription<[Readonly<Store>, Partial<Readonly<Store>>]>
+  protected DataBaseFunction(subscription: DataSubscription<[DataBase<Store>, DataBase<Store>, DataBase<Store>]> | ((full: DataBase<Store>, added: DataBase<Store>, removed: DataBase<Store>) => void), notifyAboutChangesOfChilds: false, init?: boolean): DataBaseSubscription<[DataBase<Store>, DataBase<Store>, DataBase<Store>]>
+
+
 
   protected DataBaseFunction<Path extends (keyof Store)>(path: Path): any
   // Not working in ts yet | alternative above
@@ -682,7 +688,8 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       return this.store
     }
     else if (typeof path_data_subscription === objectString || path_data_subscription === undefined) {
-      const diff = {}
+      const diffFromThis = {removed: {}, added: {}}
+      const diffFromChild = {}
 
       let newData = path_data_subscription as ComplexData
       let strict = notifyAboutChangesOfChilds_path_strict === undefined ? false : notifyAboutChangesOfChilds_path_strict
@@ -691,8 +698,6 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       
       let handledKeys: string[]
 
-      let notifyFromThis = false
-      let notifyFromChild = false
 
       this.inBulkChange = true
       
@@ -720,42 +725,37 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
             if (prop instanceof Data) {
               if (typeof newVal !== "object") {
                 if (newVal !== prop.get()) {
-                  notifyFromThis = true
-                  diff[key] = newVal
+                  diffFromChild[key] = newVal
                 }
                 prop.set(newVal)
               }
               else {
                 if (newVal[parsingId] === undefined) {
                   //@ts-ignore
-                  diff[key] = this.store[key] = newVal
+                  diffFromThis.added[key] = this.store[key] = newVal
                   //@ts-ignore
                   prop.destroy()
 
                   constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key)), enumerable: true})
                   newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
-                    const diff = {}
-                    diff[key] = undefined
+                    const diff = {removed: {}}
+                    diff.removed[key] = undefined
                     delete newVal[parsingId]
                     delete funcThis[key]
                     delete newData[key]
                     delete this.store[key]
-                    this.call(undefined, true, diff)
+                    this.call(undefined, diff, undefined)
                   })
                 }
                 else {
                   constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId], enumerable: true})
                 }
-
-                notifyFromThis = true
-
               }
             }
             else {
               if (typeof newVal === "object") {
                 const duringActivationNotificationBundler = (_diff: any) => {
-                  diff[key] = _diff
-                  notifyFromChild = true
+                  diffFromChild[key] = _diff
                 }
                 // cache all changes coming from below (children) so that only one change event gets emitted
 
@@ -770,27 +770,25 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               }
               else {
                 //@ts-ignore
-                diff[key] = this.store[key] = newVal
+                diffFromThis.added[key] = this.store[key] = newVal
                 prop.destroy(this)
                 constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
                 funcThis[key].addBeforeDestroyCb(this, () => {
-                  const diff = {}
-                  diff[key] = undefined
+                  const diff = {removed: {}}
+                  diff.removed[key] = undefined
                   delete newVal[parsingId]
                   delete funcThis[key]
                   delete newData[key]
                   delete this.store[key]
-                  this.call(undefined, true, diff)
+                  this.call(undefined, diff, undefined)
                 })
                 funcThis[key].get((e) => {
                   const diff = {}
                   diff[key] = e
                   //@ts-ignore
                   this.store[key] = e
-                  this.call(undefined, false, diff)
+                  this.call(undefined, undefined, diff)
                 }, false)
-
-                notifyFromThis = true
               }
             }
           }
@@ -799,13 +797,13 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               if (newVal[parsingId] === undefined) {
                 constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId] = new InternalDataBase(newVal, defaultVal, parsingId, this.callMeWithDiff(key)), enumerable: true})
                 funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
-                  const diff = {}
-                  diff[key] = undefined
+                  const diff = {removed: {}}
+                  diff.removed[key] = undefined
                   delete newVal[parsingId]
                   delete funcThis[key]
                   delete newData[key]
                   delete this.store[key]
-                  this.call(undefined, true, diff)
+                  this.call(undefined, diff, undefined)
                 })
                 //@ts-ignore
                 diff[key] = this.store[key] = newVal
@@ -817,47 +815,46 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
             }
             else {
               //@ts-ignore
-              diff[key] = this.store[key] = newVal
+              diffFromThis.added[key] = this.store[key] = newVal
               constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
               funcThis[key].addBeforeDestroyCb(this, () => {
-                const diff = {}
-                diff[key] = undefined
+                const diff = {removed: {}}
+                diff.removed[key] = undefined
                 delete newVal[parsingId]
                 delete funcThis[key]
                 delete newData[key]
                 delete this.store[key]
-                this.call(undefined, true, diff)
+                this.call(undefined, diff, undefined)
               })
               funcThis[key].get((e) => {
                 const diff = {}
                 diff[key] = e
                 //@ts-ignore
                 this.store[key] = e
-                this.call(undefined, false, diff)
+                this.call(undefined, undefined, diff)
               }, false)
             }
-            notifyFromThis = true
           }
         }
       }
 
       
 
-      const destroyFunc = (key: string) => {
-        
-        if (funcThis[key] instanceof Data) funcThis[key].destroy()
-        else funcThis[key][internalDataBaseBridge].destroy(this)
-        notifyFromThis = true
-        diff[key] = undefined
+
+      const destroyVals = [] as (Data | DataBase)[]
+      const removeFunc = (key: string) => {
+        const val = funcThis[key]
+        this.callMeWithDiffIndex.delete(key)
+        destroyVals.push(diffFromThis.removed[key] = val)
       }
 
       for (const key of explicitDeleteKeys) {
-        destroyFunc(key)
+        removeFunc(key)
       }
 
       if (strict) {
         for (const key in funcThis) {
-          if (!handledKeys.includes(key)) destroyFunc(key)
+          if (!handledKeys.includes(key)) removeFunc(key)
         }
       }
 
@@ -865,17 +862,19 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         this.defaultProps(keysOfNewData, parsingId)
       }
 
+      this.inBulkChange = false
+      this.call(undefined, diffFromThis, diffFromChild)
+      this.inBulkChange = true
 
+      for (const val of destroyVals) {
+        if (val instanceof Data) (val as any).destroy()
+        else val[internalDataBaseBridge].destroy(this)
+      }
       this.inBulkChange = false
 
-      if (notifyFromThis) this.call(undefined, true, diff)
-      else if (notifyFromChild) this.call(undefined, false, diff)
 
       return funcThis
     }
-    
-    
-    
   }
 
 
@@ -902,13 +901,13 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           if (val[parsingId] === undefined) {
             setToThis(val[parsingId] = new InternalDataBase(val, defaultVal, parsingId, this.callMeWithDiff(key)))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, (only) => {
-              const diff = {}
-              diff[key] = undefined
+              const diff = {removed: {}}
+              diff.removed[key] = undefined
               delete val[parsingId]
               delete newStoreKeys[key]
               delete funcThis[key]
               delete store[key]
-              this.call(undefined, true, diff)
+              this.call(undefined, diff, undefined)
             })
           }
           else setToThis(val[parsingId])
@@ -916,18 +915,18 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         else {
           setToThis(new Data(val, defaultVal))
           funcThis[key].addBeforeDestroyCb(this, () => {
-            const diff = {}
-            diff[key] = undefined
+            const diff = {removed: {}}
+            diff.removed[key] = undefined
             delete funcThis[key]
             delete store[key]
-            this.call(undefined, true, diff)
+            this.call(undefined, diff, undefined)
           })
           funcThis[key].get((e) => {
             const diff = {}
             diff[key] = e
             //@ts-ignore
             this.store[key] = e
-            this.call(undefined, false, diff)
+            this.call(undefined, undefined, diff)
           }, false)
         }
       }
@@ -950,29 +949,29 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           if (typeof def[key] === "object") {
             setToThis(new InternalDataBase({}, def[key], parsingId, this.callMeWithDiff(key)))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
-              const diff = {}
-              diff[key] = undefined
+              const diff = {removed: {}}
+              diff.removed[key] = undefined
               delete funcThis[key]
               delete this.store[key]
-              this.call(undefined, true, diff)
+              this.call(undefined, diff, undefined)
             })
             this.store[key as any] = new def[key].constructor
           }
           else {
             setToThis(new Data(undefined, def[key]))
             funcThis[key].addBeforeDestroyCb(this, () => {
-              const diff = {}
-              diff[key] = undefined
+              const diff = {removed: {}}
+              diff.removed[key] = undefined
               delete funcThis[key]
               delete this.store[key]
-              this.call(undefined, true, undefined)
+              this.call(undefined, diff, undefined)
             })
             funcThis[key].get((e) => {
               const diff = {}
               diff[key] = e
               //@ts-ignore
               this.store[key] = e
-              this.call(undefined, false, diff)
+              this.call(undefined, undefined, diff)
             }, false)
             
             this.store[key as any] = funcThis[key].get()
@@ -1001,28 +1000,44 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     subscriptionToken.remove()
   }
 
-  __call(subs: LinkedList<Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>>, diff?: any) {
+  __call(subs: LinkedList<Subscription<[Readonly<Store>, Partial<Readonly<Store>>, any]>>, ...diff: any[]) {
     const store = this.store
     for (const sub of subs) {
-      sub(store, diff)
+      // @ts-ignore
+      sub(store, ...diff)
     }
   }
-  call(s: any, fromThis: boolean = false, diff: any) {
+  call(s: any, diffFromThis: {added?: object, removed: object} | undefined, diffFromChild: object | undefined) {
     if (!this.inBulkChange) {
       let { subs, need } = needFallbackForSubs(s)
       if (need) {
-        if (fromThis) {
+        const diffFromThisForParents = {}
+
+        if (diffFromThis !== undefined && (!isObjectEmpty(diffFromThis.added) || !isObjectEmpty(diffFromThis.removed))) {
+          const thisChangesObservable = {added: {}, removed: {}} as any
+
+          if (diffFromThis.added) for (const key in diffFromThis.added) {
+            thisChangesObservable.added[key] = this.funcThis[key]
+            diffFromThisForParents[key] = diffFromThis.added[key]
+          }
+          if (diffFromThis.removed) for (const key in diffFromThis.removed) {
+            thisChangesObservable.removed[key] = this.funcThis[key]
+            diffFromThisForParents[key] = undefined
+          }
+
+
           registerSubscriptionNamespace(() => {
-            this.__call(this.subscriptionsOfThisChanges as any, diff)
+            this.__call(this.subscriptionsOfThisChanges as any, thisChangesObservable.added, thisChangesObservable.removed)
           }, this.locSubNsReg)
         }
+        if (!isObjectEmpty(diffFromChild)) {
+          registerSubscriptionNamespace(() => {
+            this.__call(this.subscriptionsOfChildChanges as any, diffFromChild)
+          }, this.locSubNsReg)
+        }
+
         
-        
-        // ---- from child ----
-        for (const f of this.notifyParentOfChangeCbs) f(diff)
-        registerSubscriptionNamespace(() => {
-          this.__call(this.subscriptionsOfChildChanges as any, diff)
-        }, this.locSubNsReg)
+        for (const f of this.notifyParentOfChangeCbs) f({...diffFromThisForParents, ...diffFromChild})
       }
       else {
         this.__call(subs)

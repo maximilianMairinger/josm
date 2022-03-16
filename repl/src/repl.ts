@@ -17,13 +17,43 @@ const { Data, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeInd
 
 const ExDataBase = parseDataBase(DATABASE)
 const eee = new ExDataBase({e: {a: 2}, a: 3})
-eee
 
-const MyDB = setDataBaseDerivativeIndex(
-  class LelOBase extends ExDataBase<{lel: number}> {
-    incLel(by: number = 1) {
-      this.lel.inc(by)
-      return this
+
+const DataBase = setDataBaseDerivativeIndex(
+  class ArrayList<T extends string> extends ExDataBase<T[]> {
+    forEach(addedCb: (added: DATA<T>, i: number) => ((() => void) | DataSubscription<[...any[]]>)) {
+      const destroyMap = new Map<DATA, Function>()
+
+      this((full, added, removed) => {
+        for (const key in added) {
+          const numKey = +key
+          if (isNaN(numKey)) continue
+          const ret = addedCb((this as any)[key], numKey)
+          if (ret instanceof DataSubscription) destroyMap.set((this as any)[key], ret.deactivate.bind(ret))
+          else if (ret instanceof Function) destroyMap.set((this as any)[key], ret)
+        }
+
+        debugger
+        for (const key in removed) {
+          const numKey = +key
+          if (isNaN(numKey)) continue
+          if (destroyMap.has((removed as any)[key])) {
+            destroyMap.get((removed as any)[key])()
+            destroyMap.delete((removed as any)[key])
+          }
+        }
+
+      }, false, false)
+
+
+      for (const key in this) {
+        const numKey = +key
+        if (isNaN(numKey)) continue
+        const ret = addedCb((this as any)[key], numKey)
+        if (ret instanceof DataSubscription) destroyMap.set((this as any)[key], ret.deactivate.bind(ret))
+        else if (ret instanceof Function) destroyMap.set((this as any)[key], ret)
+      }
+
     }
   },
   class WutOBase extends ExDataBase<{wut: number}> {
@@ -35,12 +65,31 @@ const MyDB = setDataBaseDerivativeIndex(
 )
 
 
-debugger
-const db = new MyDB({wut: {wut: 2}})
-db((e) => {
-  console.log(JSON.parse(JSON.stringify(e)))
+const db = new DataBase({e: ["elem1", "elem2", "elem3"]})
+db.e.forEach((added) => {
+  console.log("added", added.get())
+  const sub = added.get((val) => {
+    console.log("changed", val)
+  }, false)
+
+  return () => {
+    console.log("removed", added)
+    sub.deactivate()
+  }
 })
-db.wut.incWut()
+
+console.log("hehe")
+
+
+// db.e([1,2,3])
+// db.e({"3": "change3"})
+// const data0 = db.e[0]
+// data0.set("change 1")
+db.e({"0": undefined})
+// data0.set("change 11")
+
+// @ts-ignore
+window.db = db
 
 
 // console.log(new Data(2).inc(2).get())
