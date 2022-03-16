@@ -78,7 +78,7 @@ db.e.forEach((added) => {
   }
 })
 
-console.log("hehe")
+console.log("hehe2")
 
 
 // db.e([1,2,3])

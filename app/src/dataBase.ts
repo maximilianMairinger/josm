@@ -1014,20 +1014,24 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         const diffFromThisForParents = {}
 
         if (diffFromThis !== undefined && (!isObjectEmpty(diffFromThis.added) || !isObjectEmpty(diffFromThis.removed))) {
-          const thisChangesObservable = {added: {}, removed: {}} as any
 
           if (diffFromThis.added) for (const key in diffFromThis.added) {
-            thisChangesObservable.added[key] = this.funcThis[key]
             diffFromThisForParents[key] = diffFromThis.added[key]
           }
+          else diffFromThis.added = {}
           if (diffFromThis.removed) for (const key in diffFromThis.removed) {
-            thisChangesObservable.removed[key] = this.funcThis[key]
             diffFromThisForParents[key] = undefined
           }
+          else diffFromThis.removed = {}
 
 
           registerSubscriptionNamespace(() => {
-            this.__call(this.subscriptionsOfThisChanges as any, thisChangesObservable.added, thisChangesObservable.removed)
+            const store = this.store
+            const subs = this.subscriptionsOfThisChanges as any as Function[]
+            for (const sub of subs) {
+              if (sub.length === 2) (sub as any)(store, diffFromThisForParents)
+              else (sub as any)(store, diffFromThis.added, diffFromThis.removed)
+            }
           }, this.locSubNsReg)
         }
         if (!isObjectEmpty(diffFromChild)) {
