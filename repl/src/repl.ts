@@ -33,7 +33,6 @@ const DataBase = setDataBaseDerivativeIndex(
           else if (ret instanceof Function) destroyMap.set((this as any)[key], ret)
         }
 
-        debugger
         for (const key in removed) {
           const numKey = +key
           if (isNaN(numKey)) continue
@@ -81,12 +80,12 @@ db.e.forEach((added) => {
 console.log("hehe2")
 
 
-// db.e([1,2,3])
-// db.e({"3": "change3"})
-// const data0 = db.e[0]
-// data0.set("change 1")
-db.e({"0": undefined})
-// data0.set("change 11")
+db.e([1,2], true)
+db.e({"1": "change 2"})
+const data1 = db.e[1]
+data1.set("change 22")
+db.e({"1": undefined})
+data1.set("change wihasbhjasbhj")
 
 // @ts-ignore
 window.db = db

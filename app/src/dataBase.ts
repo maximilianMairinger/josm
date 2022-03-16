@@ -176,7 +176,7 @@ class DataBaseLink extends Function implements Link {
     
 
     this.funcThis[internalDataBaseBridge] = this
-    const attach = constructAttatchToPrototype(this.funcThis)
+    const attach = constructAttatchToPrototype(this.funcThis, {enumerable: false})
     const { index } = dbDerivativeCollectionIndex
     for (let key in index) {
       attach(key, index[key])  
@@ -536,7 +536,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     
 
     this.funcThis[internalDataBaseBridge] = this
-    const attach = constructAttatchToPrototype(this.funcThis)
+    const attach = constructAttatchToPrototype(this.funcThis, {enumerable: false})
     const { index } = dbDerivativeCollectionIndex
     for (let key in index) {
       attach(key, index[key])  

@@ -95,7 +95,7 @@ export function setDataDerivativeIndex<TT extends DataDerivativeCollectionClasse
   
   const functionIndex = classLsToFunctionIndex(classLs)
   const attachToData = (() => {
-    const a = constructAttatchToPrototype(dataDerivativeLiableIndex.map((e) => e.prototype))
+    const a = constructAttatchToPrototype(dataDerivativeLiableIndex.map((e) => e.prototype), {enumerable: false})
     return function attachToData() {
       for (let functionName in functionIndex) {
         a(functionName, functionIndex[functionName])
