@@ -87,7 +87,7 @@ type OptionallyExtendedDB<Q extends object, T extends DataBaseDerivativeCollecti
 
 
 
-type SetDataBaseDerivativeIndexFunc<TT extends DataDerivativeCollectionClasses<WW>, WW extends unknown[]> = <T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T) => { new<Q extends object> (a: Q): OptionallyExtendedDB<Q, T, W, TT, WW> }
+type SetDataBaseDerivativeIndexFunc<TT extends DataDerivativeCollectionClasses<WW>, WW extends unknown[]> = <T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T) => { new<Q extends object, S extends RemovePotentialArrayFunctions<Q> = RemovePotentialArrayFunctions<Q>> (a: Q): OptionallyExtendedDB<S, T, W, TT, WW> }
 
 
 export function setDataDerivativeIndex<TT extends DataDerivativeCollectionClasses<WW>, WW extends unknown[]>(...classLs: TT ): {setDataBaseDerivativeIndex: SetDataBaseDerivativeIndexFunc<TT, WW>, Data: MergedDataDerivativeClass<TT, WW>, parseDataBase(DB: typeof DataBase): { new<Q extends object, S extends RemovePotentialArrayFunctions<Q> = RemovePotentialArrayFunctions<Q>>(o: Q): WithDataExtendedDBSimple<S, TT, WW> } }  {
@@ -107,7 +107,7 @@ export function setDataDerivativeIndex<TT extends DataDerivativeCollectionClasse
 
 
 
-  function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): { new<Q extends object> (a: Q): OptionallyExtendedDB<Q, T, W, TT, WW> } {
+  function setDataBaseDerivativeIndex<T extends DataBaseDerivativeCollectionClasses<W>, W extends unknown[]>(...collection: T): { new<Q extends object, S extends RemovePotentialArrayFunctions<Q> = RemovePotentialArrayFunctions<Q>> (a: Q): OptionallyExtendedDB<S, T, W, TT, WW> } {
 
   
     // DB appends it on its own
