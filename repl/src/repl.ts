@@ -1,6 +1,10 @@
 import { Data, DataBase } from "./replLib"
 
 
+let eee: DataBase<{eee: string}>
+
+const dbEEE = new DataBase({ee: "ee"})
+
 
 
 const db = new DataBase({

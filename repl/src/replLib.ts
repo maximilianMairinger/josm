@@ -6,7 +6,7 @@ import { constructObjectIndex } from "key-index"
 
 
 
-const { Data, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
+const { Data: _Data, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
   class NumberData<T extends number> extends DATA<T> {
     inc(by: number = 1) {
       this.set((this.get() as any + by))
@@ -15,7 +15,8 @@ const { Data, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeInd
   }
 )
 
-export { Data }
+export const Data = _Data
+
 
 const ExDataBase = parseDataBase(DATABASE)
 
@@ -92,6 +93,10 @@ export const DataBase = setDataBaseDerivativeIndex(
   }
 )
 
+
+
+export type Data<Value = unknown, _Default extends Value = Value> = DATA<Value, _Default>
+export type DataBase<Store extends {[key in string]: any} = unknown> = DATABASE<Store>
 
 // const db = new DataBase(["lelelell"])
 
