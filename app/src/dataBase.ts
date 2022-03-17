@@ -571,10 +571,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       this.notifyParentOfChangeCbs.clear()
       for (const key in this.funcThis) {
         if (this.funcThis[key] instanceof Data) {
-          this.funcThis[key].destroy(this)
+          this.funcThis[key].destroy(this.funcThis)
         }
         else {
-          this.funcThis[key][internalDataBaseBridge].destroy(this)  
+          this.funcThis[key][internalDataBaseBridge].destroy(this.funcThis)  
         }
         delete this.funcThis[key]
       }
@@ -771,7 +771,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               else {
                 //@ts-ignore
                 diffFromThis.added[key] = this.store[key] = newVal
-                prop.destroy(this)
+                prop[internalDataBaseBridge].destroy(this)
                 constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
                 funcThis[key].addBeforeDestroyCb(this, () => {
                   const diff = {removed: {}}
