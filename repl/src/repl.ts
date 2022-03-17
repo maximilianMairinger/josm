@@ -1,4 +1,4 @@
-import { Data, DataBase } from "./replLib"
+import { Data, DataBase } from "./../../app/src/extendedDB"
 
 
 let eee: DataBase<{eee: string}>
