@@ -1,8 +1,11 @@
-import { Data as DATA, DataBase as DATABASE, DataSubscription, setDataDerivativeIndex } from "../../app/src/josm"
-import { DataBaseSubscription } from "./data"
+import { Data as DATA, DataSubscription, DataBaseSubscription } from "./data"
+import { DataBase as DATABASE } from "./dataBase"
+import { setDataDerivativeIndex, MergedDataDerivativeInstance } from "./derivativeExtension"
 
 
-const { Data: _Data, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
+
+
+const { Data: _Data, types: DataTypes, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
   class NumberData<T extends number> extends DATA<T> {
     inc(by: number = 1) {
       this.set((this.get() as any + by))
@@ -74,17 +77,10 @@ export const DataBase = setDataBaseDerivativeIndex(
         this(ob)
       }
     }
-  },
-  
-  class WutOBase extends ExDataBase<{wut: number}> {
-    incWut(by: number = 1) {
-      this.wut.inc(by)
-      return this
-    }
   }
 )
 
 
 
-export type Data<Value = unknown, _Default extends Value = Value> = DATA<Value, _Default>
-export type DataBase<Store extends {[key in string]: any} = unknown> = DATABASE<Store>
+export type Data<Value, _Default extends Value = Value> = MergedDataDerivativeInstance<typeof DataTypes["tt"], typeof DataTypes["ww"]>
+// export type DataBase<Store extends {[key in string]: any} = unknown> = DATABASE<Store>
