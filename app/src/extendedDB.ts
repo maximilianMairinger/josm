@@ -5,7 +5,7 @@ import { setDataDerivativeIndex, OptionallyExtendedData, OptionallyExtendedDataB
 
 
 
-const { Data: _Data, types: DataTypes, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
+const { Data: _Data, types: _DataTypes, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
   class NumberData extends DATA<number> {
     static type: number;
     inc<T extends ReturnType<typeof this["get"]> = ReturnType<typeof this["get"]>>(by: number = 1) {
@@ -14,6 +14,10 @@ const { Data: _Data, types: DataTypes, setDataBaseDerivativeIndex, parseDataBase
     }
   }
 )
+
+export type DataTypes = {
+  [key in keyof typeof _DataTypes]: typeof _DataTypes[key]
+}
 
 
 
@@ -77,6 +81,9 @@ const { DataBase: _DataBase, types: DataBaseTypes } = setDataBaseDerivativeIndex
   } as never
 )
 
+export type DataBaseTypes = {
+  [key in keyof typeof DataBaseTypes]: typeof DataBaseTypes[key]
+}
 
 export const Data = _Data
 export const DataBase = _DataBase
@@ -84,5 +91,5 @@ export const DataBase = _DataBase
 
 
 
-export type Data<Value, _Default extends Value = Value> = OptionallyExtendedData<typeof DataTypes["tt"], typeof DataTypes["ww"], Value, _Default>
-export type DataBase<Store extends object> = OptionallyExtendedDataBase<Store, typeof DataBaseTypes["t"], typeof DataBaseTypes["w"], typeof DataTypes["tt"], typeof DataTypes["ww"]>
+export type Data<Value, _Default extends Value = Value> = OptionallyExtendedData<DataTypes["tt"], DataTypes["ww"], Value, _Default>
+export type DataBase<Store extends object> = OptionallyExtendedDataBase<Store, DataBaseTypes["t"], DataBaseTypes["w"], DataTypes["tt"], DataTypes["ww"]>
