@@ -2,9 +2,13 @@ import { Data, DataBase } from "./../../app/src/extendedDB"
 
 
 let eee: Data<number>
-eee.inc("asd")
+eee.inc(2)
 
-// const dbEEE = new DataBase({ee: "ee"})
+
+
+const dbEEE = new DataBase({ee: "ee"})
+
+dbEEE.
 
 
 

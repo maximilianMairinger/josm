@@ -1,47 +1,44 @@
 import { Data as DATA, DataSubscription, DataBaseSubscription } from "./data"
-import { DataBase as DATABASE } from "./dataBase"
-import { setDataDerivativeIndex, MergedDataDerivativeInstance } from "./derivativeExtension"
+import { DataBase as DATABASE, RemovePotentialArrayFunctions } from "./dataBase"
+import { setDataDerivativeIndex, OptionallyExtendedData, OptionallyExtendedDataBase } from "./derivativeExtension"
 
 
 
 
 const { Data: _Data, types: DataTypes, setDataBaseDerivativeIndex, parseDataBase } = setDataDerivativeIndex(
-  class NumberData<T extends number> extends DATA<T> {
-    inc(by: number = 1) {
+  class NumberData extends DATA<number> {
+    static type: number;
+    inc<T extends ReturnType<typeof this["get"]> = ReturnType<typeof this["get"]>>(by: number = 1) {
       this.set((this.get() as any + by))
-      return this
+      return 2 as T
     }
   }
 )
 
-export const Data = _Data
 
 
 const ExDataBase = parseDataBase(DATABASE)
 
+type RemoveCallback = () => void
 
+interface ArrayList<T> extends DATABASE<T[]> {
+  forEach(addedCb: (added: T extends object ? DATABASE<T> : DATA<T>) => (DataSubscription<[...any[]]> | (() => void))): DataBaseSubscription<[T[]]>
+  add(what: T): RemoveCallback
+}
 
-export const DataBase = setDataBaseDerivativeIndex(
-  class ArrayList<T extends number> extends ExDataBase<T[]> {
-    // @ts-ignore
-    forEach(addedCb: (added: DATA<T>, i: number) => ((() => void) | DataSubscription<[...any[]]> | void), init?: boolean): DataBaseSubscription<[number[]]> {}
-    // @ts-ignore
-    add(what: T): () => void {}
-  },
-  class ArrayList<T extends boolean> extends ExDataBase<T[]> {
-    // @ts-ignore
-    forEach(addedCb: (added: DATA<T>, i: number) => ((() => void) | DataSubscription<[...any[]]> | void), init?: boolean): DataBaseSubscription<[boolean[]]> {}
-    // @ts-ignore
-    add(what: T): () => void {}
-  },
-  class ArrayList<T extends string> extends ExDataBase<T[]> {
-    // @ts-ignore
-    forEach(addedCb: (added: DATA<T>, i: number) => ((() => void) | DataSubscription<[...any[]]> | void), init?: boolean): DataBaseSubscription<[string[]]> {}
-    // @ts-ignore
-    add(what: T): () => void {}
-  },
-  class ArrayList<T extends object> extends ExDataBase<T[]> {
-    forEach(addedCb: (added: DATABASE<T[]>, i: number) => ((() => void) | DataSubscription<[...any[]]> | void), init: boolean = true): DataBaseSubscription<[object[]]> {
+type ArrayListClass<T> = { new(a: any): ArrayList<T>, type: T[] }
+const dummyObject = {} as any
+
+const { DataBase: _DataBase, types: DataBaseTypes } = setDataBaseDerivativeIndex(
+  dummyObject as ArrayListClass<object>,
+  dummyObject as ArrayListClass<symbol>,
+  dummyObject as ArrayListClass<boolean>,
+  dummyObject as ArrayListClass<string>,
+  dummyObject as ArrayListClass<number>,
+  dummyObject as ArrayListClass<number | object | symbol | boolean | string>,
+  class ArrayList extends ExDataBase<number[]> {
+    static type: number[];
+    forEach(addedCb: (added: DATA<number>, i: number) => ((() => void) | DataSubscription<[...any[]]> | void), init: boolean = true): DataBaseSubscription<[object[]]> {
       const destroyMap = new Map<DATA, Function>()
 
       const sub = this((full, added, removed) => {
@@ -66,8 +63,8 @@ export const DataBase = setDataBaseDerivativeIndex(
 
       return sub as any
     }
-    add(what: T) {
-      const i = (this() as any[]).length
+    add(what: number) {
+      const i = (this() as any as any[]).length
       const ob = {}
       ob[i] = what
       this(ob)
@@ -77,10 +74,12 @@ export const DataBase = setDataBaseDerivativeIndex(
         this(ob)
       }
     }
-  }
+  } as never
 )
 
 
 
-export type Data<Value, _Default extends Value = Value> = MergedDataDerivativeInstance<typeof DataTypes["tt"], typeof DataTypes["ww"]>
-// export type DataBase<Store extends {[key in string]: any} = unknown> = DATABASE<Store>
+
+
+export type Data<Value, _Default extends Value = Value> = OptionallyExtendedData<typeof DataTypes["tt"], typeof DataTypes["ww"], Value, _Default>
+export type DataBase<Store extends object> = OptionallyExtendedDataBase<Store, typeof DataBaseTypes["t"], typeof DataBaseTypes["w"], typeof DataTypes["tt"], typeof DataTypes["ww"]>
