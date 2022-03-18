@@ -8,7 +8,7 @@ eee.inc(2)
 
 const dbEEE = new DataBase({ee: "ee"})
 
-dbEEE.
+dbEEE.ee
 
 
 

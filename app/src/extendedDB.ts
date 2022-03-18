@@ -78,6 +78,9 @@ const { DataBase: _DataBase, types: DataBaseTypes } = setDataBaseDerivativeIndex
 )
 
 
+export const Data = _Data
+export const DataBase = _DataBase
+
 
 
 
