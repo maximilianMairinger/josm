@@ -33,12 +33,6 @@ type ArrayListClass<T> = { new(a: any): ArrayList<T>, type: T[] }
 const dummyObject = {} as any
 
 const { DataBase: _DataBase, types: DataBaseTypes } = setDataBaseDerivativeIndex(
-  dummyObject as ArrayListClass<object>,
-  dummyObject as ArrayListClass<symbol>,
-  dummyObject as ArrayListClass<boolean>,
-  dummyObject as ArrayListClass<string>,
-  dummyObject as ArrayListClass<number>,
-  dummyObject as ArrayListClass<number | object | symbol | boolean | string>,
   class ArrayList extends ExDataBase<number[]> {
     static type: number[];
     forEach(addedCb: (added: DATA<number>, i: number) => ((() => void) | DataSubscription<[...any[]]> | void), init: boolean = true): DataBaseSubscription<[object[]]> {
@@ -77,7 +71,13 @@ const { DataBase: _DataBase, types: DataBaseTypes } = setDataBaseDerivativeIndex
         this(ob)
       }
     }
-  } as never
+  } as never,
+  dummyObject as ArrayListClass<object>,
+  dummyObject as ArrayListClass<symbol>,
+  dummyObject as ArrayListClass<boolean>,
+  dummyObject as ArrayListClass<string>,
+  dummyObject as ArrayListClass<number>,
+  dummyObject as ArrayListClass<number | object | symbol | boolean | string>,
 )
 
 
