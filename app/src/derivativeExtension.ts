@@ -20,12 +20,13 @@ export const dbDerivativeCollectionIndex: {index: {[key in string]: any}} = {ind
 
 function classLsToFunctionIndex(clsLs: any[]): any {
   let o = {}
-  clsLs.ea(({prototype: p}) => {
-    let functionNames = Object.getOwnPropertyNames(p).rmV("constructor")
+  for (const {prototype: p} of clsLs) {
+    if (p === undefined) continue
+    const functionNames = Object.getOwnPropertyNames(p).rmV("constructor")
     for (let fnName of functionNames) {
       o[fnName] = p[fnName]
     }
-  })
+  }
   return o
 }
 
