@@ -1,38 +1,15 @@
-import { Data, DataBase } from "./../../app/src/extendedDB"
-
-
-let eee: Data<number>
-eee.inc(2)
+// import { Data, DataBase } from "./../../app/src/extendedDB"
+import { Data, DataCollection } from "./../../app/src/josm"
 
 
 
-const dbEEE = new DataBase({ee: "ee"})
-
-dbEEE.ee
-
-
-
-// const db = new DataBase({
-//   helloKey: 2,
-//   arrayKey: [1, 2, 3],
-// })
-
-// // @ts-ignore
-// window.db = db
-
-// const func = db((full) => {
-//   console.log(full)
-// })
+const dc = new DataCollection(new Data("lel1"), new Data("lel2"))
+dc.get((...u) => {
+  console.log("update", u)
+})
 
 
-// db.helloKey.inc(6)
-// db.arrayKey.add(4)
+const d3 = new Data("lel3")
+dc.set(d3, new Data("lel4"))
 
-
-
-// func.deactivate()
-
-// db.helloKey.inc(6)
-// console.log("done")
-// func.activate(false)
-// console.log("done 4 real")
+d3.set("aye")

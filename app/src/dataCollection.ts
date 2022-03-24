@@ -5,7 +5,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   private subscriptions: LinkedList<Subscription<Values>> = new LinkedList()
   //@ts-ignore
   private datas: FuckedUpDataSetify<Values> = []
-  private store: Values
+  private store: Values = [] as any
 
   private locSubNsReg: {destroy: () => void}[] = []
 
@@ -16,7 +16,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     this.set(...datas)
   }
 
-  protected __call(subs: Subscription<Values>[]) {
+  protected __call(subs: Subscription<Values>[] = this.subscriptions as any) {
     const get = this.get()
     for (const sub of subs) sub(...get)
   }
@@ -37,19 +37,24 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     this.observers.clear()
 
     this.datas = datas
+
+    const oldStore = this.store
     //@ts-ignore
-    this.store = [...this.get()]
+    this.store = [...this.datas.map((data) => data.get())]
+
+    const anyChange = this.store.ea((el, i) => {
+      if (oldStore[i] !== el) return true
+    })
+
+    if (anyChange) this.__call()
 
 
     this.datas.ea((data, i) => {
-      const observer = (...val: Value[]) => {
+      this.observers[i] = data.get((...val: Value[]) => {
         if (this.store[i] instanceof Array) this.store[i] = val
         else this.store[i] = val.first
-        for (const sub of this.subscriptions) sub(...this.store)
-      }
-      this.observers[i] = observer
-      //@ts-ignore
-      data.subscribe(observer, false)
+        this.__call()
+      }, false)
     })
   }
 
@@ -57,7 +62,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   public get(subscription: Subscription<Values> | DataSubscription<Values>, initialize?: boolean): DataSubscription<Values>
   public get(subscription?: Subscription<Values> | DataSubscription<Values>, initialize: boolean = true): DataSubscription<Values> | Values {
     //@ts-ignore
-    if (subscription === undefined) return this.datas.map((data) => data.get())
+    if (subscription === undefined) return this.store
     else {
       if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
       else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge]
