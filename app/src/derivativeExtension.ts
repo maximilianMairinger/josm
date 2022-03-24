@@ -44,11 +44,12 @@ type OptionallyExtendedDataClass<TT extends { [key in keyof WW]: { type: WW[key]
   new<Value, _Default extends Value = Value> (a: Value): OptionallyExtendedData<TT, WW, Value, _Default>
 }
 
-export type OptionallyExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = {
-  [key in (keyof WW)]: Value extends WW[key] ? InstanceType<TT[key]> : Data<Value, _Default>
+
+export type ExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = {
+  [key in (keyof WW)]: Value extends WW[key] ? InstanceType<TT[key]> : never
 }[number]
 
-
+export type OptionallyExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = ExtendedData<TT, WW, Value, _Default> extends never ? Data<Value, _Default> : (ExtendedData<TT, WW, Value, _Default> & Data<Value, _Default>)
 
 
 type RecDataBaseSimple<Store extends {[key in string]: any}, TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = WithDataExtendedDBSimple<Store, TT, WW> /* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
