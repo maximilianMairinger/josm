@@ -2,10 +2,19 @@
   "name": "josm",
   "version": "1.6.9",
   "description": "",
-  "main": "app/dist/josm.js",
-  "types": "app/dist/josm.d.ts",
+  "main": "./app/dist/esm/josm.js",
+  "types": "./app/dist/esm/josm.d.ts",
+  "exports": {
+    "node": {
+      "import": "./app/dist/esm/josm.js",
+      "require": "./app/dist/cjs/josm.js"
+    },
+    "default": "./app/dist/esm/josm.js"
+  },
   "scripts": {
-    "build": "tsc -p ./tsconfig.prod.json",
+    "build": "npm run buildESM; npm run buildCJS",
+    "buildESM": "tsc -p ./tsconfig.prod.esm.json", 
+    "buildCJS": "tsc -p ./tsconfig.prod.cjs.json",
     "dev": "npm run webDev",
     "webDev": "rollup --config rollup.web.dev.config.js -w",
     "nodeDev": "rollup --config rollup.node.dev.config.js -w",
