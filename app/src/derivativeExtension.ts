@@ -58,7 +58,7 @@ type DataBaseifySimple<Type extends object, TT extends { [key in keyof WW]: { ty
   [Key in keyof Type]: Type[Key] extends object ? RecDataBaseSimple<Type[Key], TT, WW> : OptionallyExtendedData<TT, WW, Type[Key]>
 }
 
-type WithDataExtendedDBSimple<Store extends {[key in string]: any}, TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = DataBaseifySimple<Store, TT, WW> & OmitFunctionProperties<DataBaseFunction<Store>>
+type WithDataExtendedDBSimple<Store extends {[key in string]: any}, TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = DataBaseifySimple<RemovePotentialArrayFunctions<Store>, TT, WW> & OmitFunctionProperties<DataBaseFunction<RemovePotentialArrayFunctions<Store>>>
 
 
 
@@ -71,7 +71,7 @@ type DataBaseify<Type extends object, T extends { [key in keyof W]: { type: W[ke
   [Key in keyof Type]: Type[Key] extends object ? RecDataBase<Type[Key], T, W, TT, WW> : OptionallyExtendedData<TT, WW, Type[Key]>
 }
 
-type WithDataExtendedDB<Store extends object, T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[], TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = DataBaseify<Store, T, W, TT, WW> & OmitFunctionProperties<DataBaseFunction<Store>>
+type WithDataExtendedDB<Store extends object, T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[], TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = DataBaseify<RemovePotentialArrayFunctions<Store>, T, W, TT, WW> & OmitFunctionProperties<DataBaseFunction<RemovePotentialArrayFunctions<Store>>>
 
 // type UnionToIntersection<U> = 
 //   (U extends any ? (k: U)=>void : never) extends ((k: infer I)=>void) ? I : never
@@ -105,7 +105,7 @@ export function setDataDerivativeIndex<TT extends { [key in keyof WW]: { type: W
   setDataBaseDerivativeIndex: SetDataBaseDerivativeIndexFunc<TT, WW>, 
   Data: OptionallyExtendedDataClass<TT, WW>, types: {tt: TT, ww: WW}, 
   parseDataBase(DB: typeof DataBase): { 
-    new<Q extends object>(o: Q): WithDataExtendedDBSimple<RemovePotentialArrayFunctions<Q>, TT, WW> 
+    new<Q extends object>(o: Q): WithDataExtendedDBSimple<Q, TT, WW> 
   } 
 }  {
   
