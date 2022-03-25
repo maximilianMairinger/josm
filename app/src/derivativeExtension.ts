@@ -41,7 +41,7 @@ type DataExtensionClass<WW extends unknown[]> = { [key in keyof WW]: { type: WW[
 type DataBaseExtensionClass<W extends unknown[]> = { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }
 
 type OptionallyExtendedDataClass<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = {
-  new<Value, _Default extends Value = Value> (a: Value, alt: _Default): OptionallyExtendedData<TT, WW, Value, _Default>
+  new<Value, _Default extends Value = Value> (a: Value, alt?: _Default): OptionallyExtendedData<TT, WW, Value, _Default>
 }
 
 
