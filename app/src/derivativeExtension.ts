@@ -91,7 +91,7 @@ type ExtendedDB<Q extends object, T extends { [key in keyof W]: { type: W[key], 
 }[number]
 // 
 export type OptionallyExtendedDataBase<Q extends object, T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[], TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]>
- = ExtendedDB<Q, T, W> extends never ? WithDataExtendedDB<Q, T, W, TT, WW> : (Omit<ExtendedDB<Q, T, W>, keyof Q> & WithDataExtendedDB<Q, T, W, TT, WW>)
+ = ExtendedDB<Q, T, W> extends never ? WithDataExtendedDB<Q, T, W, TT, WW> : (ExtendedDB<Q, T, W> & WithDataExtendedDB<Q, T, W, TT, WW>)
 
 
 export type OptionallyExtendedDataBaseClass<T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[], TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = { new<Q extends object> (a: Q): OptionallyExtendedDataBase<Q, T, W, TT, WW> }
