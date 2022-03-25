@@ -86,7 +86,7 @@ type WithDataExtendedDB<Store extends object, T extends { [key in keyof W]: { ty
 
 type ExtendedDB<Q extends object, T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[]> = { 
   [key in keyof W]: Q extends W[key] ? 
-    Omit<InstanceType<T[key]>, keyof DataBase<W[key]>>
+    InstanceType<T[key]>
     : never
 }[number]
 // 
