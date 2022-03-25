@@ -46,10 +46,10 @@ type OptionallyExtendedDataClass<TT extends { [key in keyof WW]: { type: WW[key]
 
 
 export type ExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = {
-  [key in (keyof WW)]: Value extends WW[key] ? Omit<InstanceType<TT[key]>, keyof Data<WW[key]>> : never
+  [key in (keyof WW)]: Value extends WW[key] ? InstanceType<TT[key]> : never
 }[number]
 
-export type OptionallyExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = ExtendedData<TT, WW, Value, _Default> extends never ? Data<Value, _Default> : (ExtendedData<TT, WW, Value, _Default> & Data<Value, _Default>)
+export type OptionallyExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = ExtendedData<TT, WW, Value, _Default> extends never ? Data<Value, _Default> : (Omit<ExtendedData<TT, WW, Value, _Default>, keyof Data<Value, _Default>> & Data<Value, _Default>)
 
 
 type RecDataBaseSimple<Store extends {[key in string]: any}, TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = WithDataExtendedDBSimple<Store, TT, WW> /* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
@@ -90,7 +90,8 @@ type ExtendedDB<Q extends object, T extends { [key in keyof W]: { type: W[key], 
     : never
 }[number]
 // 
-export type OptionallyExtendedDataBase<Q extends object, T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[], TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = ExtendedDB<Q, T, W> extends never ? WithDataExtendedDB<Q, T, W, TT, WW> : (ExtendedDB<Q, T, W> & WithDataExtendedDB<Q, T, W, TT, WW>)
+export type OptionallyExtendedDataBase<Q extends object, T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[], TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]>
+ = ExtendedDB<Q, T, W> extends never ? WithDataExtendedDB<Q, T, W, TT, WW> : (Omit<ExtendedDB<Q, T, W>, keyof Q> & WithDataExtendedDB<Q, T, W, TT, WW>)
 
 
 export type OptionallyExtendedDataBaseClass<T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[], TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[]> = { new<Q extends object> (a: Q): OptionallyExtendedDataBase<Q, T, W, TT, WW> }
