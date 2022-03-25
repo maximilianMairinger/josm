@@ -46,7 +46,7 @@ type OptionallyExtendedDataClass<TT extends { [key in keyof WW]: { type: WW[key]
 
 
 export type ExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = {
-  [key in (keyof WW)]: Value extends WW[key] ? InstanceType<TT[key]> : never
+  [key in (keyof WW)]: Value extends WW[key] ? Omit<InstanceType<TT[key]>, keyof Data<WW[key]>> : never
 }[number]
 
 export type OptionallyExtendedData<TT extends { [key in keyof WW]: { type: WW[key], new(a: any): Data<WW[key]> } }, WW extends unknown[], Value, _Default extends Value = Value> = ExtendedData<TT, WW, Value, _Default> extends never ? Data<Value, _Default> : (ExtendedData<TT, WW, Value, _Default> & Data<Value, _Default>)
@@ -86,7 +86,7 @@ type WithDataExtendedDB<Store extends object, T extends { [key in keyof W]: { ty
 
 type ExtendedDB<Q extends object, T extends { [key in keyof W]: { type: W[key], new(a: any): DataBase<W[key]> } }, W extends unknown[]> = { 
   [key in keyof W]: Q extends W[key] ? 
-    InstanceType<T[key]>
+    Omit<InstanceType<T[key]>, keyof DataBase<W[key]>>
     : never
 }[number]
 // 
