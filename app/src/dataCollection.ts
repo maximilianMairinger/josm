@@ -30,13 +30,13 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   }
 
 
-  public set(...datas: FuckedUpDataSetify<Values>) {
+  public set(...datas: any[]) {
     this.datas.ea((data, i) => {
       data.got(this.observers[i])
     })
-    this.observers.clear()
+    this.observers.clear();
 
-    this.datas = datas
+    (this as any).datas = datas
 
     const oldStore = this.store
     //@ts-ignore

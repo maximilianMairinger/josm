@@ -3,13 +3,14 @@ import { Data, DataCollection } from "./../../app/src/josm"
 
 
 
-const dc = new DataCollection(new Data("lel1"), new Data("lel2"))
+const dc = new DataCollection(new Data("lel1"))
 dc.get((...u) => {
   console.log("update", u)
 })
 
 
-const d3 = new Data("lel3")
-dc.set(d3, new Data("lel4"))
+const d11 = new Data("lel1")
+const d22 = new Data("lel22")
+dc.set(d11, d22)
 
-d3.set("aye")
+// d3.set("aye")
