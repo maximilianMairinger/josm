@@ -571,10 +571,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       this.notifyParentOfChangeCbs.clear()
       for (const key in this.funcThis) {
         if (this.funcThis[key] instanceof Data) {
-          this.funcThis[key].destroy(this.funcThis)
+          this.funcThis[key].destroy(this)
         }
         else {
-          this.funcThis[key][internalDataBaseBridge].destroy(this.funcThis)  
+          this.funcThis[key][internalDataBaseBridge].destroy(this)  
         }
         delete this.funcThis[key]
       }
