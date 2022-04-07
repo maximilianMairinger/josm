@@ -570,7 +570,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           nestedDiff[key] = diff
           this.call(undefined, {diff: nestedDiff, origins})
           return () => {
-            this.flushCall()
+            return this.flushCall(false)
           }
         }
         this.callMeWithDiffIndex.set(key, f)
@@ -1149,7 +1149,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   }
 
 
-  flushCall() {
+  flushCall(primaryFlush = true) {
     if (!this.flushAble || this.inBulkChange) return
     let diffFromThisForParents: object
     const diffFromChild = this.diffFromChildCache
@@ -1185,13 +1185,40 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     }
 
 
-
-    
-
     const deeperLs = []
     for (const f of this.notifyParentOfChangeCbs) deeperLs.push(f({...diffFromThisForParents, ...diffFromChild}, this.callOrigins))
     this.discardCall()
-    for (const deeper of deeperLs) deeper()
+
+    if (primaryFlush) {
+      const recDeeper = () => {
+        const deeeep = []
+        for (const deeper of deeperLs) {
+          const ret = deeper()
+          if (ret) deeeep.push(ret)
+        }
+        if (!deeeep.empty) {
+          deeperLs.set(deeeep)
+          recDeeper()
+        }
+      }
+      recDeeper()
+    }
+    else {
+      const retRecDeeper = () => {
+        const deeeep = []
+        for (const deeper of deeperLs) {
+          const ret = deeper()
+          if (ret) deeeep.push(ret)
+        }
+        if (!deeeep.empty) {
+          deeperLs.set(deeeep)
+          return retRecDeeper
+        }
+      }
+      return retRecDeeper
+    }
+
+    
   }
 
   discardCall() {
