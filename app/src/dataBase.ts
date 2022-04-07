@@ -1105,18 +1105,18 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   private callOrigins = new Set<any>()
   private flushAble = false
   private canRemoveFromOriginAfterFlushTimeout = []
-  private canRemoveFromOriginAfterFlush = []
+  // private canRemoveFromOriginAfterFlush = []
 
   call(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: Set<any>, diff: object} | undefined) {
     if (diffFromThis) {
       if (diffFromThis.added) for (const key in diffFromThis.added) {
-        this.callOrigins.add(this.funcThis[key])
-        this.canRemoveFromOriginAfterFlush.push(this.funcThis[key])
+        // this.callOrigins.add(this.funcThis[key])
+        // this.canRemoveFromOriginAfterFlush.push(this.funcThis[key])
         this.diffFromThisCache.added[key] = diffFromThis.added[key]
       }
       if (diffFromThis.removed) for (const key in diffFromThis.removed) {
-        this.callOrigins.add(this.funcThis[key])
-        this.canRemoveFromOriginAfterFlush.push(this.funcThis[key])
+        // this.callOrigins.add(this.funcThis[key])
+        // this.canRemoveFromOriginAfterFlush.push(this.funcThis[key])
         this.diffFromThisCache.removed[key] = diffFromThis.removed[key]
       }
       this.flushAble = true
@@ -1233,7 +1233,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     this.diffFromChildCache = {}
     this.diffFromThisCache = {added: {}, removed: {}}
     this.flushAble = false
-    for (const rm of this.canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
+    // for (const rm of this.canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
     const canRemoveFromOriginAfterFlush = [...this.canRemoveFromOriginAfterFlushTimeout]
     setTimeout(() => {
       for (const rm of canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
