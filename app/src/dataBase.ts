@@ -1137,15 +1137,23 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         for (const key in diffFromChild.diff) this.diffFromChildCache[key] = diffFromChild.diff[key]
         for (const origin of diffFromChild.origins) this.callOrigins.add(origin)
 
-        if (hasDup) {
-          console.warn("[DataBase] New and colliding diffs from children. This shouldnt happen.")
+        // if (hasDup) {
+        //   console.warn("[DataBase] New and colliding diffs from children. This shouldnt happen.")
           // unduplifyNestedObjectPath(this.diffFromChildCache)
           // justifyNesting(this.diffFromChildCache)
-        }
+        // }
       }
       
-      
+
+
+      // if you enable this instead of the above multiple paths to the diffs (not just the shortest one) will be submitted in (still) one call
+
+      // this.flushAble = true
+      // for (const key in diffFromChild.diff) this.diffFromChildCache[key] = diffFromChild.diff[key]
+      // for (const origin of diffFromChild.origins) this.callOrigins.add(origin)
+
     }
+
   }
 
 
