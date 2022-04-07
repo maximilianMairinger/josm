@@ -8,17 +8,19 @@ const entry = {lel: 0, what: 2}
 
 
 // @ts-ignore
-ddb.tree = {deep: {deeper: {deepest: entry}}}
+ddb.tree = {deep: entry, deeper: {deep: entry}}
 
 
-const db = new DataBase(ddb) as DataBase<{flat: typeof entry, tree: {deep: {deeper: {deepest: typeof entry}}}}>
+const db = new DataBase(ddb) as DataBase<{flat: typeof entry, tree: {deep: typeof entry, deeper: {deep: typeof entry}}}>
 
 db({flat: entry})
 
 db((e,s) => {
-  console.log(copy(s))
+  console.log(s)
 })
 
+
 debugger
-db.tree.deep.deeper.deepest({lel: 232})
+db.tree.deeper.deep.lel.set(22)
+
 
