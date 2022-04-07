@@ -1188,15 +1188,17 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       }, this.locSubNsReg)
     }
 
-    if (diffFromChild && !isObjectEmpty(diffFromChild)) {
+    const diffFromChildAndThis = {...diffFromThisForParents, ...diffFromChild}
+
+    if (!isObjectEmpty(diffFromChildAndThis)) {
       registerSubscriptionNamespace(() => {
-        this.__call(this.subscriptionsOfChildChanges as any, diffFromChild)
+        this.__call(this.subscriptionsOfChildChanges as any, diffFromChildAndThis)
       }, this.locSubNsReg)
     }
 
 
     const deeperLs = []
-    for (const f of this.notifyParentOfChangeCbs) deeperLs.push(f({...diffFromThisForParents, ...diffFromChild}, this.callOrigins))
+    for (const f of this.notifyParentOfChangeCbs) deeperLs.push(f(diffFromChildAndThis, this.callOrigins))
     this.discardCall()
 
     if (primaryFlush) {
