@@ -783,9 +783,9 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                   prop.destroy()
 
                   let resParsingId: Function
-                  constructAttatchToPrototype(newVal)(parsingId, {value: new Promise((res) => {resParsingId = res})})
+                  constructAttatchToPrototype([newVal])(parsingId, {value: new Promise((res) => {resParsingId = res})})
                   constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
-                  constructAttatchToPrototype(newVal)(parsingId, {value: funcThis[key]})
+                  constructAttatchToPrototype([newVal])(parsingId, {value: funcThis[key]})
                   resParsingId(newVal[parsingId])
                   newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
                     const diff = {removed: {}}
@@ -844,9 +844,9 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               diffFromThis.added[key] = (this.store as any)[key] = newVal
               if (newVal[parsingId] === undefined) {
                 let resParsingId: Function
-                constructAttatchToPrototype(newVal)(parsingId, {value: new Promise((res) => {resParsingId = res})})
+                constructAttatchToPrototype([newVal])(parsingId, {value: new Promise((res) => {resParsingId = res})})
                 constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
-                constructAttatchToPrototype(newVal)(parsingId, {value: funcThis[key]})
+                constructAttatchToPrototype([newVal])(parsingId, {value: funcThis[key]})
                 resParsingId(newVal[parsingId])
 
                 funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
@@ -959,9 +959,9 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         if (typeof val === objectString) {
           if (val[parsingId] === undefined) {
             let resParsingId: Function
-            constructAttatchToPrototype(val)(parsingId, {value: new Promise((res) => {resParsingId = res})})
+            constructAttatchToPrototype([val])(parsingId, {value: new Promise((res) => {resParsingId = res})})
             setToThis(new InternalDataBase(val, defaultVal, this.callMeWithDiff(key)))
-            constructAttatchToPrototype(val)(parsingId, {value: funcThis[key]})
+            constructAttatchToPrototype([val])(parsingId, {value: funcThis[key]})
             resParsingId(val[parsingId])
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, (only) => {
               const diff = {removed: {}}
@@ -1018,19 +1018,34 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       
       for (let key of defaultKeys) {
         if (!newStoreKeys.includes(key)) {
+          const defVal = def[key]
           const _setToThis = constructAttatchToPrototype(funcThis, {enumerable: true})
           const setToThis = (e) => _setToThis(key, {value: e})
-          if (typeof def[key] === "object") {
-            setToThis(new InternalDataBase({}, def[key], this.callMeWithDiff(key)))
-            funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
-              const diff = {removed: {}}
-              diff.removed[key] = undefined
-              delete funcThis[key]
-              delete this.store[key]
-              this.call(diff, undefined)
-              this.flushCall()
-            })
-            this.store[key as any] = new def[key].constructor
+          if (typeof defVal === "object") {
+            if (defVal[parsingId] === undefined) {
+              let resParsingId: Function
+              constructAttatchToPrototype([defVal])(parsingId, {value: new Promise((res) => {resParsingId = res})})
+              setToThis(new InternalDataBase({}, defVal, this.callMeWithDiff(key)))
+              constructAttatchToPrototype([defVal])(parsingId, {value: funcThis[key]})
+              resParsingId(defVal[parsingId])
+              funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, () => {
+                const diff = {removed: {}}
+                diff.removed[key] = undefined
+                delete funcThis[key]
+                delete this.store[key]
+                this.call(diff, undefined)
+                this.flushCall()
+              })
+              this.store[key as any] = new defVal.constructor
+            }
+            else {
+              const attachF = () => {
+                setToThis(defVal[parsingId])
+                defVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+              }
+              if (defVal[parsingId] instanceof Promise) defVal[parsingId].then(attachF)
+              else attachF()
+            }
           }
           else {
             setToThis(new Data(undefined, def[key]))
