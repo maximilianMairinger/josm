@@ -15,16 +15,12 @@ const db = new DataBase(ddb) as DataBase<{flat: typeof entry, tree: {darp: {deep
 
 db({flat: entry})
 
-db.tree((e,s, q) => {
-  debugger
-
-  
-  console.log(e, s, q)
-}, false)
+db.tree((e,s) => {
+  console.log(s)
+})
 
 
 debugger
-db.tree({qqq: 2})
-db.tree({qqq: undefined})
+db.tree.darp.deeper.deep.lel.set(22)
 
 
