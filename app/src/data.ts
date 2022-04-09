@@ -272,7 +272,7 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     return this
   }
 
-  public call(sure = true) {
+  private call(sure = true) {
     if (sure) (this._data as any).call(this._subscription, this._notifyAboutChangesOfChilds)
     return this
   }
@@ -374,6 +374,7 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     const {prev, next} = tok;
     (this as any)._data.unsubscribe(this.subToken) as Token<any>
     const initNotifyAboutChangesOfChilds = this._notifyAboutChangesOfChilds
+    const data = this._data
 
     const sibib = (sib: Token<any>, prev: boolean) => {
       const sibRem = sib.remove.bind(sib)
@@ -390,10 +391,11 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
       this.activate = (initialize = true) => {
         delete this.activate
         delete sib.remove
-        if (initNotifyAboutChangesOfChilds !== this._notifyAboutChangesOfChilds) return this.activate(initialize)
+        if (initialize || initNotifyAboutChangesOfChilds !== this._notifyAboutChangesOfChilds || this._data !== data) return this.activate(initialize)
         if (this.isActive) return this;
         this.isActive = true
         sib[prev ? "insertTokenAfter" : "insertTokenBefore"](tok)
+        // if (anyChange) if (initialize) (this._data as any).call(tok.value)
         return this
       }
     }

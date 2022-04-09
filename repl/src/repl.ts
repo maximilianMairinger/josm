@@ -1,26 +1,27 @@
+import { DataSubscription } from "./../../app/src/data"
 // import { Data, DataBase } from "./../../app/src/extendedDB"
 import { Data, DataBase, DataCollection } from "./../../app/src/josm"
 import copy from "fast-copy"
 
 
-const ddb = {}
-const entry = {lel: 0, what: 2}
+const data1 = new Data("val1")
+data1.get(() => {})
+const data2 = new Data("val2")
+data2.get(() => {})
 
 
-// @ts-ignore
-ddb.tree = {darp: {deeper: {deep: entry}}, loc: {deepLocal: entry}}
+const sub = new DataSubscription(new Data(undefined), (d) => {
+  console.log(d)
+}, true, false)
 
 
-const db = new DataBase(ddb) as DataBase<{flat: typeof entry, tree: {darp: {deeper: {deep: typeof entry}}, loc: {deepLocal: typeof entry}}}>
 
-db({flat: entry})
+sub.data(data1)
+data1.set(1)
+sub.data(data2)
+data2.set(2)
+data1.set(11)
+sub.data(data1)
 
-db.tree((e,s) => {
-  console.log(s)
-})
-
-
-debugger
-db.tree.darp.deeper.deep.lel.set(22)
 
 

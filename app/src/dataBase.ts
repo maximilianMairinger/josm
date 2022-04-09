@@ -568,7 +568,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         f = (diff: any, origins: Set<any>) => {
           const nestedDiff = {} 
           nestedDiff[key] = diff
-          this.call(undefined, {diff: nestedDiff, origins})
+          this.aggregateCall(undefined, {diff: nestedDiff, origins})
           return () => {
             return this.flushCall(false)
           }
@@ -794,7 +794,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                     delete funcThis[key]
                     delete newData[key]
                     delete this.store[key]
-                    this.call(diff, undefined)
+                    this.aggregateCall(diff, undefined)
                     this.flushCall()
                   })
                 }
@@ -825,7 +825,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                   delete newData[key]
                   delete this.store[key]
                   sub.deactivate()
-                  this.call(diff, undefined)
+                  this.aggregateCall(diff, undefined)
                   this.flushCall()
                 })
                 const sub = funcThis[key].get((e) => {
@@ -833,7 +833,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                   diff[key] = e
                   //@ts-ignore
                   this.store[key] = e
-                  this.call(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+                  this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
                   this.flushCall()
                 }, false)
               }
@@ -856,7 +856,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                   delete funcThis[key]
                   delete newData[key]
                   delete this.store[key]
-                  this.call(diff, undefined)
+                  this.aggregateCall(diff, undefined)
                 })
               }
               else {
@@ -880,7 +880,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 delete newData[key]
                 delete this.store[key]
                 sub.deactivate()
-                this.call(diff, undefined)
+                this.aggregateCall(diff, undefined)
                 this.flushCall()
               })
               const sub = funcThis[key].get((e) => {
@@ -888,7 +888,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 diff[key] = e
                 //@ts-ignore
                 this.store[key] = e
-                this.call(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+                this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
                 this.flushCall()
               }, false)
             }
@@ -921,7 +921,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       }
 
       this.inBulkChange = false
-      this.call(diffFromThis, undefined)
+      this.aggregateCall(diffFromThis, undefined)
       this.flushCall()
       this.inBulkChange = true
 
@@ -969,7 +969,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               delete val[parsingId]
               delete funcThis[key]
               delete store[key]
-              this.call(diff, undefined)
+              this.aggregateCall(diff, undefined)
               this.flushCall()
             })
           }
@@ -991,7 +991,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
             delete funcThis[key]
             delete store[key]
             sub.deactivate()
-            this.call(diff, undefined)
+            this.aggregateCall(diff, undefined)
             this.flushCall()
           })
           const sub = funcThis[key].get((e) => {
@@ -999,7 +999,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
             diff[key] = e
             //@ts-ignore
             this.store[key] = e
-            this.call(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+            this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
             this.flushCall()
           }, false)
         }
@@ -1033,7 +1033,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
                 diff.removed[key] = undefined
                 delete funcThis[key]
                 delete this.store[key]
-                this.call(diff, undefined)
+                this.aggregateCall(diff, undefined)
                 this.flushCall()
               })
               this.store[key as any] = new defVal.constructor
@@ -1055,7 +1055,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               delete funcThis[key]
               delete this.store[key]
               sub.deactivate()
-              this.call(diff, undefined)
+              this.aggregateCall(diff, undefined)
               this.flushCall()
             })
             const sub = funcThis[key].get((e) => {
@@ -1063,7 +1063,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
               diff[key] = e
               //@ts-ignore
               this.store[key] = e
-              this.call(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+              this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
               this.flushCall()
             }, false)
             
@@ -1084,6 +1084,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     return this.subscriptionsOfChildChanges.push(subscription as any)
   }
   subscribeToThis(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
+    // TODO: This is a call shouldnt there be registerSubscriptionNamespace
     if (initialize) subscription(this.store, diff.flat(subscription[subscriptionDiffSymbol], this.store) as any)
     return this.subscriptionsOfThisChanges.push(subscription as any)
   }
@@ -1100,6 +1101,14 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       sub(store, ...diff)
     }
   }
+
+  call(s) {
+    let { subs, need } = needFallbackForSubs(s)
+    if (need) subs = console.log("Unexpected error. Cannot propergate call")
+    registerSubscriptionNamespace(() => {
+      this.__call(subs, this.store)
+    }, this.locSubNsReg)
+  }
   private diffFromThisCache: {added?: object, removed: object} = {added: {}, removed: {}}
   private diffFromChildCache: object = {}
   private callOrigins = new Set<any>()
@@ -1107,7 +1116,7 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
   private canRemoveFromOriginAfterFlushTimeout = []
   private canRemoveFromOriginAfterFlush = []
 
-  call(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: Set<any>, diff: object} | undefined) {
+  aggregateCall(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: Set<any>, diff: object} | undefined) {
     if (diffFromThis) {
       if (diffFromThis.added) for (const key in diffFromThis.added) {
         const callId = {c: this.funcThis[key]}
