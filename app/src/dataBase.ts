@@ -334,7 +334,7 @@ class DataBaseLink extends Function implements Link {
       return link
     }
     //@ts-ignore
-    else this.dataBaseFunc(...a)
+    else return this.dataBaseFunc(...a)
   }
 
 
