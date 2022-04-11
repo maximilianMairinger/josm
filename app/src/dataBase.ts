@@ -361,7 +361,7 @@ attachToLinks("resolvePath", function() {
     if (path instanceof Data) {
       this.pathSubscriptions.push(path.get((e) => {
         this.currentPathIndex[localTop] = e
-        this.updatePathResolvement()
+        this.updatePathResolvent()
       }, false))
       this.currentPathIndex[top] = path.get()
       top++
@@ -379,7 +379,7 @@ attachToLinks("resolvePath", function() {
           this.currentPathIndex[maTop] = e
           maTop++
         })
-        this.updatePathResolvement()
+        this.updaupdatePathResolventtePathResolvement()
       }, false))
 
       path.get().ea((e) => {

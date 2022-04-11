@@ -4,24 +4,11 @@ import { Data, DataBase, DataCollection } from "./../../app/src/josm"
 import copy from "fast-copy"
 
 
-const data1 = new Data("val1")
-data1.get(() => {})
-const data2 = new Data("val2")
-data2.get(() => {})
+const currentLanguage = new Data("en") as Data<"en" | "de">
 
+const lang = new DataBase<{en: any, de?: any}>({en: {hi: "hello"}, de: {hi: "hallo"}})(currentLanguage) as any as DataBase<any>
 
-const sub = new DataSubscription(new Data(undefined), (d) => {
-  console.log(d)
-}, true, false)
+debugger
+currentLanguage.set("de")
 
-
-
-sub.data(data1)
-data1.set(1)
-sub.data(data2)
-data2.set(2)
-data1.set(11)
-sub.data(data1)
-
-
-
+console.log(lang())
