@@ -916,10 +916,6 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
         }
       }
 
-      if (newData !== undefined) {
-        this.defaultProps(keysOfNewData)
-      }
-
       this.inBulkChange = false
       this.aggregateCall(diffFromThis, undefined)
       this.flushCall()
@@ -950,19 +946,25 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
     
 
     for (const key of newStoreKeys) {
-      const val = store[key] as any
       const defaultVal = this._default !== undefined ? this._default[key] : undefined
+      const val = store[key]
+      if (val === undefined) (store as any)[key] = defaultVal
+      const useVal = val === undefined ? defaultVal : val
+      
+
+      
+
       // TODO: Is this needed or can you just make all functions non iteratable
-      if (typeof val !== "function") {
+      if (typeof useVal !== "function") {
         const _setToThis = constructAttatchToPrototype(funcThis, {enumerable: true})
         const setToThis = (e) => _setToThis(key, {value: e})
-        if (typeof val === objectString) {
-          if (val[parsingId] === undefined) {
+        if (typeof useVal === objectString) {
+          if (useVal[parsingId] === undefined) {
             let resParsingId: Function
-            constructAttatchToPrototype([val])(parsingId, {value: new Promise((res) => {resParsingId = res})})
+            constructAttatchToPrototype([useVal])(parsingId, {value: new Promise((res) => {resParsingId = res})})
             setToThis(new InternalDataBase(val, defaultVal, this.callMeWithDiff(key)))
-            constructAttatchToPrototype([val])(parsingId, {value: funcThis[key]})
-            resParsingId(val[parsingId])
+            constructAttatchToPrototype([useVal])(parsingId, {value: funcThis[key]})
+            resParsingId(useVal[parsingId])
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, (only) => {
               const diff = {removed: {}}
               diff.removed[key] = undefined
@@ -975,10 +977,10 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
           }
           else {
             const attachF = () => {
-              setToThis(val[parsingId])
-              val[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+              setToThis(useVal[parsingId])
+              useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
             }
-            if (val[parsingId] instanceof Promise) val[parsingId].then(attachF)
+            if (useVal[parsingId] instanceof Promise) useVal[parsingId].then(attachF)
             else attachF()
           }
         }
@@ -1007,7 +1009,6 @@ class InternalDataBase<Store extends ComplexData, _Default extends Store = Store
       
     }
 
-    this.defaultProps(newStoreKeys)
   }
 
   private defaultProps(newStoreKeys: string[]) {
