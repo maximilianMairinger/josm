@@ -1,4 +1,4 @@
 export { setDataDerivativeIndex } from "./derivativeExtension"
 export { Data, DataBaseSubscription, DataSubscription } from "./dataDerivable"
 export { DataCollection } from "./dataCollection"
-export { DataBase } from "./dataBaseDerivable"
+export { DataBase, parsingId as dataBaseParsingId } from "./dataBaseDerivable"
