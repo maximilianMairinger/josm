@@ -44,17 +44,22 @@ function justifyNesting(obj: any) {
   return just;
 }
 
-function unduplifyNestedObjectPath(root: any) {
-  const flatMap = new Map<Object, true>();
-  flatMap.set(root, true);
+const unduplifyNestedObjectPath = (() => {
+  let known: Set<Object>
+
+  return function unduplifyNestedObjectPath(root: any) {
+    known = new Set()
+    known.add(root);
+    unduplify(root);
+  }
 
   function unduplify(obj: any) {
     const deeper = [];
     for (const key in obj) {
       const val = obj[key];
       if (typeof val === "object") {
-        if (!flatMap.has(val)) {
-          flatMap.set(val, true);
+        if (!known.has(val)) {
+          known.add(val);
           deeper.push(val);
         } else {
           delete obj[key];
@@ -63,8 +68,11 @@ function unduplifyNestedObjectPath(root: any) {
     }
     for (const deep of deeper) unduplify(deep);
   }
-  unduplify(root);
-}
+})()
+
+
+
+
 
 
 function sanatizeDiff(diff: object) {
