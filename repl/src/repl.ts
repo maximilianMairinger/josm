@@ -8,10 +8,6 @@ import { InternalDataBase, internalDataBaseBridge, parsingId } from "../../app/s
 import { stringify, parse, retrocycle, toPointer } from "./serialize"
 
 
-const test = new DataBase({nested: {uiui: 11}})
-test(console.log)
-debugger
-test({nested: {uiui: 22}})
 
 const max = {
   myName: "Max",
@@ -39,7 +35,6 @@ const ob = {
 
 
 
-const db = new DataBase(ob)
 
 
 
@@ -85,31 +80,40 @@ function getParents(db: InternalDataBase<{}>) {
 }
 
 
-function resolveOldRecursion(diff: object, rootSub: any) {
-  const res = {}
-  for (let dk in diff) {
-    let val = diff[dk]
-    if (diff[dk] instanceof Object) {
-      if (val[parsingId] !== undefined) {
-        const db = val[parsingId][internalDataBaseBridge] as InternalDataBase<{}>
-        const parents = getParents(db)
-        console.log(parents.size)
-        if (parents.size >= 2) {
-          res[dk] = { $ref: findRoot(parents, rootSub) }
+const resolveOldRecursion = (() => {
+  let known: Map<any, any>
+  return function resolveOldRecursion(diff: object, rootSub: any) {
+    known = new Map()
+    return resolveOldRecursionRec(diff, rootSub)
+  }
+
+  function resolveOldRecursionRec(diff: object, rootSub: any) {
+    if (known.has(diff)) return known.get(diff)
+    const res = {}
+    known.set(diff, res)
+    for (let dk in diff) {
+      let val = diff[dk]
+      if (diff[dk] instanceof Object) {
+        if (val[parsingId] !== undefined) {
+          const db = val[parsingId][internalDataBaseBridge] as InternalDataBase<{}>
+          const parents = getParents(db)
+          if (parents.size >= 2) {
+            res[dk] = { $ref: findRoot(parents, rootSub) }
+          }
+          else res[dk] = val
         }
-        else res[dk] = val
+        else {
+          res[dk] = resolveOldRecursionRec(val, rootSub)
+        }
       }
       else {
-        res[dk] = resolveOldRecursion(val, rootSub)
+        if (dk === "$ref" && typeof val === "string" && val.startsWith("#")) val = "#" + val
+        res[dk] = val
       }
     }
-    else {
-      if (dk === "$ref" && typeof val === "string" && val.startsWith("#")) val = "#" + val
-      res[dk] = val
-    }
+    return res
   }
-  return res
-}
+})()
 
 
 function mergeOldRecursionToDB(rootStore: object) {
@@ -145,12 +149,18 @@ function mergeOldRecursionToDB(rootStore: object) {
   }
 }
 
+
+
+
 const db2 = new DataBase({})
 db2((full, diff) => {
   console.log("resived", full, diff)
 })
 const mergeOldRecursion = mergeOldRecursionToDB(db2())
 
+
+const db = new DataBase({})
+db(ob)
 db(function sub (full, diff) {
   const overNetwork = stringify(resolveOldRecursion(diff, sub))
 
@@ -162,12 +172,13 @@ db(function sub (full, diff) {
   db2(parsed)
 })
 
-debugger
+
+
+
 db({
   wellNew: {wellNew2: ting, wellNew3: max} 
 })
 
-debugger
 
 
 db2({ppl: {myName: "Maxooorg"}})

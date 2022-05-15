@@ -105,6 +105,7 @@ export function retrocycle() {
 
 
 export function parse(str: string) {
+  if (str === undefined) return undefined
   return JSON.parse(str, retrocycle())
 }
 

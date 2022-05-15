@@ -4,7 +4,6 @@ import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
-import clone from "fast-copy"
 
 import xtring from "xtring"
 xtring()
@@ -43,6 +42,52 @@ function justifyNesting(obj: any) {
   }
   return just;
 }
+
+
+
+const cloneKeysButKeepSym = (() => {
+  let known: WeakMap<any, any>
+  return function cloneKeysButKeepSym(ob: any) {
+    known = new WeakMap()
+    return cloneKeysButKeepSymRec(ob)
+  }
+  function cloneKeysButKeepSymRec(ob: any) {
+    if (ob instanceof Object) {
+      if (known.has(ob)) return known.get(ob)
+      const cloned = new ob.constructor()
+      known.set(ob, cloned)
+      for (const key of Object.keys(ob)) cloned[key] = cloneKeysButKeepSymRec(ob[key])
+      for (const sym of Object.getOwnPropertySymbols(ob)) cloned[sym] = ob[sym]
+      return cloned
+    }
+    else return ob
+  }
+})()
+
+
+const rmSymWhereNew = (sym: any) => {
+  let knownOg: Set<object>
+  return function rmSymWhereNew(diff: object, og: object = {}) {
+    knownOg = new Set()
+    const ob = cloneKeysButKeepSym(diff)
+    rmSymWhereNewRec(ob, og)
+    return ob
+  }
+  
+  function rmSymWhereNewRec(diff: object, og: object = {}) {
+    knownOg.add(og[sym])
+    if (!knownOg.has(diff[sym])) delete diff[sym]
+    else return
+    for (const key in diff) {
+      if (typeof diff[key] === "object") {
+        rmSymWhereNewRec(diff[key], og[key])
+      }
+    }
+  }
+}
+
+const rmParsingIdWhereNew = rmSymWhereNew(parsingId)
+
 
 const unduplifyNestedObjectPath = (() => {
   let known: Set<Object>
@@ -1040,7 +1085,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   // ------------
 
   subscribeToChildren(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
-    if (initialize) subscription(this.store, diff(subscription[subscriptionDiffSymbol], this.store) as any)
+    if (initialize) subscription(this.store, rmParsingIdWhereNew(diff(subscription[subscriptionDiffSymbol], this.store), subscription[subscriptionDiffSymbol]) as any)
     return this.subscriptionsOfChildChanges.push(subscription as any)
   }
   subscribeToThis(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
@@ -1050,7 +1095,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   }
 
   unsubscribe(subscriptionToken: Token<Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>>) {
-    subscriptionToken.value[subscriptionDiffSymbol] = clone(this.store)
+    subscriptionToken.value[subscriptionDiffSymbol] = cloneKeysButKeepSym(this.store)
     subscriptionToken.remove()
   }
 
