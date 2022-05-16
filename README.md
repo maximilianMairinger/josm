@@ -4,11 +4,11 @@ description: Object-oriented state manager
 
 # Josm
 
-Josm is an \(JS\) **o**bject-oriented **s**tate **m**anager for the web & node, which aims to be both, a lightweight observable \(called Data\) implementation & a feature rich state manager, providing an awesome developer experience.
+Josm is an \(JS\) **o**bject-oriented **s**tate **m**anager for the web & node, which aims to be both, a lightweight observable \(called Data\) implementation & a feature rich state manager, providing an awesome developer experience. It may be used to build declarative UI (frameworks) or as a server side data store (using a mongodb adapter for persistent storage) suitable for realtime applications (with a websocket bridge).
 
 ## Usage
 
-Note that the state manager can tree-shaken off the observable implementation using esImports & a properly configured bundler \(e.g. webpack\).
+Note that the state manager can be tree-shaken off the observable implementation using esImports & a properly configured bundler \(e.g. webpack\).
 
 ```ts
 import { Data, ... } from "josm"
