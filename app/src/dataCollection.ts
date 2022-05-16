@@ -1,5 +1,5 @@
-import LinkedList from "fast-linked-list"
-import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin } from "./data"
+import LinkedList, { Token } from "fast-linked-list"
+import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin, instanceTypeSym } from "./data"
 
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: LinkedList<Subscription<Values>> = new LinkedList()
@@ -40,7 +40,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
 
     const oldStore = this.store
     //@ts-ignore
-    this.store = [...this.datas.map((data) => data.get())]
+    this.store = this.datas.map((data) => data.get())
 
     const anyChange = this.store.ea((el, i) => {
       if (oldStore[i] !== el) return true
@@ -64,24 +64,24 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     //@ts-ignore
     if (subscription === undefined) return this.store
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
-      else if (this.isSubscribed(subscription)) return subscription[dataSubscriptionCbBridge]
+      if (subscription instanceof DataSubscription) return subscription.data(this, false).activate(initialize)
+      else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge].data(this, false).activate(initialize)
       else return new DataSubscription(this, subscription, true, initialize)
     }
   }
 
   //@ts-ignore
-  protected isSubscribed(subscription: Subscription<Values>): boolean {}
   protected subscribeToThis(subscription: Subscription<Values>, initialize: boolean) {}
   protected subscribeToChildren(subscription: Subscription<Values>, initialize: boolean) {}
-  protected unsubscribeToThis(subscription: Subscription<Values>, initialize: boolean) {}
-  protected unsubscribeToChildren(subscription: Subscription<Values>, initialize: boolean) {}
-
+  protected unsubscribe?(tok: Token<Subscription<[Value]>>): void
+  
   public got(subscription: Subscription<Values> | DataSubscription<Values>): DataSubscription<Values> {
     return (subscription instanceof DataSubscription) ? subscription.deactivate()
-    : new DataSubscription(this, subscription, false)
+    : subscription[dataSubscriptionCbBridge].deactivate()
   }
 
 } 
 
 attachSubscribableMixin(DataCollection)
+
+DataCollection.prototype[instanceTypeSym] = "DataCollection"

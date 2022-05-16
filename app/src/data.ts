@@ -2,7 +2,6 @@
 // dead code detection & omited for treeshaking
 import { Concat } from 'typescript-tuple'
 import { DataBase } from './josm'
-import clone from "fast-copy"
 import { DataCollection } from "./dataCollection"
 import keyIndex from "key-index"
 import LinkedList, { Token } from "fast-linked-list"
@@ -17,7 +16,7 @@ import { circularDeepEqual } from "fast-equals"
 
 import { dataDerivativeLiableIndex } from './derivativeExtension'
 import constructAttatchToPrototype from 'attatch-to-prototype'
-
+import cloneKeysButKeepSym from './lib/clone'
 
 
 // record???
@@ -77,8 +76,8 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   public get(subscription?: Subscription<[Value]> | DataSubscription<[Value]>, initialize: boolean = true): Value | DataSubscription<[Value]> {
     if (subscription === undefined) return this.value
     else {
-      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
-      else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge]
+      if (subscription instanceof DataSubscription) return subscription.data(this, false).activate(initialize)
+      else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge].data(this, false).activate(initialize)
       //@ts-ignore
       else return new DataSubscription(this, subscription, true, initialize)
     }
@@ -123,7 +122,7 @@ export class Data<Value = unknown, _Default extends Value = Value> {
 
   protected subscribeToThis?(subscription: Subscription<[Value]>, initialize: boolean): Token<Subscription<[Value]>>
   protected subscribeToChildren?(subscription: Subscription<[Value]>, initialize: boolean): Token<Subscription<[Value]>>
-  protected unsubscribe?(subscription: Subscription<[Value]>, initialize: boolean): Token<Subscription<[Value]>>
+  protected unsubscribe?(tok: Token<Subscription<[Value]>>): void
   protected call?(...subscription: Subscription<[Value]>[]): void
 
   public toString() {
@@ -146,8 +145,10 @@ export type FuckedUpDataSetify<T extends any[]> = {
 
 
 
-function unsubscribe(subscription: Token<any>) {
-  subscription.rm()
+function unsubscribe(subscriptionToken: Token<any>) {
+  subscriptionToken.value[subscriptionDiffSymbol] = cloneKeysButKeepSym(this.get())
+  subscriptionToken.rm()
+  
   // (this.subscriptions as LinkedList<any>)
 }
 
@@ -249,11 +250,13 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
   constructor(data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean, notfiyAboutChangesOfChilds?: boolean)
 
   constructor(data: Subscribable<Values> | Data<Value> | DataCollection<Values>, subscription?: Subscription<Values> | Subscription<[Values[0]]>, activate: boolean = true, initialize?: boolean, notfiyAboutChangesOfChilds: boolean = true) {
+    if (subscription[dataSubscriptionCbBridge] !== undefined) return subscription[dataSubscriptionCbBridge].data(subscription[dataSubscriptionCbBridge].data(), initialize, true)
     //@ts-ignore
     this._data = data
     //@ts-ignore
     this._subscription = subscription
     this._notifyAboutChangesOfChilds = notfiyAboutChangesOfChilds
+    
     subscription[dataSubscriptionCbBridge] = this
 
     localSubscriptionNamespace.register(this as any)
@@ -288,7 +291,8 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
   public setToData(e: any) {
     this.deactivate();
     try {
-      (this as any)._data.set(e)
+      if (this._data instanceof Data) (this as any)._data.set(e)
+      else (this as any)._data.apply(this._data, [e])
     }
     finally {
       this.activate(false)
@@ -298,15 +302,7 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
   }
 
   public setToDataBase(e: any) {
-    this.deactivate();
-    try {
-      (this as any)._data.apply(this._data, [e])
-    }
-    finally {
-      this.activate(false)
-    }
-    
-    return this
+    return this.setToData(e)
   }
 
   
@@ -316,15 +312,19 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     if (data === undefined) return this._data
     else {
       if (this._data !== data) {
-        let isActive = this.active()
-        let prevData: any
-        if (initialize) prevData = clone((this._data as ProperSubscribable<Values>).get())
+        let wasActive = this.active()
         this.deactivate()
         this._data = data
-        if (isActive) this.activate(initialize && (!circularDeepEqual(prevData, (data as ProperSubscribable<Values>).get())))
+        if (wasActive) this.activate(initialize)
       }
       return this
     }
+  }
+
+  public dataBase(): ConcreteData
+  public dataBase(data: ConcreteData, initialize?: boolean): this
+  public dataBase(data?: ConcreteData, initialize?: boolean) {
+    return this.data(data, initialize) as any
   }
   
   public subscription(): ConcreteSubscription
@@ -363,7 +363,10 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
   public activate(initialize: boolean = true): this {  
     if (this.isActive) return this;
     this.isActive = true
-    this.subToken = this._notifyAboutChangesOfChilds ? (this._data as any).subscribeToChildren(this._subscription, initialize) : (this._data as any).subscribeToThis(this._subscription, initialize)
+    const prevData = this._subscription[subscriptionDiffSymbol]
+    const data = this._data as any
+    const reallyInit = initialize && (!circularDeepEqual(prevData, data[instanceTypeSym] !== "DataBase" ? data.get() : (data as Function).apply(data)))
+    this.subToken = this._notifyAboutChangesOfChilds ? (this._data as any).subscribeToChildren(this._subscription, reallyInit) : (this._data as any).subscribeToThis(this._subscription, reallyInit)
     return this
   }
 
@@ -407,7 +410,7 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
 
 }
 
-export type DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> = Omit<_DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>, "setToData">
+export type DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> = _DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
 export const DataBaseSubscription = _DataBaseSubscription as any as {
   new<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>>
     (data: Subscribable<Values>, subscription: Subscription<Values>, activate?: false): 
@@ -479,3 +482,7 @@ export const DataSubscription = DataBaseSubscription as ({
     (data: DataCollection<Values>, subscription: Subscription<Values>, activate?: true, inititalize?: boolean): DataSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription> 
 })
 
+export const subscriptionDiffSymbol = Symbol("diff")
+
+export const instanceTypeSym = Symbol("instanceType")
+Data.prototype[instanceTypeSym] = "Data"

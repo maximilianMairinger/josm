@@ -1,10 +1,11 @@
-import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace, needFallbackForSubs, registerSubscriptionNamespace } from "./data"
+import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace, needFallbackForSubs, registerSubscriptionNamespace, subscriptionDiffSymbol, instanceTypeSym } from "./data"
 import { DataCollection } from "./dataCollection"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
 import { MultiMap } from "./lib/multiMap"
+import cloneKeysButKeepSym from "./lib/clone"
 
 
 
@@ -46,26 +47,6 @@ function justifyNesting(obj: any) {
   return just;
 }
 
-
-
-const cloneKeysButKeepSym = (() => {
-  let known: WeakMap<any, any>
-  return function cloneKeysButKeepSym(ob: any) {
-    known = new WeakMap()
-    return cloneKeysButKeepSymRec(ob)
-  }
-  function cloneKeysButKeepSymRec(ob: any) {
-    if (ob instanceof Object) {
-      if (known.has(ob)) return known.get(ob)
-      const cloned = new ob.constructor()
-      known.set(ob, cloned)
-      for (const key of Object.keys(ob)) cloned[key] = cloneKeysButKeepSymRec(ob[key])
-      for (const sym of Object.getOwnPropertySymbols(ob)) cloned[sym] = ob[sym]
-      return cloned
-    }
-    else return ob
-  }
-})()
 
 
 const rmSymWhereNew = (sym: any) => {
@@ -816,8 +797,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       let subscription = path_data_subscription
       let initialize: boolean = paths[0] === undefined ? true : paths[0]
 
-      if (subscription instanceof DataSubscription) return subscription.activate(false).data(this, false).call(initialize)
-      else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge]
+      if (subscription instanceof DataSubscription) return subscription.data(this, false).activate(initialize)
+      else if (subscription[dataSubscriptionCbBridge]) return subscription[dataSubscriptionCbBridge].data(this, false).activate(initialize)
       else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notifyAboutChangesOfChilds)
     }
     else if (arguments.length === 0) {
@@ -1282,8 +1263,6 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 export type DataBaseFunction<Store extends {[key in string]: any}> = InternalDataBase<Store>["DataBaseFunction"]
 
-const subscriptionDiffSymbol = Symbol("diff")
-
 
 
 //@ts-ignore
@@ -1318,3 +1297,10 @@ export type DataBase<Store extends {[key in string]: any} = unknown, S extends R
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Store>(store: Store, _Default?: _Default): DataBase<Store> })
+
+
+
+
+DataBase.prototype[instanceTypeSym] = "DataBase"
+DataLink.prototype[instanceTypeSym] = "Data"
+DataBaseLink.prototype[instanceTypeSym] = "DataBase"

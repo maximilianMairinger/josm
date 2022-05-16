@@ -261,16 +261,15 @@ describe("DataSubscription", () => {
   test("Active state change", () => {
     let d = new Data(4)
 
-    expect.assertions(5)
+    expect.assertions(4)
     let i = 0
     let subscription1 = (e) => {
       i++
       if (i === 1) expect(e).toBe(4)
-      else if (i === 2) expect(e).toBe(4)
-      else if (i === 3) expect(e).toBe(5)
-      else if (i === 4) expect(e).toBe(6)
-      else if (i === 5) expect(e).toBe(2)
-      else if (i === 6) fail()
+      else if (i === 2) expect(e).toBe(5)
+      else if (i === 3) expect(e).toBe(6)
+      else if (i === 4) expect(e).toBe(2)
+      else if (i === 5) fail()
     } 
     let s = new DataSubscription(d, subscription1)
 
@@ -368,16 +367,15 @@ describe("DataSubscription", () => {
   test("Multiple instances of same DataSet & Subsciption active coherence", () => {
     let d = new Data(4)
 
-    expect.assertions(5)
+    expect.assertions(4)
     let i = 0
     let subscription1 = (e) => {
       i++
       if (i === 1) expect(e).toBe(4)
-      else if (i === 2) expect(e).toBe(4)
-      else if (i === 3) expect(e).toBe(5)
-      else if (i === 4) expect(e).toBe(6)
-      else if (i === 5) expect(e).toBe(2)
-      else if (i === 6) fail()
+      else if (i === 2) expect(e).toBe(5)
+      else if (i === 3) expect(e).toBe(6)
+      else if (i === 4) expect(e).toBe(2)
+      else if (i === 5) fail()
     } 
     let s1 = new DataSubscription(d, subscription1)
     let s2 = new DataSubscription(d, subscription1)

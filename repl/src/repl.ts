@@ -8,17 +8,60 @@ import { InternalDataBase, internalDataBaseBridge, parsingId } from "../../app/s
 import { stringify, parse, retrocycle } from "./serialize"
 import LinkedList, { Token } from "fast-linked-list"
 import { MultiMap } from "./../../app/src/lib/multiMap"
+import { deepEqual } from "fast-equals"
 
-const map = new MultiMap<any, number>()
-
-const key = {}
-map.set(key, 1)
-map.set(key, 2)
-map.set("hei", 3)
-
-for (const [key, val] of map) {
-  console.log(key, val)
+let calls = 0
+const expect = (e) => {
+  return {
+    toBe(f) {
+      calls++
+      if (!deepEqual(e, f)) throw new Error()
+    },
+    toEqual(f) {
+      calls++
+      if (!deepEqual(e, f)) throw new Error()
+    }
+  }
+} 
+expect.assertions = (e) => {
+  setTimeout(() => {
+    if (e !== calls) throw new Error()
+  })
 }
+
+
+let d1 = new Data(1)
+    let d2 = new Data(2)
+
+    let d = new DataCollection(d1, d2)
+
+    let i = 0
+    expect.assertions(2)
+    let f = (...a) => {
+      i++
+      if (i === 1) {
+        expect(a).toEqual([1, 2])
+      }
+      else if (i === 2) {
+        expect(a).toEqual([100, 2])
+      }
+      else if (i === 3) {
+        fail()
+      }
+    }
+
+    d.get(f)
+
+
+    d1.set(100)
+    d.got(f)
+    d1.set(2000)
+    d2.set(2000)
+
+
+
+
+
 
 
 const toPointer = (parts) => '#' + ["", ...parts].map(part => String(part).replace(/~/g, '~0').replace(/\//g, '~1')).join('/')
