@@ -4,6 +4,9 @@ import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
+import { MultiMap } from "./lib/multiMap"
+
+
 
 import xtring from "xtring"
 xtring()
@@ -609,7 +612,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
   private store: Store
   private notifyParentOfChangeCbs: any[]
-  private beforeDestroyCbs: Map<InternalDataBase<any>, Function>
+  private beforeDestroyCbs: MultiMap<InternalDataBase<any>, Function>
 
   public linksOfMe: Link[]
 
@@ -620,6 +623,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   private callMeWithDiffIndex: Map<string, ((diff: any, origins: Set<any>) => (() => void))> & { activate(): void, deactivate(): void }
 
   private locSubNsReg: any[]
+  private isRoot: boolean
 
   constructor(store?: Store, private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
@@ -631,7 +635,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     this.notifyParentOfChangeCbs = []
     this.subscriptionsOfChildChanges = new LinkedList()
     this.subscriptionsOfThisChanges = new LinkedList()
-    this.beforeDestroyCbs = new Map
+    this.beforeDestroyCbs = new MultiMap
 
     this.callMeWithDiffIndex = new Map as any
     this.callMeWithDiff = (key: string) => {
@@ -655,8 +659,13 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
     this.initFuncProps(store, _default)
 
-    if (notifyParentOfChange) this.addNotifyParentOfChangeCb(notifyParentOfChange)
-    
+    if (notifyParentOfChange) {
+      this.isRoot = false
+      this.addNotifyParentOfChangeCb(notifyParentOfChange)
+    }
+    else {
+      this.isRoot = true
+    }
 
     
     
@@ -691,7 +700,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
   destroy(from: InternalDataBase<any>) {
     this.inBulkChange = true
-    this.beforeDestroyCbs.get(from)()
+    this.beforeDestroyCbs.get(from).forEach(f => f())
     this.beforeDestroyCbs.delete(from)
 
     if (this.beforeDestroyCbs.size === 0) {

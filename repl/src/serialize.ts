@@ -17,7 +17,7 @@
 /**
 * @param {string[]} parts 
 */
-export const toPointer = (parts) => '#' + parts.map(part => String(part).replace(/~/g, '~0').replace(/\//g, '~1')).join('/')
+const toPointer = (parts) => '#' + parts.map(part => String(part).replace(/~/g, '~0').replace(/\//g, '~1')).join('/')
 
 const sym = Symbol('$ref')
 

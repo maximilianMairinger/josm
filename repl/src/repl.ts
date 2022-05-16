@@ -5,8 +5,33 @@ import copy from "fast-copy"
 import { InternalDataBase, internalDataBaseBridge, parsingId } from "../../app/src/dataBase"
 
 // TODO: what about parsing queties not created with stringify? can cause infinite recursion?
-import { stringify, parse, retrocycle, toPointer } from "./serialize"
+import { stringify, parse, retrocycle } from "./serialize"
+import LinkedList, { Token } from "fast-linked-list"
+import { MultiMap } from "./../../app/src/lib/multiMap"
 
+const map = new MultiMap<any, number>()
+
+const key = {}
+map.set(key, 1)
+map.set(key, 2)
+map.set("hei", 3)
+
+for (const [key, val] of map) {
+  console.log(key, val)
+}
+
+
+const toPointer = (parts) => '#' + ["", ...parts].map(part => String(part).replace(/~/g, '~0').replace(/\//g, '~1')).join('/')
+const resolvePointer = (pointer) => {
+  let p = pointer.slice(1)
+  const ar = []
+  if (p === "") return ar
+  p = p.slice(1)
+  for (const part of p.split('/').map(s => s.replace(/~1/g, '/').replace(/~0/g, '~'))) {
+    ar.push(part)
+  }
+  return ar
+}
 
 
 const max = {
@@ -37,46 +62,73 @@ const ob = {
 
 
 
+function findRoot(db: InternalDataBase<{}>, findSub: any) {
+  const initChildMap = getParents(db)
+  for (const sub of (db as any).subscriptionsOfChildChanges) {
+    if (sub === findSub) return toPointer([])
+  }
 
-
-function findRoot(initChildMap: Map<InternalDataBase<{}>, {key: string}>, findSub: any) {
+  // we dont want to look into the last path, as it is the one that was just added.
+  const keys = [...initChildMap.keys()]
+  let lastVals: any
+  let lastKey: any
+  if (keys.length > 1) {
+    lastKey = keys[keys.length - 1]
+    lastVals = initChildMap.get(lastKey)
+    initChildMap.delete(lastKey)
+  } 
   
 
-  let currentLevel = [...initChildMap.keys()]
-  let currentPath = [...initChildMap.values()].map(({key}) => [key])
+
+  try {
+    const initEntries = [...initChildMap.entries()]
+
+    let currentLevel = initEntries.map(e => e[0])
+    let currentPath = initEntries.map(e => [e[1][0].key]) as any[]
 
 
-  let nextLevel: typeof currentLevel
-  let nextPath: typeof currentPath
-
-  while(true) {
-    nextPath = []
-    nextLevel = []
-
-    let i = 0
-    for (const db of currentLevel) {
-      for (const sub of (db as any).subscriptionsOfChildChanges) {
-        if (sub === findSub) return toPointer(currentPath[i])
+  
+  
+  
+    let nextLevel: typeof currentLevel
+    let nextPath: typeof currentPath
+  
+    while(true) {
+      nextPath = []
+      nextLevel = []
+  
+      let i = 0
+      for (const db of currentLevel) {
+        for (const sub of (db as any).subscriptionsOfChildChanges) {
+          if (sub === findSub) return toPointer(currentPath[i])
+        }
+  
+  
+        const myNextLevelMap = getParents(db)
+        const fullPath = currentPath[i]
+        for (const [dbDeep, deepPaths] of myNextLevelMap) {
+          nextPath.push([deepPaths[0].key, ...fullPath])
+          nextLevel.push(dbDeep)
+        }
+  
+        i++
       }
-
-
-      const myNextLevelMap = getParents(db)
-      const fullPath = currentPath[i]
-      for (const [dbDeep, deepPath] of myNextLevelMap) {
-        nextPath.push([deepPath.key, ...fullPath])
-        nextLevel.push(dbDeep)
-      }
-
-      i++
+      
+      currentLevel = nextLevel
+      currentPath = nextPath
     }
-    
-    currentLevel = nextLevel
-    currentPath = nextPath
+  }
+  finally {
+    if (keys.length > 1) {
+      for (const lastVal of lastVals) {
+        initChildMap.set(lastKey, lastVal)
+      }
+    }
   }
 }
 
 function getParents(db: InternalDataBase<{}>) {
-  return (db as any).beforeDestroyCbs as Map<InternalDataBase<{}>, {key: string}>
+  return (db as any).beforeDestroyCbs as MultiMap<InternalDataBase<{}>, {key: string}>
 }
 
 
@@ -97,8 +149,8 @@ const resolveOldRecursion = (() => {
         if (val[parsingId] !== undefined) {
           const db = val[parsingId][internalDataBaseBridge] as InternalDataBase<{}>
           const parents = getParents(db)
-          if (parents.size >= 2) {
-            res[dk] = { $ref: findRoot(parents, rootSub) }
+          if (parents.size >= 2  || ((db as any).isRoot && parents.size === 1)) {
+            res[dk] = { $ref: findRoot(db, rootSub) }
           }
           else res[dk] = val
         }
@@ -128,7 +180,8 @@ function mergeOldRecursionToDB(rootStore: object) {
         if (key === "$ref" && typeof val === "string") {
           if (val.startsWith("##")) diff[key] = val.slice(1)
           else if (val.startsWith("#")) {
-            const path = val.slice(1).split('/').map(s => s.replace(/~1/g, '/').replace(/~0/g, '~'))
+            const path = resolvePointer(val)
+            
             let c = rootStore
             for (const entry of path) {
               c = c[entry]
@@ -155,13 +208,14 @@ function mergeOldRecursionToDB(rootStore: object) {
 const db2 = new DataBase({})
 db2((full, diff) => {
   console.log("resived", full, diff)
-})
+}, true, false)
 const mergeOldRecursion = mergeOldRecursionToDB(db2())
 
 
-const db = new DataBase({})
-db(ob)
+const db = new DataBase(ob)
 db(function sub (full, diff) {
+  console.log(resolveOldRecursion(diff, sub))
+
   const overNetwork = stringify(resolveOldRecursion(diff, sub))
 
   // network
@@ -173,15 +227,18 @@ db(function sub (full, diff) {
 })
 
 
-
-
 db({
-  wellNew: {wellNew2: ting, wellNew3: max} 
+  leeel: ob
 })
 
 
+// db({
+//   wellNew: {wellNew2: ting, wellNew3: max} 
+// })
 
-db2({ppl: {myName: "Maxooorg"}})
+
+
+db2({whooo: "yea"})
 
 // db({
 //   wellNew: undefined
