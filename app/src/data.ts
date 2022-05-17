@@ -16,7 +16,7 @@ import { circularDeepEqual } from "fast-equals"
 
 import { dataDerivativeLiableIndex } from './derivativeExtension'
 import constructAttatchToPrototype from 'attatch-to-prototype'
-import cloneKeysButKeepSym from './lib/clone'
+import { cloneKeysButKeepSym } from './lib/clone'
 
 
 // record???
