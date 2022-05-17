@@ -12,6 +12,30 @@ import { deepEqual } from "fast-equals"
 
 
 
+const map = new MultiMap()
+
+map.set("b", 2)
+
+map.set("a", 1)
+map.set("b", 3)
+
+const bb = map.get("b")
+
+map.get("b").shift()
+map.get("b").shift()
+bb.push("aaaa")
+console.log(map.get("b"))
+
+for (const [key, val] of map) {
+  console.log(key, val)
+}
+
+
+
+
+
+
+
 const max = {
   myName: "Max",
   age: 27
@@ -72,14 +96,17 @@ function findRoot(db: InternalDataBase<{}>, findSub: any) {
     if (sub === findSub) return toPointer([])
   }
 
-  // we dont want to look into the last path, as it is the one that was just added.
-  const keys = [...initChildMap.keys()]
+  
+  let lastVal: any
   let lastVals: any
-  let lastKey: any
-  if (keys.length > 1) {
-    lastKey = keys[keys.length - 1]
+
+  const keys = [...initChildMap.keys()]
+  const removeLastVal = keys.length > 1 // is root if this is 1
+  if (removeLastVal) {
+    // we dont want to look into the last path, as it is the one that was just added.
+    const lastKey = keys[keys.length - 1]
     lastVals = initChildMap.get(lastKey)
-    initChildMap.delete(lastKey)
+    lastVal = lastVals.pop()
   } 
   
 
@@ -123,10 +150,8 @@ function findRoot(db: InternalDataBase<{}>, findSub: any) {
     }
   }
   finally {
-    if (keys.length > 1) {
-      for (const lastVal of lastVals) {
-        initChildMap.set(lastKey, lastVal)
-      }
+    if (removeLastVal) {
+      lastVals.push(lastVal)
     }
   }
 }
