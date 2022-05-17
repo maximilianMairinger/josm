@@ -5,7 +5,7 @@ import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
 import { MultiMap } from "./lib/multiMap"
-import cloneKeysButKeepSym from "./lib/clone"
+import { cloneKeysButKeepSym } from "./lib/clone"
 
 
 
