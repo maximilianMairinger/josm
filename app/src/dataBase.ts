@@ -821,7 +821,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
       let keysOfNewData: string[]
 
-
+      try {
       if (newData !== undefined) {
         keysOfNewData = Object.keys(newData)
 
@@ -856,7 +856,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
               if (typeof newVal !== "object") {
                 prop.set(newVal)
               }
-              else {
+              else { // newVal is object and prop is Data
                 (this.store as any)[key] = newVal
                 diffFromThis.added[key] = cloneUntilParsingId(newVal)
                 if (newVal[parsingId] === undefined) {
@@ -878,11 +878,29 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 }
               }
             }
-            else {
+            else { // prop instanceof DataBase
               if (typeof newVal === "object") {
-                prop(newVal, strict, parsingId)
+                if (newVal[parsingId] === undefined) prop(newVal, strict, parsingId)
+                else {
+                  if (newVal[parsingId] !== prop) {
+                    //@ts-ignore
+                    this.store[key] = newVal
+                    diffFromThis.added[key] = newVal
+                    prop[internalDataBaseBridge].destroy(this)
+                    
+                    const attachF = () => {
+                      constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId], enumerable: true})
+                      newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+                      newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
+                    }
+                    if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                    else attachF()
+                  }
+                  else return funcThis // cleanup code is in finally block
+                  
+                }
               }
-              else {
+              else { // newVal is primitive and prop is DataBase
                 //@ts-ignore
                 this.store[key] = newVal
                 diffFromThis.added[key] = cloneUntilParsingId(newVal)
@@ -905,17 +923,18 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 }, false)
               }
             }
-          }
-          else {
+          } 
+          else { // prop is undefined
             if (typeof newVal === "object") {
               (this.store as any)[key] = newVal
               diffFromThis.added[key] = cloneUntilParsingId(newVal)
+
               if (newVal[parsingId] === undefined) {
                 constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
 
                 funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
               }
-              else {
+              else { 
                 const attachF = () => {
                   constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId], enumerable: true})
                   newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
@@ -928,7 +947,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
               }
               
             }
-            else {
+            else { // newVal primitive and prop is undefined
               (this.store as any)[key] = newVal
               diffFromThis.added[key] = cloneUntilParsingId(newVal)
               constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
@@ -981,10 +1000,15 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         else val[internalDataBaseBridge].destroy(this)
       }
       this.discardCall()
-      this.inBulkChange = false
-
 
       return funcThis
+      }
+      finally {
+        this.inBulkChange = false
+      }
+
+
+      
     }
   }
 

@@ -10,55 +10,40 @@ import LinkedList, { Token } from "fast-linked-list"
 import { MultiMap } from "./../../app/src/lib/multiMap"
 import { deepEqual } from "fast-equals"
 
-let calls = 0
-const expect = (e) => {
-  return {
-    toBe(f) {
-      calls++
-      if (!deepEqual(e, f)) throw new Error()
-    },
-    toEqual(f) {
-      calls++
-      if (!deepEqual(e, f)) throw new Error()
-    }
-  }
-} 
-expect.assertions = (e) => {
-  setTimeout(() => {
-    if (e !== calls) throw new Error()
-  })
+
+
+const max = {
+  myName: "Max",
+  age: 27
+
+}
+
+const ting = {
+  myName: "Ting",
+  age: 23
 }
 
 
-let d1 = new Data(1)
-    let d2 = new Data(2)
 
-    let d = new DataCollection(d1, d2)
-
-    let i = 0
-    expect.assertions(2)
-    let f = (...a) => {
-      i++
-      if (i === 1) {
-        expect(a).toEqual([1, 2])
-      }
-      else if (i === 2) {
-        expect(a).toEqual([100, 2])
-      }
-      else if (i === 3) {
-        fail()
-      }
-    }
-
-    d.get(f)
+// @ts-ignore
+max.loves = ting
+// @ts-ignore
+ting.loves = max
 
 
-    d1.set(100)
-    d.got(f)
-    d1.set(2000)
-    d2.set(2000)
+let ob = {
+  ppl: max
+}
 
 
+console.log("qwejnkasdn")
+
+const dd = new DataBase(ob)
+dd((full, diff) => {
+  console.log("me", diff)
+})
+dd({aye: ting})
+dd({aye: ting})
 
 
 
@@ -76,30 +61,6 @@ const resolvePointer = (pointer) => {
   return ar
 }
 
-
-const max = {
-  myName: "Max",
-  age: 27,
-
-}
-
-const ting = {
-  myName: "Ting",
-  age: 23,
-  
-}
-
-
-
-// @ts-ignore
-max.loves = ting
-// @ts-ignore
-ting.loves = max
-
-
-const ob = {
-  ppl: max
-}
 
 
 
