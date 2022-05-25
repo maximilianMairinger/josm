@@ -1,19 +1,39 @@
+import { constructAttatchToPrototype } from "attatch-to-prototype"
 import LinkedList, { Token } from "fast-linked-list"
-import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin, instanceTypeSym } from "./data"
+import diff from "fast-object-diff"
+import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin, instanceTypeSym, call, unsubscribe, subscribe, Data } from "./data"
 
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: LinkedList<Subscription<Values>> = new LinkedList()
+  private subscriptionsLength = new Data(0)
+  private subscriptionsEmpty = this.subscriptionsLength.tunnel(length => length === 0)
+
   //@ts-ignore
   private datas: FuckedUpDataSetify<Values> = []
   private store: Values = [] as any
 
   private locSubNsReg: {destroy: () => void}[] = []
 
-  private observers: Subscription<[Value]>[] = []
+  private observers: DataSubscription<[Value]>[] = []
 
   constructor(...datas: FuckedUpDataSetify<Values>) {
     //@ts-ignore
     this.set(...datas)
+
+    this.subscriptionsEmpty.get((empty) => {
+      if (empty) {
+        for (const observer of this.observers) observer.deactivate()
+      }
+      else {
+        this.datas.forEach((data, i) => {
+          const val = data.get()
+          if (this.store[i] instanceof Array) this.store[i] = val
+          else this.store[i] = val.first
+
+          this.observers[i].activate(false)
+        })
+      }
+    }, false)
   }
 
   protected __call(subs: Subscription<Values>[] = this.subscriptions as any) {
@@ -31,9 +51,12 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
 
 
   public set(...datas: any[]) {
-    this.datas.ea((data, i) => {
-      data.got(this.observers[i])
-    })
+    const empty = this.subscriptionsEmpty.get()
+    if (empty) {
+      this.datas.ea((data, i) => {
+        data.got(this.observers[i])
+      })
+    }
     this.observers.clear();
 
     (this as any).datas = datas
@@ -42,11 +65,11 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     //@ts-ignore
     this.store = this.datas.map((data) => data.get())
 
-    const anyChange = this.store.ea((el, i) => {
-      if (oldStore[i] !== el) return true
-    })
-
-    if (anyChange) this.__call()
+    if (empty) {
+      const anyChange = diff.flat(oldStore, this.store)
+      if (anyChange) this.__call()
+    }
+    
 
 
     this.datas.ea((data, i) => {
@@ -56,6 +79,8 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
         this.__call()
       }, false)
     })
+
+    if (empty) for (const observer of this.observers) observer.deactivate()
   }
 
   public get(): Values
@@ -82,6 +107,16 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
 
 } 
 
-attachSubscribableMixin(DataCollection)
+const attach = constructAttatchToPrototype(DataCollection.prototype)
+
+attach("call", call)
+attach("unsubscribe", function(subscriptionToken: Token<any>) {
+  if (unsubscribe(subscriptionToken))
+  this.subscriptionsLength.set(this.subscriptionsLength.get() - 1)
+})
+attach(["subscribeToThis", "subscribeToChildren", "subscribe"], function(subscription: any, initialize: any) {
+  subscribe(subscription, initialize)
+  this.subscriptionsLength.set(this.subscriptionsLength.get() + 1)
+})
 
 DataCollection.prototype[instanceTypeSym] = "DataCollection"

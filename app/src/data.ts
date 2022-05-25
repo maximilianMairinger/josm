@@ -145,20 +145,20 @@ export type FuckedUpDataSetify<T extends any[]> = {
 
 
 
-function unsubscribe(subscriptionToken: Token<any>) {
+export function unsubscribe(subscriptionToken: Token<any>) {
   subscriptionToken.value[subscriptionDiffSymbol] = cloneKeysButKeepSym(this.get())
-  subscriptionToken.rm()
+  return subscriptionToken.remove()
   
   // (this.subscriptions as LinkedList<any>)
 }
 
-function subscribe(subscription: any, initialize: any) {
+export function subscribe(subscription: any, initialize: any) {
   const tok = this.subscriptions.push(subscription)
   if (initialize) this.call(subscription)
   return tok
 }
 
-function call(s: any) {
+export function call(s: any) {
   let { subs, need } = needFallbackForSubs(s)
   if (need) subs = this.subscriptions
   registerSubscriptionNamespace(() => {
@@ -364,8 +364,9 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
     if (this.isActive) return this;
     this.isActive = true
     const prevData = this._subscription[subscriptionDiffSymbol]
-    const data = this._data as any
-    const reallyInit = initialize && (!circularDeepEqual(prevData, data[instanceTypeSym] !== "DataBase" ? data.get() : (data as Function).apply(data)))
+    const _data = this._data as any
+    const data = _data[instanceTypeSym] !== "DataBase" ? _data.get() : (_data as Function).apply(_data)
+    const reallyInit = initialize && !circularDeepEqual(prevData, data)
     this.subToken = this._notifyAboutChangesOfChilds ? (this._data as any).subscribeToChildren(this._subscription, reallyInit) : (this._data as any).subscribeToThis(this._subscription, reallyInit)
     return this
   }
