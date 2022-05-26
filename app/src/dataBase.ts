@@ -701,17 +701,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
     if (this.beforeDestroyCbs.size === 0) {
       delete this.store[parsingId as any]
-      registerSubscriptionNamespace(() => {
-        const subs = this.subscriptionsOfThisChanges as any as Function[]
-        for (const sub of subs) {
-          if (sub.length === 2) (sub as any)(undefined, undefined)
-          else (sub as any)(undefined, undefined, undefined)
-        }
-      }, this.locSubNsReg)
 
-
-
-      this.notifyParentOfChangeCbs.clear()
+      
       for (const key in this.funcThis) {
         if (this.funcThis[key] instanceof Data) {
           this.funcThis[key].destroy(this)
@@ -721,7 +712,18 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         }
         delete this.funcThis[key]
       }
-  
+
+      registerSubscriptionNamespace(() => {
+        const subs = this.subscriptionsOfThisChanges as any as Function[]
+        for (const sub of subs) {
+          if (sub.length === 2) (sub as any)(undefined, undefined)
+          else (sub as any)(undefined, undefined, undefined)
+        }
+      }, this.locSubNsReg)
+
+      
+      this.notifyParentOfChangeCbs.clear()
+      
       for (const e of this.linksOfMe) e.destroy()
       this.linksOfMe.clear()
       for (const e of this.locSubNsReg) e.destroy()
