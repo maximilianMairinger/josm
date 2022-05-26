@@ -679,12 +679,38 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     this.beforeDestroyCbs.set(from, cb)
   }
 
-  destroy(from: InternalDataBase<any>) {
+  destroy(from: InternalDataBase<any>, key?: string) {
     this.inBulkChange = true
-    this.beforeDestroyCbs.get(from).forEach(f => f())
-    this.beforeDestroyCbs.delete(from)
+    const myBeforeDestroyCbs = this.beforeDestroyCbs.get(from)
+    if (key === undefined || myBeforeDestroyCbs.length === 1) {
+      myBeforeDestroyCbs.forEach(f => f())
+      this.beforeDestroyCbs.delete(from)
+    }
+    else {
+      for (let i = 0; i < myBeforeDestroyCbs.length; i++) {
+        // This is suboptimal, as it is not indexed thus having a timecomplexity of O(n).
+        // But this will probably never manifest itself, as having multiple keys (on one db) pointing to the same db object 
+        // is not really usefull at all. Just for testing maybe, so thats why this is handled here.
+        if ((myBeforeDestroyCbs[i] as any).key === key) {
+          myBeforeDestroyCbs.splice(i, 1)
+          break
+        }
+        
+      }
+    }
 
     if (this.beforeDestroyCbs.size === 0) {
+      delete this.store[parsingId as any]
+      registerSubscriptionNamespace(() => {
+        const subs = this.subscriptionsOfThisChanges as any as Function[]
+        for (const sub of subs) {
+          if (sub.length === 2) (sub as any)(undefined, undefined)
+          else (sub as any)(undefined, undefined, undefined)
+        }
+      }, this.locSubNsReg)
+
+
+
       this.notifyParentOfChangeCbs.clear()
       for (const key in this.funcThis) {
         if (this.funcThis[key] instanceof Data) {
@@ -973,11 +999,11 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         
 
 
-        const destroyVals = [] as (Data | DataBase)[]
+        const destroyVals = {} as {[key in string]: (Data | DataBase)}
         const removeFunc = (key: string) => {
           const val = funcThis[key]
           this.callMeWithDiffIndex.delete(key)
-          destroyVals.push(diffFromThis.removed[key] = val)
+          destroyVals[key] = val
         }
 
         for (const key of explicitDeleteKeys) {
@@ -990,16 +1016,16 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
           }
         }
 
-        this.inBulkChange = false
         this.aggregateCall(diffFromThis, undefined)
-        this.flushCall()
-        this.inBulkChange = true
 
-        for (const val of destroyVals) {
+        for (const key in destroyVals) {
+          const val = destroyVals[key]
           if (val instanceof Data) (val as any).destroy()
-          else val[internalDataBaseBridge].destroy(this)
+          else val[internalDataBaseBridge].destroy(this, key)
         }
-        this.discardCall()
+        
+        this.inBulkChange = false
+        this.flushCall()
 
         return funcThis
       }
