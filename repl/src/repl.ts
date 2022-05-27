@@ -12,22 +12,39 @@ import { MultiMap } from "./../../app/src/lib/multiMap"
 import { deepEqual } from "fast-equals"
 
 
-const db = new DataBase({
-  lel: {woow: {insideWow: "wow"}, lel: "leeel"}
-})
-db({lel: {woow: {lel: db().lel}}})
 
-// db(console.log)
 
-db.lel.woow((full, diff) => {
-  console.log(cloneKeys(full), cloneKeys(diff))
-  debugger
+let d1 = new Data(1)
+    let d2 = new Data("2")
+    let dd = new DataCollection(d1, d2)
+    let d3 = new Data(3)
+    let d4 = new Data("4")
 
-}, false, false)
+    let ddd = new DataCollection(dd, d3, d4)
+    ddd.get((...a) => {
+      expect(a).toEqual([[1, "2"], 3, "4"])
+    })
 
-debugger
-db({lel: undefined})
-// db({lel2: undefined})
+
+
+
+
+// const db = new DataBase({
+//   lel: {woow: {insideWow: "wow"}, lel: "leeel"}
+// })
+// db({lel: {woow: {lel: db().lel}}})
+
+// // db(console.log)
+
+// db.lel.woow((full, diff) => {
+//   console.log(cloneKeys(full), cloneKeys(diff))
+//   debugger
+
+// }, false, false)
+
+// debugger
+// db({lel: undefined})
+// // db({lel2: undefined})
 
 
 

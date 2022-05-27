@@ -26,10 +26,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
       }
       else {
         this.datas.forEach((data, i) => {
-          const val = data.get()
-          if (this.store[i] instanceof Array) this.store[i] = val
-          else this.store[i] = val.first
-
+          this.store[i] = data.get()
           this.observers[i].activate(false)
         })
       }
@@ -73,9 +70,8 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
 
 
     this.datas.ea((data, i) => {
-      this.observers[i] = data.get((...val: Value[]) => {
-        if (this.store[i] instanceof Array) this.store[i] = val
-        else this.store[i] = val.first
+      this.observers[i] = data.get(() => {
+        this.store[i] = data.get()
         this.__call()
       }, false)
     })
@@ -112,12 +108,14 @@ const attach = constructAttatchToPrototype(DataCollection.prototype)
 
 attach("call", call)
 attach("unsubscribe", function(subscriptionToken: Token<any>) {
-  if (unsubscribe.call(this, subscriptionToken))
-  this.subscriptionsLength.set(this.subscriptionsLength.get() - 1)
+  const suc = unsubscribe.call(this, subscriptionToken)
+  if (suc) this.subscriptionsLength.set(this.subscriptionsLength.get() - 1)
+  return suc
 })
 attach(["subscribeToThis", "subscribeToChildren", "subscribe"], function(subscription: any, initialize: any) {
-  subscribe.call(this, subscription, initialize)
+  const ret = subscribe.call(this, subscription, initialize)
   this.subscriptionsLength.set(this.subscriptionsLength.get() + 1)
+  return ret
 })
 
 DataCollection.prototype[instanceTypeSym] = "DataCollection"
