@@ -109,13 +109,14 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
 
 const attach = constructAttatchToPrototype(DataCollection.prototype)
 
+
 attach("call", call)
 attach("unsubscribe", function(subscriptionToken: Token<any>) {
-  if (unsubscribe(subscriptionToken))
+  if (unsubscribe.call(this, subscriptionToken))
   this.subscriptionsLength.set(this.subscriptionsLength.get() - 1)
 })
 attach(["subscribeToThis", "subscribeToChildren", "subscribe"], function(subscription: any, initialize: any) {
-  subscribe(subscription, initialize)
+  subscribe.call(this, subscription, initialize)
   this.subscriptionsLength.set(this.subscriptionsLength.get() + 1)
 })
 
