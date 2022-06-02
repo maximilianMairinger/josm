@@ -931,7 +931,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 else { // newVal is primitive and prop is DataBase
                   //@ts-ignore
                   this.store[key] = newVal
-                  diffFromThis.added[key] = cloneUntilParsingId(newVal)
+                  diffFromThis.added[key] = newVal
                   prop[internalDataBaseBridge].destroy(this)
                   constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
                   const specialOnDel = () => {
@@ -977,7 +977,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
               }
               else { // newVal primitive and prop is undefined
                 (this.store as any)[key] = newVal
-                diffFromThis.added[key] = cloneUntilParsingId(newVal)
+                diffFromThis.added[key] = newVal
                 constructAttatchToPrototype(funcThis)(key, {value: new Data(newVal, defaultVal), enumerable: true})
                 const specialOnDel = () => {
                   sub.deactivate()
