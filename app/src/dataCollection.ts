@@ -1,7 +1,7 @@
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import LinkedList, { Token } from "fast-linked-list"
 import diff from "fast-object-diff"
-import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin, instanceTypeSym, call, subscribe, Data, subscriptionDiffSymbol } from "./data"
+import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin, instanceTypeSym, call, subscribe, Data, subscriptionDiffSymbol, localSubscriptionNamespace } from "./data"
 
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: LinkedList<Subscription<Values>> = new LinkedList()
@@ -17,8 +17,10 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
   private observers: DataSubscription<[Value]>[] = []
 
   constructor(...datas: FuckedUpDataSetify<Values>) {
+    localSubscriptionNamespace.dont(this)
     //@ts-ignore
     this.set(...datas)
+    
 
     this.subscriptionsEmpty.get((empty) => {
       if (empty) {

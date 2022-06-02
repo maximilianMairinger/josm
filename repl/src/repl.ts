@@ -13,17 +13,23 @@ import { deepEqual } from "fast-equals"
 
 
 
+let dc: any
+const db = new DataBase({}) as any
 
-let d1 = new Data(1)
-    let d2 = new Data("2")
-    let dd = new DataCollection(d1, d2)
-    let d3 = new Data(3)
-    let d4 = new Data("4")
+db((full, added, rm) => {
+  for (const key in added) {
+    dc = new DataCollection(db.a).get((a) => {
+      console.log(a)
+    }, true)
+  }
+}, false, false)
 
-    let ddd = new DataCollection(dd, d3, d4)
-    ddd.get((...a) => {
-      expect(a).toEqual([[1, "2"], 3, "4"])
-    })
+db({a: 2})
+db.a.set(3)
+db({b: 2})
+db({c: 2})
+
+db.a.set(4)
 
 
 

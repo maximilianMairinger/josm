@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace, needFallbackForSubs, registerSubscriptionNamespace, subscriptionDiffSymbol, instanceTypeSym } from "./data"
+import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace, needFallbackForSubs, registerSubscriptionNamespace, subscriptionDiffSymbol, instanceTypeSym, instanceTypeLink } from "./data"
 import { DataCollection } from "./dataCollection"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
@@ -233,6 +233,8 @@ const dataLinkTokTunnel = Symbol("dataLinkSubTunnel")
 class DataBaseLink extends Function implements Link {
   private dataBaseFunc: DataBase<any>
   private dataBase: InternalDataBase<any>
+  // needed registration api
+  private _data: InternalDataBase<any>
   private funcThis: any
   private wrapper: DataBase<any>
   private paths: DataSet<PrimitivePathSegment[]>[] | PrimitivePathSegment[]
@@ -243,8 +245,7 @@ class DataBaseLink extends Function implements Link {
 
   private pathSubscriptions: DataSubscription<PathSegment[]>[]
 
-  // needed registration api
-  private _data: any
+  
 
   
 
@@ -1233,24 +1234,31 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
     else diffFromThisForParents = diffFromThis.added
 
-    if (!isObjectEmpty(diffFromThisForParents)) {
-      registerSubscriptionNamespace(() => {
+    const diffFromChildAndThis = {...diffFromThisForParents, ...diffFromChild}
+
+    registerSubscriptionNamespace(() => {
+      for (const key in diffFromThis.added) {
+        localSubscriptionNamespace.dont(this.funcThis[key])
+      }
+      if (!isObjectEmpty(diffFromThisForParents)) {
         const store = this.store
         const subs = this.subscriptionsOfThisChanges as any as Function[]
         for (const sub of subs) {
           if (sub.length === 2) (sub as any)(store, diffFromThisForParents)
           else (sub as any)(store, diffFromThis.added, diffFromThis.removed)
         }
-      }, this.locSubNsReg)
-    }
+      }
 
-    const diffFromChildAndThis = {...diffFromThisForParents, ...diffFromChild}
-
-    if (!isObjectEmpty(diffFromChildAndThis)) {
-      registerSubscriptionNamespace(() => {
+      if (!isObjectEmpty(diffFromChildAndThis)) {
         this.__call(this.subscriptionsOfChildChanges as any, diffFromChildAndThis)
-      }, this.locSubNsReg)
-    }
+      }
+    }, this.locSubNsReg)
+    
+
+    
+
+
+
 
 
     const deeperLs = []
@@ -1351,8 +1359,9 @@ export type DataBase<Store extends {[key in string]: any} = unknown, S extends R
 export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Store>(store: Store, _Default?: _Default): DataBase<Store> })
 
 
-
-
 DataBase.prototype[instanceTypeSym] = "DataBase"
 DataLink.prototype[instanceTypeSym] = "Data"
 DataBaseLink.prototype[instanceTypeSym] = "DataBase"
+DataLink.prototype[instanceTypeLink] = true
+DataBaseLink.prototype[instanceTypeLink] = true
+

@@ -179,7 +179,8 @@ export function registerSubscriptionNamespace(go: () => void, locSubNsReg: any[]
     if (!dont.includes(me._data)) locSubNsReg.push(me)
   }
   localSubscriptionNamespace.dont = (that) => {
-    dont.push(that)
+    if (that[instanceTypeLink]) dont.push(that._data)
+    else dont.push(that)
   }
   go()
   localSubscriptionNamespace.register = lastReg
@@ -485,5 +486,7 @@ export const DataSubscription = DataBaseSubscription as ({
 
 export const subscriptionDiffSymbol = Symbol("diff")
 
+export const instanceTypeLink = Symbol("instanceTypeLink")
 export const instanceTypeSym = Symbol("instanceType")
 Data.prototype[instanceTypeSym] = "Data"
+
