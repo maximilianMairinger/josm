@@ -145,8 +145,8 @@ export type FuckedUpDataSetify<T extends any[]> = {
 
 
 
-export function unsubscribe(subscriptionToken: Token<any>) {
-  subscriptionToken.value[subscriptionDiffSymbol] = cloneKeysButKeepSym(this.get())
+function unsubscribe(subscriptionToken: Token<any>) {
+  subscriptionToken.value[subscriptionDiffSymbol] = this.get()
   return subscriptionToken.remove()
   
   // (this.subscriptions as LinkedList<any>)

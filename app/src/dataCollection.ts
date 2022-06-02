@@ -1,7 +1,7 @@
 import { constructAttatchToPrototype } from "attatch-to-prototype"
 import LinkedList, { Token } from "fast-linked-list"
 import diff from "fast-object-diff"
-import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin, instanceTypeSym, call, unsubscribe, subscribe, Data } from "./data"
+import { Subscription, FuckedUpDataSetify, DataSubscription, dataSubscriptionCbBridge, attachSubscribableMixin, instanceTypeSym, call, subscribe, Data, subscriptionDiffSymbol } from "./data"
 
 export class DataCollection<Values extends any[] = unknown[], Value extends Values[number] = Values[number]> {
   private subscriptions: LinkedList<Subscription<Values>> = new LinkedList()
@@ -108,7 +108,8 @@ const attach = constructAttatchToPrototype(DataCollection.prototype)
 
 attach("call", call)
 attach("unsubscribe", function(subscriptionToken: Token<any>) {
-  const suc = unsubscribe.call(this, subscriptionToken)
+  subscriptionToken.value[subscriptionDiffSymbol] = [...this.get()]
+  const suc = subscriptionToken.remove()
   if (suc) this.subscriptionsLength.set(this.subscriptionsLength.get() - 1)
   return suc
 })
