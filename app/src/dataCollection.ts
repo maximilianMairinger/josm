@@ -48,12 +48,10 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
 
 
   public set(...datas: any[]) {
-    const empty = this.subscriptionsEmpty.get()
-    if (empty) {
-      this.datas.ea((data, i) => {
-        data.got(this.observers[i])
-      })
-    }
+    const noSubs = this.subscriptionsEmpty.get()
+    this.datas.ea((data, i) => {
+      data.got(this.observers[i])
+    })
     this.observers.clear();
 
     (this as any).datas = datas
@@ -62,7 +60,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
     //@ts-ignore
     this.store = this.datas.map((data) => data.get())
 
-    if (empty) {
+    if (!noSubs) {
       const anyChange = diff.flat(oldStore, this.store)
       if (anyChange) this.__call()
     }
@@ -76,7 +74,7 @@ export class DataCollection<Values extends any[] = unknown[], Value extends Valu
       }, false)
     })
 
-    if (empty) for (const observer of this.observers) observer.deactivate()
+    if (noSubs) for (const observer of this.observers) observer.deactivate()
   }
 
   public get(): Values
