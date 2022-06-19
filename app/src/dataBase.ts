@@ -33,7 +33,7 @@ interface Link {
 
 function justifyNesting(obj: any) {
   let just = false;
-  const deeper = [];
+  const deeper = [] as any[];
   for (const key in obj) {
     const val = obj[key];
     if (typeof val === "object") deeper.push({ key, val });
@@ -83,7 +83,7 @@ const unduplifyNestedObjectPath = (() => {
   }
 
   function unduplify(obj: any) {
-    const deeper = [];
+    const deeper = [] as any[];
     for (const key in obj) {
       const val = obj[key];
       if (typeof val === "object") {
@@ -203,7 +203,7 @@ export class DataLink extends Data implements Link {
   updatePathResolvent(wrapper: DataBase<any> = this.wrapper) {
     let parent = this.wrapper = wrapper as any
     this.currentPathIndex.ea((path) => {
-      parent = parent[path]
+      parent = parent[path as PrimitivePathSegment]
     })
 
     //@ts-ignore
@@ -219,7 +219,7 @@ export class DataLink extends Data implements Link {
   destroyPathSubscriptions() {}
   resolvePath() {}
   dataChange(wrapper?: DataBase<any>) {
-    this.wrapper = wrapper
+    this.wrapper = wrapper as any
   
     this.resolvePath()
   }
@@ -297,7 +297,7 @@ class DataBaseLink extends Function implements Link {
 
     let parent = this.wrapper = wrapper as any
     this.currentPathIndex.ea((path) => {
-      parent = parent[path]
+      parent = parent[path as any]
     })
 
     if (this.dataBaseFunc !== parent) {
@@ -639,7 +639,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       
       return f
     }
-    this.initFuncProps(store, _default)
+    this.initFuncProps(store as any, _default)
 
     if (notifyParentOfChange) {
       this.isRoot = false
@@ -845,8 +845,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
       this.inBulkChange = true
       
-      if (strict) handledKeys = []
-      let explicitDeleteKeys = []
+      if (strict) handledKeys = [] as any[]
+      let explicitDeleteKeys = [] as any[]
 
       let keysOfNewData: string[]
 
@@ -855,6 +855,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
           keysOfNewData = Object.keys(newData)
 
           for (const key of keysOfNewData) {
+            // @ts-ignore
             if (strict) handledKeys.push(key)
 
             const prop = funcThis[key]
@@ -1015,6 +1016,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
         if (strict) {
           for (const key in funcThis) {
+            // @ts-ignore
             if (!handledKeys.includes(key)) removeFunc(key)
           }
         }
@@ -1024,7 +1026,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         for (const key in destroyVals) {
           const val = destroyVals[key]
           if (val instanceof Data) (val as any).destroy()
-          else val[internalDataBaseBridge].destroy(this, key)
+          else (val[internalDataBaseBridge as any] as any).destroy(this, key)
         }
         
         this.inBulkChange = false
@@ -1119,6 +1121,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 
     constructAttatchToPrototype([this.store])(parsingId, this.funcThis)
+    // @ts-ignore
     resParsingId(this.store[parsingId as any])
   }
 
@@ -1161,16 +1164,16 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   private diffFromChildCache: object = {}
   private callOrigins = new Set<any>()
   private flushAble = false
-  private canRemoveFromOriginAfterFlushTimeout = []
-  private canRemoveFromOriginAfterFlush = []
+  private canRemoveFromOriginAfterFlushTimeout = [] as any[]
+  private canRemoveFromOriginAfterFlush = [] as any[]
 
   aggregateCall(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: Set<any>, diff: object} | undefined) {
     if (diffFromThis) {
       if (diffFromThis.added) for (const key in diffFromThis.added) {
         const callId = {c: this.funcThis[key]}
         this.callOrigins.add(callId)
-        this.canRemoveFromOriginAfterFlush.push(callId)
-        this.diffFromThisCache.added[key] = diffFromThis.added[key]
+        this.canRemoveFromOriginAfterFlush.push(callId);
+        (this.diffFromThisCache as any).added[key] = diffFromThis.added[key]
       }
       if (diffFromThis.removed) for (const key in diffFromThis.removed) {
         const callId = {c: this.funcThis[key]}
@@ -1232,7 +1235,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         diffFromThisForParents[key] = undefined
       }
     }
-    else diffFromThisForParents = diffFromThis.added
+    else diffFromThisForParents = diffFromThis.added as any
 
     const diffFromChildAndThis = {...diffFromThisForParents, ...diffFromChild}
 
@@ -1261,13 +1264,13 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 
 
-    const deeperLs = []
+    const deeperLs = [] as any[]
     for (const f of this.notifyParentOfChangeCbs) deeperLs.push(f(diffFromChildAndThis, this.callOrigins))
     this.discardCall()
 
     if (primaryFlush) {
       const recDeeper = () => {
-        const deeeep = []
+        const deeeep = [] as any[]
         for (const deeper of deeperLs) {
           const ret = deeper()
           if (ret) deeeep.push(ret)
@@ -1281,7 +1284,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
     else {
       const retRecDeeper = () => {
-        const deeeep = []
+        const deeeep = [] as any[]
         for (const deeper of deeperLs) {
           const ret = deeper()
           if (ret) deeeep.push(ret)
@@ -1347,13 +1350,13 @@ type DataBaseify<Type extends object> = {
   [Key in keyof Type]: Type[Key] extends object ? RecDataBase<RemovePotentialArrayFunctions<Type[Key]>> : Data<Type[Key]>
 }
 
-type RecDataBase<Store extends {[key in string]: any} = unknown> = DataBase<Store>/* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
+type RecDataBase<Store extends {[key in string]: any} = {[key in string]: any}> = DataBase<Store>/* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
 
 // when omiting function props the expression is not callable any more so for now this does nothing (maybe this changes in the future)
 type FunctionProperties = "apply" | "call" | "caller" | "bind" | "arguments" | "length" | "prototype" | "name" | "toString"
 type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionProperties>
 
-export type DataBase<Store extends {[key in string]: any} = unknown, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
+export type DataBase<Store extends {[key in string]: any} = {[key in string]: any}, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
 
 //@ts-ignore
 export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Store>(store: Store, _Default?: _Default): DataBase<Store> })
