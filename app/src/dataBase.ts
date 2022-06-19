@@ -17,6 +17,7 @@ xrray(Array)
 import { tunnelSubscription, justInheritanceFlag } from "./data"
 import LinkedList, { Token } from "fast-linked-list"
 import copy from "fast-copy"
+import keyIndex from "key-index"
 
 
 export const parsingId = Symbol("parsingId")
@@ -247,11 +248,31 @@ class DataBaseLink extends Function implements Link {
 
   
 
+  private distributedPathIndex = keyIndex((key: string) => {
+    let linkInstance: any
+    let link: any
+    if (this.dataBaseFunc[key] instanceof Data) linkInstance = link = new DataLink(this.dataBaseFunc as any, [key])
+    else linkInstance = (link = new DataBaseLink(this.dataBaseFunc as any, [key]))[internalDataBaseBridge]
+    // let des = linkInstance.destroy.bind(linkInstance)
+    // linkInstance.destroy = () => {
+    //   des()
+    //   delete this.funcThis[key]
+    // }
+    // localSubscriptionNamespace.register(linkInstance)
+    this.distributedLinks.push(linkInstance)
+    return link
+  })
+
   
 
   constructor(wrapper: DataBase<any>, paths: DataSet<PrimitivePathSegment[]>[] | PrimitivePathSegment[]) {
     super(paramsOfDataBaseLinkFunction, bodyOfDataBaseLinkFunction)
-    this.funcThis = this.bind(this)
+    
+    this.funcThis = new Proxy(this.bind(this), {
+      get: (target, key) => {
+        return this.distributedPathIndex(key)
+      }
+    })
 
     this.paths = paths
     this.pathSubscriptions = []
@@ -268,7 +289,6 @@ class DataBaseLink extends Function implements Link {
     for (let key in index) {
       attach(key, index[key])  
     }
-
 
     return this.funcThis
   }
@@ -417,7 +437,7 @@ attachToLinks("resolvePath", function() {
           this.currentPathIndex[maTop] = e
           maTop++
         })
-        this.updaupdatePathResolventtePathResolvement()
+        this.updatePathResolvement()
       }, false))
 
       path.get().ea((e) => {
