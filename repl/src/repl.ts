@@ -18,8 +18,8 @@ const currentLanguage = new Data("de") as Data<"en" | "de">
 const superLang = new DataBase<{en: object, de: object}>({de: {hey: "Hallo"} as any, en: {hey: "hi eng"} as any})
 
 const lang = superLang(currentLanguage) as any as DataBase<any>
-superLang.de({what: "was"})
-console.log(lang.what)
+superLang.de({what: {deep: "was"}})
+console.log(lang.what.deep)
 
 
 

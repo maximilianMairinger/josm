@@ -280,7 +280,6 @@ class DataBaseLink extends Function implements Link {
     this.subscriptions = []
     
     this.dataChange(wrapper)
-    this.initFuncProps()
     
 
     this.funcThis[internalDataBaseBridge] = this
@@ -340,30 +339,6 @@ class DataBaseLink extends Function implements Link {
     
   }
 
-  initFuncProps() {
-    for (let key in this.dataBaseFunc) {
-      
-      Object.defineProperty(this.funcThis, key, {
-        get: () => {
-          let linkInstance: any
-          let link: any
-          if (this.dataBaseFunc[key] instanceof Data) linkInstance = link = new DataLink(this.dataBaseFunc as any, [key])
-          else linkInstance = (link = new DataBaseLink(this.dataBaseFunc as any, [key]))[internalDataBaseBridge]
-          // let des = linkInstance.destroy.bind(linkInstance)
-          // linkInstance.destroy = () => {
-          //   des()
-          //   delete this.funcThis[key]
-          // }
-          // localSubscriptionNamespace.register(linkInstance)
-          this.distributedLinks.push(linkInstance)
-          Object.defineProperty(this.funcThis, key, {value: link, configurable: true})
-          return link
-        }, 
-        configurable: true
-      })
-      
-    }
-  }
 
   // TODO: get set sub unsub usw
 
