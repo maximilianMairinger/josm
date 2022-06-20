@@ -270,7 +270,7 @@ class DataBaseLink extends Function implements Link {
     
     this.funcThis = new Proxy(this.bind(this), {
       get: (target, key) => {
-        return typeof key === "string" ? this.distributedPathIndex(key as any) : target[key]
+        return typeof key === "string" ? this.dataBaseFunc[key] !== undefined ? this.distributedPathIndex(key as any) : undefined : target[key]
       }
     })
 
