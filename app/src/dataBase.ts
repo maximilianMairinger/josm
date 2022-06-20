@@ -584,6 +584,12 @@ const bodyOfDataBaseLinkFunction = entireDataBaseLinkFunction.slice(entireDataBa
 export let internalDataBaseBridge = Symbol("InternalDataBaseBridge")
 
 
+type QueryForStore<Store extends object> = {
+  [K in keyof Store]?: Store[K] extends object ? (boolean | QueryForStore<Store[K]>) : boolean
+}
+
+
+
 export class InternalDataBase<Store extends ComplexData, _Default extends Store = Store> extends Function {
   private funcThis: any
 
@@ -602,10 +608,12 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   private locSubNsReg: any[]
   private isRoot: boolean
 
-  constructor(store?: Store, private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
+
+
+  constructor(store?: Store | ((query: QueryForStore<Store>) => Partial<Store>), private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
-    this.funcThis = this.bind(this)
+    const myFuncThis = this.funcThis = this.bind(this)
 
     this.linksOfMe = []
     this.locSubNsReg = []
@@ -657,7 +665,11 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
     
 
-    return this.funcThis
+    return new Proxy(myFuncThis, {
+      get: (target, key) => {
+        return key in target ? target[key] : // todo
+      }
+    })
   }
 
 

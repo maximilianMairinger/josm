@@ -12,14 +12,85 @@ import { MultiMap } from "./../../app/src/lib/multiMap"
 import { deepEqual } from "fast-equals"
 
 
-const currentLanguage = new Data("de") as Data<"en" | "de">
 
 
-const superLang = new DataBase<{en: object, de: object}>({de: {hey: "Hallo"} as any, en: {hey: "hi eng"} as any})
+class DB extends Function {
+  constructor(private store: object) {
+    super("...a", "console.log(this.store)")
 
-const lang = superLang(currentLanguage) as any as DataBase<any>
-superLang.de({what: {deep: "was"}})
-console.log(lang.whee)
+
+    const p = new Proxy(this.bind(this), {
+      get: (target, key) => {
+        return key === "constructor" ? DB : "lel"
+      }
+    })
+    
+    return p
+  }
+}
+
+class A {
+
+}
+class B extends A {
+
+}
+
+window.b = new B()
+
+
+const db = new DB({wwooo: 2})
+
+console.log(db instanceof DB)
+db()
+
+
+
+
+
+// const db = new DataBase({lel: {deep: 2}})
+
+
+
+
+// const sub = db((f, d) => {
+//   console.log(d)
+// })
+
+// sub.deactivate()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// const currentLanguage = new Data("de") as Data<"en" | "de">
+
+
+// const superLang = new DataBase<{en: object, de: object}>({de: {hey: "Hallo"} as any, en: {hey: "hi eng"} as any})
+
+// const lang = superLang(currentLanguage) as any as DataBase<any>
+// superLang.de({what: {deep: "was"}})
+// console.log(lang.whee)
 
 
 
