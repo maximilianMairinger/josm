@@ -3,7 +3,7 @@ import { DataSubscription } from "./../../app/src/data"
 // import { Data, DataBase } from "./../../app/src/extendedDB"
 import { Data, DataBase, DataCollection } from "./../../app/src/josm"
 import copy from "fast-copy"
-import { InternalDataBase, internalDataBaseBridge, parsingId } from "../../app/src/dataBase"
+import { InternalDataBase, parsingId } from "../../app/src/dataBase"
 
 // TODO: what about parsing queties not created with stringify? can cause infinite recursion?
 import { stringify, parse, retrocycle } from "./serialize"
@@ -26,7 +26,7 @@ const sourceOb = {
 
 
 const db = new DataBase<typeof sourceOb>(async (query) => {
-  await delay(1000)
+  await delay(300)
   return project(sourceOb, query) as Partial<typeof sourceOb>
 });
 
@@ -35,10 +35,13 @@ const db = new DataBase<typeof sourceOb>(async (query) => {
 //   console.log(await db.max.userName.get())
 // })()
 
-db.max((v) => {
+const sub = db.max((v) => {
   console.log(v)
 })
 
+sub.deactivate()
+sub.activate()
+// sub.activate(false)
 
 
 

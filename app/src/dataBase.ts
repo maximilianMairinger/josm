@@ -14,7 +14,7 @@ xtring()
 import xrray from "xrray"
 xrray(Array)
 
-import { tunnelSubscription, justInheritanceFlag } from "./data"
+import { tunnelSubscription, justInheritanceFlag, internalDataBaseBridge } from "./data"
 import LinkedList, { Token } from "fast-linked-list"
 import copy from "fast-copy"
 import keyIndex from "key-index"
@@ -582,7 +582,6 @@ const entireDataBaseLinkFunction = DataBaseLink.prototype.LinkFunctionWrapper.to
 const paramsOfDataBaseLinkFunction = entireDataBaseLinkFunction.slice(entireDataBaseLinkFunction.indexOf("(") + 1, nthIndex(entireDataBaseLinkFunction, ")", 1));
 const bodyOfDataBaseLinkFunction = entireDataBaseLinkFunction.slice(entireDataBaseLinkFunction.indexOf("{") + 1, entireDataBaseLinkFunction.lastIndexOf("}"));
 
-export let internalDataBaseBridge = Symbol("InternalDataBaseBridge")
 
 
 type QueryForStore<Store extends object> = {
@@ -609,10 +608,15 @@ function futureMainFunc(...params: any[]) {
     (async () => {
       this.prox(await this.queryFunc(true))
     })()
-    // TODO: DataSub implementation
-    return this[futurePromiseSym].then((el) => {
-      return el(...params)
+    const initDataBase = new DataBase({})
+    const datSub = initDataBase(p, params[1], false)
+    const init = params[2]
+    this[futurePromiseSym].then((el) => {
+      if (datSub.dataBase() === initDataBase) {
+        datSub.dataBase(el, init)
+      }
     })
+    return datSub
   }
   else {
     
@@ -679,6 +683,7 @@ class Future extends Function {
             datSub.data(el, init)
           }
         })
+        return datSub
       }
     }
 
@@ -795,11 +800,16 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         }
       })
       this.futFuncThis = queryFunc.fut !== undefined ? queryFunc.fut : this.funcThis
+      this.pFuncThis = myProxy
       return myProxy
     }
-    else return myFuncThis
+    else {
+      this.pFuncThis = this.funcThis
+      return myFuncThis
+    }
   }
 
+  private pFuncThis: any
   private futFuncThis: any
   private myProx: any
 

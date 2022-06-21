@@ -324,7 +324,11 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
   public dataBase(): ConcreteData
   public dataBase(data: ConcreteData, initialize?: boolean): this
   public dataBase(data?: ConcreteData, initialize?: boolean) {
-    return this.data(data, initialize) as any
+    if (data === undefined) return (this.data() as any).pFuncThis
+    else {
+      const intDB = data[internalDataBaseBridge] === undefined ? data : data[internalDataBaseBridge]
+      return this.data(intDB, initialize)
+    }
   }
   
   public subscription(): ConcreteSubscription
@@ -410,6 +414,8 @@ export class _DataBaseSubscription<Values extends Value[], TupleValue extends [V
   }
 
 }
+
+export const internalDataBaseBridge = Symbol("InternalDataBaseBridge")
 
 export type DataBaseSubscription<Values extends Value[], TupleValue extends [Value] = [Values[number]], Value = TupleValue[0], ConcreteData extends Subscribable<Values> = Subscribable<Values>, ConcreteSubscription extends Subscription<Values> = Subscription<Values>> = _DataBaseSubscription<Values, TupleValue, Value, ConcreteData, ConcreteSubscription>
 export const DataBaseSubscription = _DataBaseSubscription as any as {
