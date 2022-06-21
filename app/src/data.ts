@@ -119,7 +119,6 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   public constructor(value?: Value, _default?: _Default)
   public constructor(value?: Value, private _default?: _Default) {
     if (value !== justInheritanceFlag as any) {
-      // TODO: default
       if (value instanceof Function) {
         if (_default === undefined) return new DataFuture(value) as any
         else {
@@ -127,6 +126,7 @@ export class Data<Value = unknown, _Default extends Value = Value> {
           const getFunc = value
           value = undefined
           this.get = (...a: any) => {
+            if (this.get() !== this._default) return
             (async () => {
               const res = await getFunc(true)
               if (this.get() === this._default) this.set(res)

@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace, needFallbackForSubs, registerSubscriptionNamespace, subscriptionDiffSymbol, instanceTypeSym, instanceTypeLink } from "./data"
+import { Data, DataSubscription, DataBaseSubscription, Subscription, DataSet, dataSubscriptionCbBridge, Subscribable, localSubscriptionNamespace, needFallbackForSubs, registerSubscriptionNamespace, subscriptionDiffSymbol, instanceTypeSym, instanceTypeLink, futurePromiseSym } from "./data"
 import { DataCollection } from "./dataCollection"
 import { nthIndex } from "./helper"
 import { constructAttatchToPrototype } from "attatch-to-prototype"
@@ -626,32 +626,24 @@ function futureMainFunc(...params: any[]) {
   }
 }
 
+
 const { params: futureFuncParams, body: futureFuncBody } = functionToStr(futureMainFunc)
 
-const futurePromiseSym = Symbol("FuturePromise")
-const distributedFuturesSym = Symbol("DistributedFutures")
-class Future extends Function {
 
-  
-  private prox: any
 
-  // when resing a promise with this as a value, the promise tries to call then. And Proxy tries to resolve this parameter get if this is not defined as undefined here
+import { DataFuture } from "./data"
+class Future extends DataFuture {
+  protected prox: any
+  // when resing a promise with this as a value, the promise tries to call then. 
+  // And Proxy tries to resolve this parameter get if this is not defined as undefined here
   then = undefined
-
-  constructor(private queryFunc: Function) {
-    super(futureFuncParams, futureFuncBody)
-    this[futurePromiseSym] = new ResablePromise<Data<void> | DataBase<object>>()
-
-    this[futurePromiseSym].catch(() => {
-      console.error("whoa")
-    })
-
-    
-    
+  constructor(queryFunc: Function) {
+    super(queryFunc, futureFuncParams, futureFuncBody)
+        
     const prox = this.prox = new Proxy(this.bind(this), {
       get: (target, key) => {
         if (key in this || typeof key === "symbol") return this[key]
-        const f = new Future(async (query) => (await queryFunc({[key]: query}))[key])
+        const f = new DataFuture(async (query) => (await queryFunc({[key]: query}))[key])
         this[key] = f
         f[futurePromiseSym].then((r) => {
           this[key] = r
@@ -662,50 +654,8 @@ class Future extends Function {
     (queryFunc as any).fut = this
     return prox
   }
-  get(sub?: any, init?: any) {
-    (async () => {
-      this.set(await this.queryFunc(true))
-    })()
-    if (sub !== undefined) {
-      if (sub instanceof DataSubscription) {
-        this[futurePromiseSym].then((el) => el.get(sub, init))
-        return sub
-      }
-      else if (sub[dataSubscriptionCbBridge]) {
-        this[futurePromiseSym].then((el) => el.get(sub, init))
-        return sub[dataSubscriptionCbBridge]
-      }
-      else {
-        const initData = new Data()
-        const datSub = new DataSubscription(initData, sub, true, false)
-        this[futurePromiseSym].then((el) => {
-          if (datSub.data() === initData) {
-            datSub.data(el, init)
-          }
-        })
-        return datSub
-      }
-    }
-
-    return this[futurePromiseSym].then((el) => el.get(sub, init))
-  }
-  got(sub: any) {
-    Data.prototype.got(sub)
-  }
-  addBeforeDestroyCb(from: any, cb: () => void) {
-    return this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(from, cb))
-  }
-  destroy() {
-    this[futurePromiseSym].rej()
-  }
-  valueOf() {
-    return this.get()
-  }
-  set(value: any) {
-    this[futurePromiseSym].res(new Data(value))
-    return value
-  }
 }
+
 
 
 export class InternalDataBase<Store extends ComplexData, _Default extends Store = Store> extends Function {
@@ -788,9 +738,30 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       // when resing a promise with this as a value, the promise tries to call then. And Proxy tries to resolve this parameter get if this is not defined as undefined here
       myFuncThis.then = undefined
       const queryFunc = store as Function & {fut?: any}
+      this.onceGetCb.push(async () => {
+        if (!isObjectEmpty(store)) return
+        const res = await queryFunc(true)
+        if (!isObjectEmpty(store)) return
+        this.funcThis(res)
+      })
       const myProxy = this.myProx = new Proxy(myFuncThis, {
         get: (target, key) => {
-          if (key in target || typeof key === "symbol") return target[key]
+          if (typeof key === "symbol") return target[key]
+          if (key in target) {
+            debugger
+            if (store[key] === undefined) {
+              // todo init props: pass queryfunc
+              if (_default[key] !== undefined) {
+                this.funcThis[key][internalDataBaseBridge].onceGetCb.push(async () => {
+                  if (store[key] !== undefined) return
+                  const res = await queryFunc({[key]: true})
+                  if (store[key] !== undefined) return
+                  this.funcThis(res)
+                })
+              }
+            }
+            return target[key]
+          }
           const f = new Future(async (query) => (await queryFunc({[key]: query}))[key]);
           myFuncThis[key] = f
           f[futurePromiseSym].then((r) => {
@@ -813,6 +784,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   private futFuncThis: any
   private myProx: any
 
+  private onceGetCb = new LinkedList<Function>()
 
   addNotifyParentOfChangeCb(...cb: ((diff: any, origins: Set<any>) => (() => void))[]) {
     this.notifyParentOfChangeCbs.push(...cb)
@@ -967,6 +939,9 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
     
     else if (typeof path_data_subscription === "function" || path_data_subscription instanceof DataSubscription) {
+      for (const onceGetCb of this.onceGetCb) onceGetCb()
+      this.onceGetCb.clear()
+
       let notifyAboutChangesOfChilds = (notifyAboutChangesOfChilds_path_strict === undefined ? true : notifyAboutChangesOfChilds_path_strict) as boolean
       let subscription = path_data_subscription
       let initialize: boolean = paths[0] === undefined ? true : paths[0]
@@ -976,6 +951,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       else return new DataBaseSubscription(this as any, subscription as any, true, initialize, notifyAboutChangesOfChilds)
     }
     else if (arguments.length === 0) {
+      for (const onceGetCb of this.onceGetCb) onceGetCb()
+      this.onceGetCb.clear()
       return this.store
     }
     else if (typeof path_data_subscription === objectString || path_data_subscription === undefined) {
@@ -1216,62 +1193,61 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 
     for (const key of newStoreKeys) {
+
       const defaultVal = this._default !== undefined ? this._default[key] : undefined
       const val = store[key]
-      if (val === undefined) (store as any)[key] = defaultVal
-      const useVal = val === undefined ? defaultVal : val
-      
+      const hasQueryFunc = val instanceof Function
+      const needFallback = val === undefined || hasQueryFunc
+      if (needFallback) (store as any)[key] = defaultVal
+      const useVal = needFallback ? defaultVal : val
 
       
 
-      // TODO: Is this needed or can you just make all functions non iteratable
-      if (typeof useVal !== "function") {
-        const _setToThis = constructAttatchToPrototype(funcThis, {enumerable: true})
-        const setToThis = (e) => _setToThis(key, {value: e})
-        const onDel = () => {
-          const diff = {removed: {}}
-          diff.removed[key] = undefined
-          delete val[parsingId]
-          delete funcThis[key]
-          delete this.store[key]
-          this.aggregateCall(diff, undefined)
-          this.flushCall()
-        };   
-        (onDel as any).key = key
+      const _setToThis = constructAttatchToPrototype(funcThis, {enumerable: true})
+      const setToThis = (e) => _setToThis(key, {value: e})
+      const onDel = () => {
+        const diff = {removed: {}}
+        diff.removed[key] = undefined
+        delete val[parsingId]
+        delete funcThis[key]
+        delete this.store[key]
+        this.aggregateCall(diff, undefined)
+        this.flushCall()
+      };   
+      (onDel as any).key = key
 
-        if (typeof useVal === objectString) {
-          if (useVal[parsingId] === undefined) {
-            setToThis(new InternalDataBase(val, defaultVal, this.callMeWithDiff(key)))
-            funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
-          }
-          else {
-            const attachF = () => {
-              setToThis(useVal[parsingId])
-              useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
-              funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
-            }
-            if (useVal[parsingId] instanceof Promise) useVal[parsingId].then(attachF)
-            else attachF()
-          }
+      if (typeof useVal === objectString || hasQueryFunc) {
+        if (useVal[parsingId] === undefined) {
+          setToThis(new InternalDataBase(val, defaultVal, this.callMeWithDiff(key)))
+          funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
         }
         else {
-          setToThis(new Data(val, defaultVal))
-
-          const specialOnDel = () => {
-            sub.deactivate()
-            onDel()
-          };
-          (specialOnDel as any).key = key
-          funcThis[key].addBeforeDestroyCb(this, onDel)
-          const sub = funcThis[key].get((e) => {
-            const diff = {}
-            diff[key] = e
-            //@ts-ignore
-            this.store[key] = e
-            this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
-            this.flushCall()
-          }, false)
+          const attachF = () => {
+            setToThis(useVal[parsingId])
+            useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+            funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
+          }
+          if (useVal[parsingId] instanceof Promise) useVal[parsingId].then(attachF)
+          else attachF()
         }
+      }
+      else {
+        setToThis(new Data(val, defaultVal))
+
+        const specialOnDel = () => {
+          sub.deactivate()
+          onDel()
+        };
+        (specialOnDel as any).key = key
+        funcThis[key].addBeforeDestroyCb(this, onDel)
+        const sub = funcThis[key].get((e) => {
+          const diff = {}
+          diff[key] = e
+          //@ts-ignore
+          this.store[key] = e
+          this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+          this.flushCall()
+        }, false)
       }
     }
 
@@ -1482,12 +1458,15 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 export type DataBaseFunction<Store extends {[key in string]: any}> = InternalDataBase<Store>["DataBaseFunction"]
 
+
 function functionToStr(func: Function) {
   const str = func.toString()
   const params = str.slice(str.indexOf("(") + 1, nthIndex(str, ")", 1));
   const body = str.slice(str.indexOf("{") + 1, str.lastIndexOf("}"));
   return {params, body}
 }
+
+
 
 const { params: paramsOfDataBaseFunction, body: bodyOfDataBaseFunction } = functionToStr((InternalDataBase.prototype as any).DataBaseFunctionWrapper)
 
@@ -1516,7 +1495,7 @@ type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionP
 export type DataBase<Store extends {[key in string]: any} = {[key in string]: any}, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
 
 //@ts-ignore
-export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Store>(store: Store | ((query: QueryForStore<Store>) => (Partial<Store> | Promise<Partial<Store>>)), _Default?: _Default): DataBase<Store> })
+export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Partial<Store>>(store: Store | ((query: QueryForStore<Store>) => (Partial<Store> | Promise<Partial<Store>>)), _Default?: _Default): DataBase<Store> })
 
 
 DataBase.prototype[instanceTypeSym] = "DataBase"

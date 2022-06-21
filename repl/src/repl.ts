@@ -16,38 +16,30 @@ import delay from "delay"
 
 
 
-const data = new Data(async (query) => {
+
+
+const sourceOb = {
+  max: {
+    userName: "max",
+    age: 20
+  },
+  marnie: {
+    userName: "marnie",
+    age: 50
+  },
+  root: true
+}
+
+
+// @ts-ignore
+const db = new DataBase<typeof sourceOb>(async (query) => {
   await delay(500)
-  return "hello " + query
-}, "default")
+  return project(sourceOb, query) as Partial<typeof sourceOb>
+}, {max: {userName: "unknown", age: 0}});
 
-data.get((v) => {
-  console.log("val", v)
-  // @ts-ignore
+db((f) => {
+  console.log(f)
 })
-
-
-
-delay(1000).then(() => {
-  debugger
-  data.set("whoo")
-
-})
-
-
-// const sourceOb = {
-//   max: {
-//     userName: "max",
-//     age: 20
-//   },
-//   marnie: {
-//     userName: "marnie",
-//     age: 50
-//   },
-//   root: true
-// }
-
-
 
 // // @ts-ignore
 // const db = new DataBase<{de: typeof sourceOb}>({de: async (query) => {
