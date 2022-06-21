@@ -84,7 +84,6 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   }
 
 
-  // TODO: Return false when not successfull; dont throw (maybe in general Xrray)
   public got(subscription: Subscription<[Value]> | DataSubscription<[Value]>): DataSubscription<[Value]> {
     return (subscription instanceof DataSubscription) ? subscription.deactivate()
     : subscription[dataSubscriptionCbBridge].deactivate()

@@ -10,39 +10,41 @@ import { stringify, parse, retrocycle } from "./serialize"
 import LinkedList, { Token } from "fast-linked-list"
 import { MultiMap } from "./../../app/src/lib/multiMap"
 import { deepEqual } from "fast-equals"
+import project from "project-obj"
+import delay from "delay"
 
 
 
-
-class DB extends Function {
-  constructor(private store: object) {
-    super("...a", "console.log(this.store)")
-
-
-    const p = new Proxy(this.bind(this), {
-      get: (target, key) => {
-        return key === "constructor" ? DB : "lel"
-      }
-    })
-    
-    return p
-  }
+const sourceOb = {
+  max: {
+    userName: "max",
+    age: 20
+  },
+  root: true
 }
 
-class A {
-
-}
-class B extends A {
-
-}
-
-window.b = new B()
 
 
-const db = new DB({wwooo: 2})
+const db = new DataBase(async (query) => {
+  await delay(1000)
+  return project(sourceOb, query)
+});
 
-console.log(db instanceof DB)
-db()
+
+// (async () => {
+//   console.log(await db.max.userName.get())
+// })()
+
+db.max((v) => {
+  console.log(v)
+})
+
+
+
+
+
+
+
 
 
 

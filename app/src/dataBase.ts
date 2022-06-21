@@ -18,6 +18,7 @@ import { tunnelSubscription, justInheritanceFlag } from "./data"
 import LinkedList, { Token } from "fast-linked-list"
 import copy from "fast-copy"
 import keyIndex from "key-index"
+import ResablePromise from "./lib/resAblePromise"
 
 
 export const parsingId = Symbol("parsingId")
@@ -590,6 +591,118 @@ type QueryForStore<Store extends object> = {
 
 
 
+function futureMainFunc(...params: any[]) {
+  const p = params[0]
+  if (typeof p === "string" || typeof p === "number") {
+    let el = this.prox
+    for (const param of params) {
+      el = el[param]
+    }
+    return el
+  }
+  else if (typeof p === "object") {
+    const myDB = new DataBase<object>(this.queryFunc)
+    myDB(p)
+    this[futurePromiseSym].res(myDB)
+  }
+  else if (p instanceof Function || p instanceof DataBaseSubscription) {
+    (async () => {
+      this.prox(await this.queryFunc(true))
+    })()
+    // TODO: DataSub implementation
+    return this[futurePromiseSym].then((el) => {
+      return el(...params)
+    })
+  }
+  else {
+    
+    return this[futurePromiseSym].then((el) => {
+      return el(...params)
+    })
+  }
+}
+
+const { params: futureFuncParams, body: futureFuncBody } = functionToStr(futureMainFunc)
+
+const futurePromiseSym = Symbol("FuturePromise")
+const distributedFuturesSym = Symbol("DistributedFutures")
+class Future extends Function {
+
+  
+  private prox: any
+
+  // when resing a promise with this as a value, the promise tries to call then. And Proxy tries to resolve this parameter get if this is not defined as undefined here
+  then = undefined
+
+  constructor(private queryFunc: Function) {
+    super(futureFuncParams, futureFuncBody)
+    this[futurePromiseSym] = new ResablePromise<Data<void> | DataBase<object>>()
+
+    this[futurePromiseSym].catch(() => {
+      console.error("whoa")
+    })
+
+    
+    
+    const prox = this.prox = new Proxy(this.bind(this), {
+      get: (target, key) => {
+        if (key in this || typeof key === "symbol") return this[key]
+        const f = new Future(async (query) => (await queryFunc({[key]: query}))[key])
+        this[key] = f
+        f[futurePromiseSym].then((r) => {
+          this[key] = r
+        })
+        return f
+      }
+    }) as any;
+    (queryFunc as any).fut = this
+    return prox
+  }
+  get(sub?: any, init?: any) {
+    (async () => {
+      this.set(await this.queryFunc(true))
+    })()
+    if (sub !== undefined) {
+      if (sub instanceof DataSubscription) {
+        this[futurePromiseSym].then((el) => el.get(sub, init))
+        return sub
+      }
+      else if (sub[dataSubscriptionCbBridge]) {
+        this[futurePromiseSym].then((el) => el.get(sub, init))
+        return sub[dataSubscriptionCbBridge]
+      }
+      else {
+        const initData = new Data()
+        const datSub = new DataSubscription(initData, sub, true, false)
+        this[futurePromiseSym].then((el) => {
+          if (datSub.data() === initData) {
+            datSub.data(el, init)
+          }
+        })
+      }
+    }
+
+    return this[futurePromiseSym].then((el) => el.get(sub, init))
+  }
+  got(sub: any) {
+    Data.prototype.got(sub)
+  }
+  addBeforeDestroyCb(from: any, cb: () => void) {
+    return this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(from, cb))
+  }
+  destroy() {
+    this[futurePromiseSym].rej()
+  }
+  valueOf() {
+    return this.get()
+  }
+  set(value: any) {
+    this[futurePromiseSym].res(new Data(value))
+    return value
+  }
+}
+
+
 export class InternalDataBase<Store extends ComplexData, _Default extends Store = Store> extends Function {
   private funcThis: any
 
@@ -609,7 +722,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   private isRoot: boolean
 
 
-
+  private hasQueryFunc: boolean
   constructor(store?: Store | ((query: QueryForStore<Store>) => Partial<Store>), private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
@@ -642,7 +755,10 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       
       return f
     }
-    this.initFuncProps(store as any, _default)
+
+    this.hasQueryFunc = store instanceof Function
+    if (!this.hasQueryFunc) this.initFuncProps(store as any, _default)
+    else this.initFuncProps({} as any, _default)
 
     if (notifyParentOfChange) {
       this.isRoot = false
@@ -663,17 +779,29 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       attach(key, index[key])  
     }
 
-    
-
-    return new Proxy(myFuncThis, {
-      get: (target, key) => {
-        return key in target ? target[key] : // todo
-      }
-    })
+    if (this.hasQueryFunc) {
+      // when resing a promise with this as a value, the promise tries to call then. And Proxy tries to resolve this parameter get if this is not defined as undefined here
+      myFuncThis.then = undefined
+      const queryFunc = store as Function & {fut?: any}
+      const myProxy = this.myProx = new Proxy(myFuncThis, {
+        get: (target, key) => {
+          if (key in target || typeof key === "symbol") return target[key]
+          const f = new Future(async (query) => (await queryFunc({[key]: query}))[key]);
+          myFuncThis[key] = f
+          f[futurePromiseSym].then((r) => {
+            myFuncThis[key] = r
+          })
+          return f
+        }
+      })
+      this.futFuncThis = queryFunc.fut !== undefined ? queryFunc.fut : this.funcThis
+      return myProxy
+    }
+    else return myFuncThis
   }
 
-
-  
+  private futFuncThis: any
+  private myProx: any
 
 
   addNotifyParentOfChangeCb(...cb: ((diff: any, origins: Set<any>) => (() => void))[]) {
@@ -888,7 +1016,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
               explicitDeleteKeys.push(key)
               continue
             }
-            if (prop !== undefined) {
+            if (prop !== undefined && !(prop instanceof Future)) {
               if (prop instanceof Data) {
                 if (typeof newVal !== "object") {
                   prop.set(newVal)
@@ -960,7 +1088,18 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                   }, false)
                 }
               }
-            } 
+            }
+            else if (this.futFuncThis.hasOwnProperty(key) && this.futFuncThis[key] instanceof Future) {
+              const futVal = this.futFuncThis[key]
+              if (typeof newVal === "object") futVal(newVal)
+              else if (newVal !== undefined) futVal.set(newVal)
+              else {
+                // TODO: unsure if this is correct
+                explicitDeleteKeys.pop()
+              }
+
+
+            }
             else { // prop is undefined
               if (typeof newVal === "object") {
                 (this.store as any)[key] = newVal
@@ -1123,7 +1262,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
             this.flushCall()
           }, false)
         }
-      } 
+      }
     }
 
 
@@ -1333,13 +1472,14 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 export type DataBaseFunction<Store extends {[key in string]: any}> = InternalDataBase<Store>["DataBaseFunction"]
 
+function functionToStr(func: Function) {
+  const str = func.toString()
+  const params = str.slice(str.indexOf("(") + 1, nthIndex(str, ")", 1));
+  const body = str.slice(str.indexOf("{") + 1, str.lastIndexOf("}"));
+  return {params, body}
+}
 
-
-//@ts-ignore
-const entireDataBaseFunction = InternalDataBase.prototype.DataBaseFunctionWrapper.toString(); 
-const paramsOfDataBaseFunction = entireDataBaseFunction.slice(entireDataBaseFunction.indexOf("(") + 1, nthIndex(entireDataBaseFunction, ")", 1));
-const bodyOfDataBaseFunction = entireDataBaseFunction.slice(entireDataBaseFunction.indexOf("{") + 1, entireDataBaseFunction.lastIndexOf("}"));
-
+const { params: paramsOfDataBaseFunction, body: bodyOfDataBaseFunction } = functionToStr((InternalDataBase.prototype as any).DataBaseFunctionWrapper)
 
 const objectString: "object" = "object"
 

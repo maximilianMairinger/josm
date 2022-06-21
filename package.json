@@ -49,6 +49,7 @@
     "esm": "^3.2.25",
     "jest": "^25.0.0",
     "postcss-loader": "^3.0.0",
+    "project-obj": "^1.0.0",
     "rollup": "^2.23.0",
     "terser-webpack-plugin": "^2.3.7",
     "to-string-loader": "^1.1.6",
