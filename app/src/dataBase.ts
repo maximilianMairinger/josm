@@ -723,7 +723,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 
   private hasQueryFunc: boolean
-  constructor(store?: Store | ((query: QueryForStore<Store>) => Partial<Store>), private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
+  constructor(store?: Store | ((query: QueryForStore<Store>) => (Partial<Store> | Promise<Partial<Store>>)), private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
     const myFuncThis = this.funcThis = this.bind(this)
@@ -1506,7 +1506,7 @@ type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionP
 export type DataBase<Store extends {[key in string]: any} = {[key in string]: any}, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
 
 //@ts-ignore
-export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Store>(store: Store, _Default?: _Default): DataBase<Store> })
+export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Store>(store: Store | ((query: QueryForStore<Store>) => (Partial<Store> | Promise<Partial<Store>>)), _Default?: _Default): DataBase<Store> })
 
 
 DataBase.prototype[instanceTypeSym] = "DataBase"

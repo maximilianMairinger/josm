@@ -25,9 +25,9 @@ const sourceOb = {
 
 
 
-const db = new DataBase(async (query) => {
+const db = new DataBase<typeof sourceOb>(async (query) => {
   await delay(1000)
-  return project(sourceOb, query)
+  return project(sourceOb, query) as Partial<typeof sourceOb>
 });
 
 
