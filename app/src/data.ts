@@ -17,6 +17,7 @@ import { circularDeepEqual } from "fast-equals"
 import { dataDerivativeLiableIndex } from './derivativeExtension'
 import constructAttatchToPrototype from 'attatch-to-prototype'
 import { cloneKeysButKeepSym } from './lib/clone'
+import ResablePromise from './lib/resAblePromise'
 
 
 // record???
@@ -28,6 +29,78 @@ export const localSubscriptionNamespace = {
 
   }
 }
+
+
+
+
+
+export const futurePromiseSym = Symbol("FuturePromise")
+export class DataFuture extends Function {
+
+  constructor(protected queryFunc: Function, funcParams = "", funcBody = "") {
+    super(funcParams, funcBody)
+    this[futurePromiseSym] = new ResablePromise<Data<void> | DataBase<object>>()
+
+    this[futurePromiseSym].catch(() => {
+      console.error("whoa")
+    })
+
+    
+
+  }
+  get(sub?: any, init?: any) {
+    (async () => {
+      this.set(await this.queryFunc(true))
+    })()
+    if (sub !== undefined) {
+      if (sub instanceof DataSubscription) {
+        this[futurePromiseSym].then((el) => el.get(sub, init))
+        return sub
+      }
+      else if (sub[dataSubscriptionCbBridge]) {
+        this[futurePromiseSym].then((el) => el.get(sub, init))
+        return sub[dataSubscriptionCbBridge]
+      }
+      else {
+        const initData = new Data()
+        const datSub = new DataSubscription(initData, sub, true, false)
+        this[futurePromiseSym].then((el) => {
+          if (datSub.data() === initData) {
+            datSub.data(el, init)
+          }
+        })
+        return datSub
+      }
+    }
+
+    return this[futurePromiseSym].then((el) => el.get(sub, init))
+  }
+  got(sub: any) {
+    Data.prototype.got(sub)
+  }
+  addBeforeDestroyCb(from: any, cb: () => void) {
+    return this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(from, cb))
+  }
+  destroy() {
+    this[futurePromiseSym].rej()
+  }
+  valueOf() {
+    return this.get()
+  }
+  set(value: any) {
+    const d = new Data(value)
+    this.set = d.set.bind(d)
+    this.get = d.get.bind(d)
+    this.addBeforeDestroyCb = (d as any).addBeforeDestroyCb.bind(d)
+    this.destroy = (d as any).destroy.bind(d)
+    this.valueOf = d.valueOf.bind(d)
+    this[futurePromiseSym].res(d)
+    return value
+  }
+}
+
+
+
 
 
 export type Subscription<Values extends any[]> = (...value: Values) => void
@@ -42,8 +115,27 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   private locSubNsReg: { destroy: () => void }[]
   protected value: Value
 
+  public constructor(queryFunc?: (query: true) => (Promise<Value> | Value), _default?: _Default)
+  public constructor(value?: Value, _default?: _Default)
   public constructor(value?: Value, private _default?: _Default) {
     if (value !== justInheritanceFlag as any) {
+      // TODO: default
+      if (value instanceof Function) {
+        if (_default === undefined) return new DataFuture(value) as any
+        else {
+          const oriGet = this.get.bind(this)
+          const getFunc = value
+          value = undefined
+          this.get = (...a: any) => {
+            (async () => {
+              const res = await getFunc(true)
+              if (this.get() === this._default) this.set(res)
+            })()
+            delete this.get
+            return oriGet(...a)
+          }
+        }
+      }
       localSubscriptionNamespace.dont(this)
       this.linksOfMe = []
       this.subscriptions = new LinkedList()

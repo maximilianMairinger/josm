@@ -15,32 +15,55 @@ import delay from "delay"
 
 
 
-const sourceOb = {
-  max: {
-    userName: "max",
-    age: 20
-  },
-  root: true
-}
 
+const data = new Data(async (query) => {
+  await delay(500)
+  return "hello " + query
+}, "default")
 
-
-const db = new DataBase<typeof sourceOb>(async (query) => {
-  await delay(300)
-  return project(sourceOb, query) as Partial<typeof sourceOb>
-});
-
-
-// (async () => {
-//   console.log(await db.max.userName.get())
-// })()
-
-const sub = db.max((v) => {
-  console.log(v)
+data.get((v) => {
+  console.log("val", v)
+  // @ts-ignore
 })
 
-sub.deactivate()
-sub.activate()
+
+
+delay(1000).then(() => {
+  debugger
+  data.set("whoo")
+
+})
+
+
+// const sourceOb = {
+//   max: {
+//     userName: "max",
+//     age: 20
+//   },
+//   marnie: {
+//     userName: "marnie",
+//     age: 50
+//   },
+//   root: true
+// }
+
+
+
+// // @ts-ignore
+// const db = new DataBase<{de: typeof sourceOb}>({de: async (query) => {
+//   await delay(300)
+//   return project(sourceOb, query) as Partial<typeof sourceOb>
+// }});
+
+
+// // (async () => {
+// //   console.log(await db.max.userName.get())
+// // })()
+
+// const sub = db(new Data("de")).max((v) => {
+//   console.log(v)
+// })
+
 // sub.activate(false)
 
 
