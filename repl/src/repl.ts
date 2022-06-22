@@ -19,32 +19,49 @@ import delay from "delay"
 
 
 const sourceOb = {
-  max: {
-    userName: "max",
-    age: 20
+  de: {
+    max: {
+      userName: "max",
+      age: 20
+    },
+    marnie: {
+      userName: "marnie",
+      age: 50
+    },
+    root: true
   },
-  marnie: {
-    userName: "marnie",
-    age: 50
-  },
-  root: true
+  en: {
+    max: {
+      userName: "en max",
+      age: 220
+    },
+    marnie: {
+      userName: "en marnie",
+      age: 250
+    },
+    root: "root en"
+  }
 }
 
 
 
 
+
 // @ts-ignore
-const db = new DataBase<{de: typeof sourceOb}>({de: async (query) => {
+const db = new DataBase<typeof sourceOb>(async (query) => {
+  console.log("query", query)
   await delay(500)
-  return project(sourceOb, query) as Partial<typeof sourceOb>
-}}, {de: {root: "default"}});
+  return project(sourceOb, query) as any
+}, {de: {root: "default" as any}});
 
 
-db.de.marnie({userName: "preMarnie", age: 0})
-
-const sub = db.de((v) => {
+const sub = db("de")((v) => {
   console.log("2", cloneKeys(v))
-}, true, false)
+})
+
+
+
+
 
 
 

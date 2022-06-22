@@ -611,7 +611,15 @@ function futureMainFunc(...params: any[]) {
     (async () => {
       if (this[notFirstSym]) return
       this[notFirstSym] = true
-      this.prox(await this.queryFunc(true))
+      let result: any
+      try {
+        result = await this.queryFunc(true)
+      }
+      catch(e) {
+        console.error("Failed to interpret results of queryFunc. The provided queryFunc may not return a proper result for the given query.")
+        console.error(e)
+      }
+      this.prox(result)
     })()
     const initDataBase = new DataBase({}) // This is just temp
     const datSub = initDataBase(p, params[1], false)
@@ -700,7 +708,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 
   private hasQueryFunc: boolean
-  constructor(store?: Store | ((query: QueryForStore<Store>) => (Partial<Store> | Promise<Partial<Store>>)), private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
+  constructor(store?: Store | ((query: QueryForStore<Store>) => (RecursivePartial<Store> | Promise<RecursivePartial<Store>>)), private _default: _Default = {} as any, notifyParentOfChange?: (diff: any, origins: Set<any>) => (() => void)) {
     super(paramsOfDataBaseFunction, bodyOfDataBaseFunction)
     localSubscriptionNamespace.dont(this)
     const myFuncThis = this.funcThis = this.bind(this)
@@ -758,11 +766,9 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     if (this.hasQueryFunc) {
       // when resing a promise with this as a value, the promise tries to call then. And Proxy tries to resolve this parameter get if this is not defined as undefined here
       myFuncThis.then = undefined
-      const queryFunc = store as Function & {fut?: any}
+      const queryFunc = this.queryFunc = store as Function & {fut?: any}
       this.onceGetCb.push(async () => {
-        // if (!isObjectEmpty(store)) return
         const res = await queryFunc(true)
-        // if (!isObjectEmpty(store)) return
         this.funcThis(res)
       })
       const myProxy = this.myProx = new Proxy(myFuncThis, {
@@ -803,6 +809,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
   }
 
+  private queryFunc: any
   private pFuncThis: any
   private futFuncThis: any
   private myProx: any
@@ -894,7 +901,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   
   protected DataBaseFunction(): Readonly<Store>
   
-  protected DataBaseFunction(subscription: DataSubscription<[Readonly<Store>, Partial<Readonly<Store>>]> | ((full: Readonly<Store>, diff: Partial<Readonly<Store>>) => void), notifyAboutChangesOfChilds?: true, init?: boolean): DataBaseSubscription<[Readonly<Store>, Partial<Readonly<Store>>]>
+  protected DataBaseFunction(subscription: DataSubscription<[Readonly<Store>, RecursivePartial<Readonly<Store>>]> | ((full: Readonly<Store>, diff: RecursivePartial<Readonly<Store>>) => void), notifyAboutChangesOfChilds?: true, init?: boolean): DataBaseSubscription<[Readonly<Store>, RecursivePartial<Readonly<Store>>]>
   protected DataBaseFunction(subscription: DataSubscription<[DataBase<Store>, DataBase<Store>, DataBase<Store>]> | ((full: DataBase<Store>, added: DataBase<Store>, removed: DataBase<Store>) => void), notifyAboutChangesOfChilds: false, init?: boolean): DataBaseSubscription<[DataBase<Store>, DataBase<Store>, DataBase<Store>]>
 
 
@@ -951,7 +958,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         return link
       }
       else {
-        let ret = funcThis
+        let ret = this.pFuncThis
         for (let path of dataSegments) {
           //@ts-ignore
           ret = ret[path]
@@ -1038,8 +1045,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                     //@ts-ignore
                     prop.destroy()
 
-                    constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
-                    // ok
+                    constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(this.hasQueryFunc ? async(query) => (await this.queryFunc({[key]: query}))[key] : newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
+                    if (this.hasQueryFunc) funcThis[key](newVal)
                     newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                   }
                   else {
@@ -1099,7 +1106,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 }
               }
             }
-            else if (this.futFuncThis.hasOwnProperty(key) && this.futFuncThis[key] instanceof Future) {
+            else if (this.hasQueryFunc && this.futFuncThis.hasOwnProperty(key) && this.futFuncThis[key] instanceof Future) {
               const futVal = this.futFuncThis[key]
               if (typeof newVal === "object") futVal(newVal)
               else if (newVal !== undefined) futVal.set(newVal)
@@ -1111,13 +1118,13 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
             }
             else { // prop is undefined
-              if (newVal instanceof Object) { // Function or object
+              if (newVal instanceof Object) {
                 (this.store as any)[key] = newVal
                 diffFromThis.added[key] = cloneUntilParsingId(newVal)
 
                 if (newVal[parsingId] === undefined) {
-                  constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
-
+                  constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(this.hasQueryFunc ? async(query) => (await this.queryFunc({[key]: query}))[key] : newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
+                  if (this.hasQueryFunc) funcThis[key](newVal)
                   funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                 }
                 else { 
@@ -1256,6 +1263,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         }
       }
       else if (hasQueryFunc && defaultVal === undefined) {
+        debugger
         setToThis(new Future(val, this.callMeWithDiff(key), this as any, key))
         funcThis[key].addBeforeDestroyCb(this, onDel)
       }
@@ -1291,22 +1299,22 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   // Functions for Data**Base**Subscription
   // ------------
 
-  subscribeToChildren(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
+  subscribeToChildren(subscription: Subscription<[Readonly<Store>, RecursivePartial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
     if (initialize) subscription(this.store, rmParsingIdWhereNew(diff(subscription[subscriptionDiffSymbol], this.store), subscription[subscriptionDiffSymbol]) as any)
     return this.subscriptionsOfChildChanges.push(subscription as any)
   }
-  subscribeToThis(subscription: Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
+  subscribeToThis(subscription: Subscription<[Readonly<Store>, RecursivePartial<Readonly<Store>>]>, initialize: boolean = true): Token<any> {
     // TODO: This is a call shouldnt there be registerSubscriptionNamespace
     if (initialize) subscription(this.store, diff.flat(subscription[subscriptionDiffSymbol], this.store) as any)
     return this.subscriptionsOfThisChanges.push(subscription as any)
   }
 
-  unsubscribe(subscriptionToken: Token<Subscription<[Readonly<Store>, Partial<Readonly<Store>>]>>) {
+  unsubscribe(subscriptionToken: Token<Subscription<[Readonly<Store>, RecursivePartial<Readonly<Store>>]>>) {
     subscriptionToken.value[subscriptionDiffSymbol] = cloneKeysButKeepSym(this.store)
     subscriptionToken.remove()
   }
 
-  __call(subs: LinkedList<Subscription<[Readonly<Store>, Partial<Readonly<Store>>, any]>>, ...diff: any[]) {
+  __call(subs: LinkedList<Subscription<[Readonly<Store>, RecursivePartial<Readonly<Store>>, any]>>, ...diff: any[]) {
     const store = this.store
     for (const sub of subs) {
       // @ts-ignore
@@ -1523,8 +1531,12 @@ type OmitFunctionProperties<Func extends Function> = Func & Omit<Func, FunctionP
 
 export type DataBase<Store extends {[key in string]: any} = {[key in string]: any}, S extends RemovePotentialArrayFunctions<Store> = RemovePotentialArrayFunctions<Store>> = DataBaseify<S> & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>
 
+type RecursivePartial<T> = {
+  [P in keyof T]?: RecursivePartial<T[P]>;
+};
+
 //@ts-ignore
-export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = Partial<Store>>(store: Store | ((query: QueryForStore<Store>) => (Partial<Store> | Promise<Partial<Store>>)), _Default?: _Default): DataBase<Store> })
+export const DataBase = InternalDataBase as ({ new <Store extends object = any, _Default extends {[key in string]: any} = RecursivePartial<Store>>(store: Store | ((query: QueryForStore<Store>) => (RecursivePartial<Store> | Promise<RecursivePartial<Store>>)), _Default?: _Default): DataBase<Store> })
 
 
 DataBase.prototype[instanceTypeSym] = "DataBase"
