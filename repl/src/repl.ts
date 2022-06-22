@@ -31,32 +31,21 @@ const sourceOb = {
 }
 
 
+
+
 // @ts-ignore
-const db = new DataBase<typeof sourceOb>(async (query) => {
+const db = new DataBase<{de: typeof sourceOb}>({de: async (query) => {
   await delay(500)
   return project(sourceOb, query) as Partial<typeof sourceOb>
-}, {max: {userName: "unknown", age: 0}});
-
-db((f) => {
-  console.log(f)
-})
-
-// // @ts-ignore
-// const db = new DataBase<{de: typeof sourceOb}>({de: async (query) => {
-//   await delay(300)
-//   return project(sourceOb, query) as Partial<typeof sourceOb>
-// }});
+}}, {de: {root: "default"}});
 
 
-// // (async () => {
-// //   console.log(await db.max.userName.get())
-// // })()
+db.de.marnie({userName: "preMarnie", age: 0})
 
-// const sub = db(new Data("de")).max((v) => {
-//   console.log(v)
-// })
+const sub = db.de((v) => {
+  console.log("2", cloneKeys(v))
+}, true, false)
 
-// sub.activate(false)
 
 
 

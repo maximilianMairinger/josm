@@ -5,8 +5,8 @@ import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
 import { MultiMap } from "./lib/multiMap"
-import { cloneKeysButKeepSym } from "./lib/clone"
-
+import { cloneKeys, cloneKeysButKeepSym } from "./lib/clone"
+import _SyncProm from "sync-p"; const SyncProm = _SyncProm as typeof Promise
 
 
 import xtring from "xtring"
@@ -18,7 +18,7 @@ import { tunnelSubscription, justInheritanceFlag, internalDataBaseBridge } from 
 import LinkedList, { Token } from "fast-linked-list"
 import copy from "fast-copy"
 import keyIndex from "key-index"
-import ResablePromise from "./lib/resAblePromise"
+import ResablePromise, { wrapPromiseLike } from "./lib/resAblePromise"
 
 
 export const parsingId = Symbol("parsingId")
@@ -589,7 +589,7 @@ type QueryForStore<Store extends object> = {
 }
 
 
-
+const notFirstSym = Symbol("first");
 function futureMainFunc(...params: any[]) {
   const p = params[0]
   if (typeof p === "string" || typeof p === "number") {
@@ -599,36 +599,40 @@ function futureMainFunc(...params: any[]) {
     }
     return el
   }
-  else if (typeof p === "object") {
-    const myDB = new DataBase<object>(this.queryFunc)
+  else if (typeof p === objectString) {
+
+    const myDB = new InternalDataBase<object>(this.queryFunc, undefined, this.notifyParentOfChange)
+    this.parent.store[this.fromKey] = myDB[internalDataBaseBridge].store
     myDB(p)
-    this[futurePromiseSym].res(myDB)
+
+    this[futurePromiseSym].res(myDB[internalDataBaseBridge])
   }
   else if (p instanceof Function || p instanceof DataBaseSubscription) {
     (async () => {
+      if (this[notFirstSym]) return
+      this[notFirstSym] = true
       this.prox(await this.queryFunc(true))
     })()
-    const initDataBase = new DataBase({})
+    const initDataBase = new DataBase({}) // This is just temp
     const datSub = initDataBase(p, params[1], false)
     const init = params[2]
     this[futurePromiseSym].then((el) => {
       if (datSub.dataBase() === initDataBase) {
-        datSub.dataBase(el, init)
+        datSub.dataBase(el.funcThis, init)
       }
     })
     return datSub
   }
   else {
     
-    return this[futurePromiseSym].then((el) => {
-      return el(...params)
-    })
+    return wrapPromiseLike(this[futurePromiseSym].then((el) => {
+      return el.funcThis(...params)
+    }))
   }
 }
 
 
 const { params: futureFuncParams, body: futureFuncBody } = functionToStr(futureMainFunc)
-
 
 
 import { DataFuture } from "./data"
@@ -637,16 +641,34 @@ class Future extends DataFuture {
   // when resing a promise with this as a value, the promise tries to call then. 
   // And Proxy tries to resolve this parameter get if this is not defined as undefined here
   then = undefined
-  constructor(queryFunc: Function) {
+  private store = new Proxy({}, {
+    set(target, key, value) {
+      this.prox({[key]: value})
+      return true
+    }
+  })
+  constructor(queryFunc: Function, private notifyParentOfChange: any, private parent: DataBase<object>, private fromKey: any) {
     super(queryFunc, futureFuncParams, futureFuncBody)
         
     const prox = this.prox = new Proxy(this.bind(this), {
       get: (target, key) => {
         if (key in this || typeof key === "symbol") return this[key]
-        const f = new DataFuture(async (query) => (await queryFunc({[key]: query}))[key])
+        
+        const f = new Future(async (query) => (await queryFunc({[key]: query}))[key], (...a) => {
+          const callAgainProm = callMeWithDiffProm.then((callMeWithDiff) => callMeWithDiff(...a))
+          return () => {
+            callAgainProm.then((callAgain) => {
+              callAgain()
+            })
+          }
+        }, this as any, key)
+        const callMeWithDiffProm = f[futurePromiseSym].then((r) => {
+          if (r.callMeWithDiff) return r.callMeWithDiff(key)
+        })
         this[key] = f
         f[futurePromiseSym].then((r) => {
-          this[key] = r
+          const el = this[key] = r instanceof Data ? r : r.funcThis
+          this[key] = el
         })
         return f
       }
@@ -712,8 +734,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
 
     this.hasQueryFunc = store instanceof Function
-    if (!this.hasQueryFunc) this.initFuncProps(store as any, _default)
-    else this.initFuncProps({} as any, _default)
+    this.initFuncProps(this.hasQueryFunc ? {} : store as any, _default)
 
     if (notifyParentOfChange) {
       this.isRoot = false
@@ -739,16 +760,15 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       myFuncThis.then = undefined
       const queryFunc = store as Function & {fut?: any}
       this.onceGetCb.push(async () => {
-        if (!isObjectEmpty(store)) return
+        // if (!isObjectEmpty(store)) return
         const res = await queryFunc(true)
-        if (!isObjectEmpty(store)) return
+        // if (!isObjectEmpty(store)) return
         this.funcThis(res)
       })
       const myProxy = this.myProx = new Proxy(myFuncThis, {
         get: (target, key) => {
           if (typeof key === "symbol") return target[key]
           if (key in target) {
-            debugger
             if (store[key] === undefined) {
               // todo init props: pass queryfunc
               if (_default[key] !== undefined) {
@@ -762,10 +782,13 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
             }
             return target[key]
           }
-          const f = new Future(async (query) => (await queryFunc({[key]: query}))[key]);
+          const f = new Future(async (query) => (await queryFunc({[key]: query}))[key], this.callMeWithDiff(key), this as any, key);
+
+          
           myFuncThis[key] = f
           f[futurePromiseSym].then((r) => {
-            myFuncThis[key] = r
+            const el = myFuncThis[key] = r instanceof Data ? r : r.funcThis
+            myFuncThis[key] = el
           })
           return f
         }
@@ -1032,7 +1055,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
               }
               else { // prop instanceof DataBase
                 if (typeof newVal === "object") {
-                  if (newVal[parsingId] === undefined) prop(newVal, strict, parsingId)
+                  if (newVal[parsingId] === undefined) prop(newVal, strict)
                   else {
                     if (newVal[parsingId] !== prop) {
                       //@ts-ignore
@@ -1088,7 +1111,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
             }
             else { // prop is undefined
-              if (typeof newVal === "object") {
+              if (newVal instanceof Object) { // Function or object
                 (this.store as any)[key] = newVal
                 diffFromThis.added[key] = cloneUntilParsingId(newVal)
 
@@ -1179,7 +1202,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
 
   private initFuncProps(store: Store, _default: any) {
-    store = store === undefined ? _default : store
+    store = store === undefined ? cloneKeys(_default) : store
     this.store = store
     const funcThis = this.funcThis
     let newStoreKeys = Object.keys(store)
@@ -1194,7 +1217,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
     for (const key of newStoreKeys) {
 
-      const defaultVal = this._default !== undefined ? this._default[key] : undefined
+      const defaultVal = this._default[key]
       const val = store[key]
       const hasQueryFunc = val instanceof Function
       const needFallback = val === undefined || hasQueryFunc
@@ -1216,9 +1239,10 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       };   
       (onDel as any).key = key
 
-      if (typeof useVal === objectString || hasQueryFunc) {
+      if (useVal instanceof Object) {
         if (useVal[parsingId] === undefined) {
           setToThis(new InternalDataBase(val, defaultVal, this.callMeWithDiff(key)))
+          if (hasQueryFunc && defaultVal !== undefined) funcThis[key](useVal)
           funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
         }
         else {
@@ -1231,8 +1255,13 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
           else attachF()
         }
       }
+      else if (hasQueryFunc && defaultVal === undefined) {
+        setToThis(new Future(val, this.callMeWithDiff(key), this as any, key))
+        funcThis[key].addBeforeDestroyCb(this, onDel)
+      }
       else {
         setToThis(new Data(val, defaultVal))
+        if (hasQueryFunc && defaultVal !== undefined) funcThis[key].set(useVal)
 
         const specialOnDel = () => {
           sub.deactivate()

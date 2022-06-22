@@ -73,6 +73,7 @@
     "fast-object-diff": "^1.0.1",
     "key-index": "^1.4.9",
     "multimap": "^1.1.0",
+    "sync-p": "^1.3.0",
     "xrray": "^4.7.6",
     "xtring": "^1.2.0"
   },

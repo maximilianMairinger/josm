@@ -17,8 +17,7 @@ import { circularDeepEqual } from "fast-equals"
 import { dataDerivativeLiableIndex } from './derivativeExtension'
 import constructAttatchToPrototype from 'attatch-to-prototype'
 import { cloneKeysButKeepSym } from './lib/clone'
-import ResablePromise from './lib/resAblePromise'
-
+import { ResableSyncPromise, wrapPromiseLike } from './lib/resAblePromise'
 
 // record???
 export const localSubscriptionNamespace = {
@@ -39,7 +38,7 @@ export class DataFuture extends Function {
 
   constructor(protected queryFunc: Function, funcParams = "", funcBody = "") {
     super(funcParams, funcBody)
-    this[futurePromiseSym] = new ResablePromise<Data<void> | DataBase<object>>()
+    this[futurePromiseSym] = new ResableSyncPromise<Data<void> | DataBase<object>>()
 
     this[futurePromiseSym].catch(() => {
       console.error("whoa")
@@ -48,8 +47,10 @@ export class DataFuture extends Function {
     
 
   }
+  private firstGet = true
   get(sub?: any, init?: any) {
-    (async () => {
+    if (this.firstGet) (async () => {
+      this.firstGet = false
       this.set(await this.queryFunc(true))
     })()
     if (sub !== undefined) {
@@ -73,15 +74,16 @@ export class DataFuture extends Function {
       }
     }
 
-    return this[futurePromiseSym].then((el) => el.get(sub, init))
+    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.get(sub, init)))
   }
   got(sub: any) {
     Data.prototype.got(sub)
   }
   addBeforeDestroyCb(from: any, cb: () => void) {
-    return this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(from, cb))
+    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(from, cb)))
   }
-  destroy() {
+  destroy(...a) {
+    this[futurePromiseSym].then((el) => el.destroy(...a))
     this[futurePromiseSym].rej()
   }
   valueOf() {
