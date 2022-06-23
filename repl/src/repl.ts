@@ -11,7 +11,8 @@ import LinkedList, { Token } from "fast-linked-list"
 import { MultiMap } from "./../../app/src/lib/multiMap"
 import { deepEqual } from "fast-equals"
 import project from "project-obj"
-import delay from "delay"
+import delay from "tiny-delay"
+
 
 
 
@@ -48,16 +49,29 @@ const sourceOb = {
 
 
 // @ts-ignore
-const db = new DataBase<typeof sourceOb>(async (query) => {
+const db = new DataBase<typeof sourceOb>({woo: async (query) => {
   console.log("query", query)
   await delay(500)
   return project(sourceOb, query) as any
-}, {de: {root: "default" as any}});
+}});
+
+// db.woo.de.max({age: 2})
+db({woo: {de: {ww: 2}}})
+
+// console.log(cloneKeys(db()))
 
 
-const sub = db("de")((v) => {
-  console.log("2", cloneKeys(v))
-})
+const lang = new Data("de")
+
+
+const sub = db.woo(lang)((v) => {
+  console.log(cloneKeys(v))
+}, true, true)
+
+// delay(1000, () => {
+//   console.log("switch")
+//   // lang.set("en")
+// })
 
 
 

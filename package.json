@@ -52,6 +52,7 @@
     "project-obj": "^1.0.0",
     "rollup": "^2.23.0",
     "terser-webpack-plugin": "^2.3.7",
+    "tiny-delay": "^1.0.0",
     "to-string-loader": "^1.1.6",
     "ts-jest": "^25.5.1",
     "ts-loader": "^6.2.2",

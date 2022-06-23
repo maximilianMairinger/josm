@@ -35,6 +35,7 @@ export const localSubscriptionNamespace = {
 
 export const futurePromiseSym = Symbol("FuturePromise")
 export class DataFuture extends Function {
+  public resolving = false
 
   constructor(protected queryFunc: Function, funcParams = "", funcBody = "") {
     super(funcParams, funcBody)
@@ -79,8 +80,11 @@ export class DataFuture extends Function {
   got(sub: any) {
     Data.prototype.got(sub)
   }
-  addBeforeDestroyCb(from: any, cb: () => void) {
-    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(from, cb)))
+  addBeforeDestroyCb(...a) {
+    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(...a)))
+  }
+  removeNotifyParentOfChangeCb(...a) {
+    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.removeNotifyParentOfChangeCb(...a)))
   }
   destroy(...a) {
     this[futurePromiseSym].then((el) => el.destroy(...a))
@@ -90,6 +94,7 @@ export class DataFuture extends Function {
     return this.get()
   }
   set(value: any) {
+    this.resolving = true
     const d = new Data(value)
     this.set = d.set.bind(d)
     this.get = d.get.bind(d)
