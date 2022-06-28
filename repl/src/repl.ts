@@ -56,22 +56,26 @@ const db = new DataBase<typeof sourceOb>({woo: async (query) => {
 }});
 
 // db.woo.de.max({age: 2})
-db({woo: {de: {ww: 2}}})
 
 // console.log(cloneKeys(db()))
 
 
 const lang = new Data("de")
 
+const l = db.woo(lang)
 
-const sub = db.woo(lang)((v) => {
+l((v) => {
   console.log(cloneKeys(v))
-}, true, true)
+}, true)
 
-// delay(1000, () => {
-//   console.log("switch")
-//   // lang.set("en")
-// })
+// l.max.userName.get((v) => {
+//   console.log(cloneKeys(v))
+// }, true, true)
+
+delay(1000, () => {
+  console.log("switch")
+  lang.set("en")
+})
 
 
 

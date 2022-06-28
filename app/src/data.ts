@@ -39,6 +39,7 @@ export class DataFuture extends Function {
 
   constructor(protected queryFunc: Function, funcParams = "", funcBody = "") {
     super(funcParams, funcBody)
+    this[internalDataBaseBridge] = this
     this[futurePromiseSym] = new ResableSyncPromise<Data<void> | DataBase<object>>()
 
     this[futurePromiseSym].catch(() => {
@@ -48,64 +49,137 @@ export class DataFuture extends Function {
     
 
   }
-  private firstGet = true
-  get(sub?: any, init?: any) {
-    if (this.firstGet) (async () => {
-      this.firstGet = false
-      this.set(await this.queryFunc(true))
-    })()
-    if (sub !== undefined) {
-      if (sub instanceof DataSubscription) {
-        this[futurePromiseSym].then((el) => el.get(sub, init))
-        return sub
-      }
-      else if (sub[dataSubscriptionCbBridge]) {
-        this[futurePromiseSym].then((el) => el.get(sub, init))
-        return sub[dataSubscriptionCbBridge]
-      }
-      else {
-        const initData = new Data()
-        const datSub = new DataSubscription(initData, sub, true, false)
-        this[futurePromiseSym].then((el) => {
-          if (datSub.data() === initData) {
-            datSub.data(el, init)
-          }
-        })
-        return datSub
-      }
+  protected preCreatedData: any
+  get(sub?: any, init: any = false) {
+    const t = this[internalDataBaseBridge] as this
+    if (!t.preCreatedData) {
+      t.preCreatedData = new Data();
+      t[instanceTypeSym] = "Data";
+      (async () => {
+        t.set(await t.queryFunc(true))
+      })()
     }
 
-    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.get(sub, init)))
+    return t.preCreatedData.get(sub, init)
   }
   got(sub: any) {
     Data.prototype.got(sub)
   }
   addBeforeDestroyCb(...a) {
-    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.addBeforeDestroyCb(...a)))
+    const t = this[internalDataBaseBridge]
+    return wrapPromiseLike(t[futurePromiseSym].then((el) => el.addBeforeDestroyCb(...a)))
   }
+
   removeNotifyParentOfChangeCb(...a) {
-    return wrapPromiseLike(this[futurePromiseSym].then((el) => el.removeNotifyParentOfChangeCb(...a)))
+    const t = this[internalDataBaseBridge]
+    return wrapPromiseLike(t[futurePromiseSym].then((el) => el.removeNotifyParentOfChangeCb(...a)))
   }
   destroy(...a) {
-    this[futurePromiseSym].then((el) => el.destroy(...a))
-    this[futurePromiseSym].rej()
+    const t = this[internalDataBaseBridge]
+    t[futurePromiseSym].then((el) => el.destroy(...a))
+    t[futurePromiseSym].rej()
   }
   valueOf() {
-    return this.get()
+    const t = this[internalDataBaseBridge]
+    return t.get()
   }
   set(value: any) {
-    this.resolving = true
-    const d = new Data(value)
-    this.set = d.set.bind(d)
-    this.get = d.get.bind(d)
-    this.addBeforeDestroyCb = (d as any).addBeforeDestroyCb.bind(d)
-    this.destroy = (d as any).destroy.bind(d)
-    this.valueOf = d.valueOf.bind(d)
-    this[futurePromiseSym].res(d)
+    const t = this[internalDataBaseBridge]
+    t.resolving = true
+    let d: Data<any>
+    if (!t.preCreatedData) {
+      d = t.preCreatedData = new Data(value);
+      t[instanceTypeSym] = "Data"
+    }
+    else {
+      d = t.preCreatedData
+      d.set(value)
+    }
+    t.set = d.set.bind(d)
+    t.get = d.get.bind(d)
+    t.addBeforeDestroyCb = (d as any).addBeforeDestroyCb.bind(d)
+    t.destroy = (d as any).destroy.bind(d)
+    t.valueOf = d.valueOf.bind(d)
+    t[futurePromiseSym].res(d)
     return value
   }
+  subscribeToChildren(sub: any, init: boolean) {
+    if (this.preCreatedData) {
+      const myDB = this.preCreatedData
+      return myDB.subscribeToChildren(sub, false)
+    }
+    else {
+      const tok = new OnRmToken(sub)
+      tok.returnSucAlways = true
+      let alreadyRemoved = false
+      const onRm = tok.onSub.push(() => {
+        alreadyRemoved = true
+        onRm.rm()
+      })
+      this[futurePromiseSym].then((db) => {
+        if (alreadyRemoved) return
+        tok.returnSucAlways = false
+        onRm.rm()
+        db.subscribeToChildren(db, init)
+      })
+      
+      return tok
+    }
+
+  }
+  subscribeToThis(sub: any, init: boolean) {
+    if (this.preCreatedData) {
+      const myDB = this.preCreatedData
+      return myDB.subscribeToThis(sub, false)
+    }
+    else {
+      const tok = new OnRmToken(sub)
+      tok.returnSucAlways = true
+      let alreadyRemoved = false
+      const onRm = tok.onSub.push(() => {
+        alreadyRemoved = true
+        onRm.rm()
+      })
+      this[futurePromiseSym].then((db) => {
+        if (alreadyRemoved) return
+        tok.returnSucAlways = false
+        onRm.rm()
+        db.subscribeToThis(db, init)
+      })
+      
+      return tok
+    }
+  }
+
 }
 
+class OnRmToken<T> extends Token<T> {
+  public onSub: LinkedList<Function> = new LinkedList()
+  public returnSucAlways = false
+
+  remove(): boolean {
+    const r = super.remove()
+
+    for (const sub of this.onSub) {
+      sub()
+    }
+    this.onSub.clear()
+    if (this.returnSucAlways) return true
+    return r
+  }
+
+}
+
+export const whitelistFuncFlag = Symbol("whitelistFuncFlag")
+
+
+DataFuture.prototype.get[whitelistFuncFlag] = true
+DataFuture.prototype.got[whitelistFuncFlag] = true
+DataFuture.prototype.addBeforeDestroyCb[whitelistFuncFlag] = true
+DataFuture.prototype.removeNotifyParentOfChangeCb[whitelistFuncFlag] = true
+DataFuture.prototype.destroy[whitelistFuncFlag] = true
+DataFuture.prototype.valueOf[whitelistFuncFlag] = true
+DataFuture.prototype.set[whitelistFuncFlag] = true
 
 
 
