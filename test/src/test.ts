@@ -1,6 +1,7 @@
-import { Data, DataSubscription, DataCollection } from "../../app/src/josm"
+import { Data, DataSubscription, DataCollection, DataBase } from "../../app/src/josm"
 import delay from "delay"
-
+import clone from "./../../app/src/lib/clone"
+import "./extend"
 
 
 
@@ -532,5 +533,90 @@ describe("DataCollection", () => {
     d2.set(2000)
     d.get(me, false)
     d1.set(1000)
+  })
+})
+
+
+
+describe("DataBase", () => {
+  test("Init and set and get", () => {
+    const db = new DataBase({lel: 2})
+    expect(db).toBeInstanceOf(DataBase)
+    expect(db()).eq({lel: 2})
+    const setRet = db({lel: 3})
+    expect(setRet).toBeInstanceOf(DataBase)
+    expect(setRet).toBe(db)
+    expect(db()).eq({lel: 3})
+    const store = db()
+    db({lul: 4})
+    expect(store).eq({lel: 3, lul: 4})
+    expect(db()).eq({lel: 3, lul: 4})
+    db({l1: 1, l2: 2})
+    expect(db()).eq({lel: 3, lul: 4, l1: 1, l2: 2})
+    db({l3: 3}, true)
+    expect(db()).eq({l3: 3})
+
+    const dd = db as any
+    expect(dd.l3).toBeInstanceOf(Data)
+    expect(dd.l3.get()).toBe(3)
+    expect(dd.l2).toBe(undefined)
+    dd.l3.set("woo")
+    expect(dd.l3.get()).toBe("woo")
+    expect(db()).eq({l3: "woo"})
+    expect(store).eq({l3: "woo"})
+  })
+
+  test("Deep DB", () => {
+    const db = new DataBase({flat: 1, deep: {deeper: 2}}) as any
+    expect(db.deep.deeper.get()).toBe(2)
+    expect(db.deep.deeper).toBeInstanceOf(Data)
+    expect(db.deep).toBeInstanceOf(DataBase)
+    db({deep: {lel: 2}})
+    expect(db()).eq({flat: 1, deep: {deeper: 2, lel: 2}})
+    expect(db.deep()).eq({deeper: 2, lel: 2})
+    expect(db.flat).toBeInstanceOf(Data)
+    expect(db.flat.get()).toBe(1)
+    db.deep({deeper: 3})
+    expect(db()).eq({flat: 1, deep: {deeper: 3, lel: 2}})
+    db.deep({deeper: 4}, true)
+    expect(db()).eq({flat: 1, deep: {deeper: 4}})
+    db({deep: {deeper: 5}}, true)
+    expect(db()).eq({deep: {deeper: 5}})
+  })
+
+  test("Recursive DB", () => {
+    const ob = {
+      ppl: {
+        name: "max",
+        age: 22,
+        likes: {
+          name: "lela",
+          age: 21
+        }
+      }
+    };
+    (ob.ppl.likes as any).likes = ob.ppl
+    // console.log(ob)
+
+    const db = new DataBase(ob) as any
+    // console.log(clone(db()))
+    expect(db.ppl.name.get()).toBe("max")
+    expect(db.ppl.age.get()).toBe(22)
+    console.log(clone(db().ppl.likes.likes.age))
+
+    expect(db.ppl.likes.likes.age.get()).toBe(22)
+    expect(db.ppl.likes.likes.name.get()).toBe("max")
+    db({ppl: {name: "marx"}})
+    expect(db.ppl.name.get()).toBe("marx")
+    expect(db.ppl.likes.likes.name.get()).toBe("marx")
+    db.ppl.name.set("marxx")
+    expect(db.ppl.name.get()).toBe("marxx")
+    expect(db.ppl.likes.likes.name.get()).toBe("marxx")
+    expect(db.ppl.likes.likes.likes.likes.name.get()).toBe("marxx")
+    expect(db.ppl.likes.likes.likes.likes.likes.name.get()).toBe("lela")
+    expect(db.ppl.likes.likes.likes.likes.likes().age).toBe(21)
+    db({lela: db().ppl.likes})
+    db({lela: {age: 22}})
+    expect(db.ppl.likes.likes.likes.likes.likes().age).toBe(22)
   })
 })

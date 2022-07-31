@@ -1,7 +1,9 @@
-import _SyncProm from "sync-p"; const SyncProm = _SyncProm as typeof Promise
+import SyncProm from "./syncProm"
 
 
-const constrRes = (SuperClass: typeof Promise) => class ResablePromise<T = any> extends SuperClass<T> {
+
+
+const constrRes = (SuperClass: /*typeof SyncProm | */typeof Promise) => class ResablePromise<T = unknown> extends SuperClass<T> {
   public readonly settled: boolean
   public readonly res: (t: T) => void
   public readonly rej: (err: any) => void
@@ -37,6 +39,7 @@ const constrRes = (SuperClass: typeof Promise) => class ResablePromise<T = any> 
     }) as any
 
     if (f) f(rres, rrej)
+    return this
   }
 }
 
@@ -44,7 +47,7 @@ export type ResablePromise<T> = Promise<T> & {res(t: T): void, rej(t: any): void
 export const ResablePromise = constrRes(Promise)
 
 export type ResableSyncPromise<T> = Promise<T> & {res(t: T): void, rej(t: any): void, settled(): Promise<T> }
-export const ResableSyncPromise = constrRes(SyncProm)
+export const ResableSyncPromise = constrRes(SyncProm as any as typeof Promise)
 
 export default ResablePromise
 

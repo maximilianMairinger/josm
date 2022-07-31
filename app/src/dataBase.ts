@@ -6,7 +6,9 @@ import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
 import { MultiMap } from "./lib/multiMap"
 import { cloneKeys, cloneKeysButKeepSym } from "./lib/clone"
-import _SyncProm from "sync-p"; const SyncProm = _SyncProm as typeof Promise
+import { SyncProm } from "./lib/syncProm"
+
+
 
 
 import xtring from "xtring"
@@ -673,12 +675,11 @@ function futureMainFunc(...params: any[]) {
 
 const { params: futureFuncParams, body: futureFuncBody } = functionToStr(futureMainFunc)
 
-
+import { DataFuture } from "./data"
 const _explicitlyForwardToThis = Object.getOwnPropertyNames(DataFuture.prototype)
 _explicitlyForwardToThis.shift() // pop constructor
 const explicitlyForwardToThis = new Set(_explicitlyForwardToThis)
 explicitlyForwardToThis.add("then")
-import { DataFuture } from "./data"
 class Future extends DataFuture {
   protected prox: any
   
@@ -776,6 +777,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       
       return f
     }
+    this.funcThis[internalDataBaseBridge] = this
 
     this.hasQueryFunc = store instanceof Function
     this.initFuncProps(this.hasQueryFunc ? {} : store as any, _default)
@@ -792,7 +794,6 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     
     
 
-    this.funcThis[internalDataBaseBridge] = this
     const { index } = dbDerivativeCollectionIndex
     for (let key in index) {
       this.setToFuncThis(key, {value: index[key], enumerable: false})  
@@ -1101,7 +1102,10 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                       newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
                       newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                     }
-                    if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                    if (newVal[parsingId] instanceof SyncProm) newVal[parsingId].then((value) => {
+                      constructAttatchToPrototype([newVal])(parsingId, {value, enumerable: false})
+                      attachF()
+                    })
                     else attachF()
                   }
                 }
@@ -1119,7 +1123,10 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                         newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
                         newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                       }
-                      if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                      if (newVal[parsingId] instanceof SyncProm) newVal[parsingId].then((value) => {
+                        constructAttatchToPrototype([newVal])(parsingId, {value, enumerable: false})
+                        attachF()
+                      })
                       else attachF()
                     }
                     else return funcThis // cleanup code is in finally block
@@ -1157,7 +1164,10 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
                     funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                   }
-                  if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                  if (newVal[parsingId] instanceof SyncProm) newVal[parsingId].then((value) => {
+                    constructAttatchToPrototype([newVal])(parsingId, {value, enumerable: false})
+                    attachF()
+                  })
                   else attachF()
                 }
                 
@@ -1240,7 +1250,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
 
     let resParsingId: Function
-    constructAttatchToPrototype([this.store])(parsingId, {value: new Promise((res) => {resParsingId = res})})
+    constructAttatchToPrototype([this.store])(parsingId, {value: new SyncProm((res) => {resParsingId = res}), enumerable: false})
     
 
 
@@ -1275,11 +1285,15 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         }
         else {
           const attachF = () => {
+            debugger
             setToThis(useVal[parsingId])
             useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
           }
-          if (useVal[parsingId] instanceof Promise) useVal[parsingId].then(attachF)
+          if (useVal[parsingId] instanceof SyncProm) useVal[parsingId].then((value) => {
+            constructAttatchToPrototype([useVal])(parsingId, {value, enumerable: false})
+            attachF()
+          })
           else attachF()
         }
       }
@@ -1312,7 +1326,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
 
 
-    constructAttatchToPrototype([this.store])(parsingId, this.funcThis)
+    constructAttatchToPrototype([this.store])(parsingId, {value: this.funcThis, enumerable: false})
     // @ts-ignore
     resParsingId(this.store[parsingId as any])
   }

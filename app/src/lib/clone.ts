@@ -36,3 +36,5 @@ export const cloneKeys = (() => {
     else return ob
   }
 })()
+
+export default cloneKeys
