@@ -14,68 +14,166 @@ import project from "project-obj"
 import delay from "tiny-delay"
 
 
+const expect = (e) => {return {toBe(w) {if (e !== w) throw new Error(`${e} !== ${w}`)}}}
 
 
-
-
-
-const sourceOb = {
-  de: {
-    max: {
-      userName: "max",
-      age: 20
-    },
-    marnie: {
-      userName: "marnie",
-      age: 50
-    },
-    root: true
-  },
-  en: {
-    max: {
-      userName: "en max",
-      age: 220
-    },
-    marnie: {
-      userName: "en marnie",
-      age: 250
-    },
-    root: "root en"
+const ob = {
+  ppl: {
+    name: "max",
+    age: 22,
+    likes: {
+      name: "lela",
+      age: 21
+    }
   }
-}
+};
+(ob.ppl.likes as any).likes = ob.ppl
+// console.log(ob)
+
+
+
+
+const db = new DataBase(ob) as any
+
+
+const ob2 = {
+  ppl: {
+    name: "linda",
+    age: 30,
+    likes: {
+      name: "binda",
+      age: 31
+    }
+  }
+};
+
+(ob2.ppl.likes as any).likes = ob2.ppl;
+((ob2.ppl as any).root as any) = ob2;
+((ob2.ppl.likes as any).root as any) = ob2;
+
+db({ob2})
+
+
+
+const ob3 = {
+  ppl: {
+    name3: "winda",
+    age3: 30,
+    likes: {
+      name3: "rinda",
+      age3: 31
+    }
+  }
+};
+
+
+
+db({ob2: ob3})
+
+expect(db.ob2.ppl.likes.likes.name.get()).toBe("linda")
+expect(db.ob2.ppl.likes.likes.likes.name.get()).toBe("binda")
+
+expect(db.ob2.ppl.likes.likes.name3.get()).toBe("winda")
+expect(db.ob2.ppl.likes.likes.likes.name3.get()).toBe("rinda")
 
 
 
 
 
-// @ts-ignore
-const db = new DataBase<typeof sourceOb>({woo: async (query) => {
-  console.log("query", query)
-  await delay(500)
-  return project(sourceOb, query) as any
-}});
+const ob4 = {
+  ppl: {
+    name4: "winda2",
+    age3: 111,
+    likes: {
+      name4: "rinda2",
+      age4: 31
+    }
+  }
+};
 
-// db.woo.de.max({age: 2})
+(ob4.ppl.likes as any).likes = ob4.ppl;
 
-// console.log(cloneKeys(db()))
+db({ob2: ob4})
+
+expect(db.ob2.ppl.likes.likes.name.get()).toBe("linda")
+expect(db.ob2.ppl.likes.likes.likes.name.get()).toBe("binda")
+
+expect(db.ob2.ppl.likes.likes.name3.get()).toBe("winda")
+expect(db.ob2.ppl.likes.likes.likes.name3.get()).toBe("rinda")
+
+expect(db.ob2.ppl.likes.likes.name4.get()).toBe("winda2")
+expect(db.ob2.ppl.likes.likes.likes.name4.get()).toBe("rinda2")
+
+expect(db.ob2.ppl.likes.likes.age3.get()).toBe(111)
 
 
-const lang = new Data("de")
 
-const l = db.woo(lang)
 
-l((v) => {
-  console.log(cloneKeys(v))
-}, true)
 
-// l.max.userName.get((v) => {
+
+
+
+
+
+
+
+// const sourceOb = {
+//   de: {
+//     max: {
+//       userName: "max",
+//       age: 20
+//     },
+//     marnie: {
+//       userName: "marnie",
+//       age: 50
+//     },
+//     root: true
+//   },
+//   en: {
+//     max: {
+//       userName: "en max",
+//       age: 220
+//     },
+//     marnie: {
+//       userName: "en marnie",
+//       age: 250
+//     },
+//     root: "root en"
+//   }
+// }
+
+
+
+
+
+// // @ts-ignore
+// const db = new DataBase<typeof sourceOb>({woo: async (query) => {
+//   console.log("query", query)
+//   await delay(500)
+//   return project(sourceOb, query) as any
+// }});
+
+// // db.woo.de.max({age: 2})
+
+// // console.log(cloneKeys(db()))
+
+
+// const lang = new Data("de")
+
+// const l = db.woo(lang)
+
+// l((v) => {
 //   console.log(cloneKeys(v))
-// }, true, true)
+// }, true)
 
-delay(1000, () => {
-  console.log("switch")
-  lang.set("en")
-})
+// // l.max.userName.get((v) => {
+// //   console.log(cloneKeys(v))
+// // }, true, true)
+
+// delay(1000, () => {
+//   console.log("switch")
+//   lang.set("en")
+// })
 
 
 

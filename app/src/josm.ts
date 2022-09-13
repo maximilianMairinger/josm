@@ -1,5 +1,5 @@
 export { setDataDerivativeIndex } from "./derivativeExtension"
-export { internalDataBaseBridge } from "./data" 
+export { internalDataBaseBridge, instanceTypeLink, instanceTypeSym } from "./data" 
 export { Data, DataBaseSubscription, DataSubscription } from "./dataDerivable"
 export { DataCollection } from "./dataCollection"
 export { DataBase, parsingId as dataBaseParsingId } from "./dataBaseDerivable"

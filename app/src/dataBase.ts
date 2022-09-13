@@ -1083,9 +1083,9 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 }
                   
               }
-              else { // prop instanceof DataBase
+              else { // newVal instanceof object
                 if (prop instanceof Data && !(prop instanceof Future)) {
-                  // newVal is object and prop is Data
+                  // prop is Data
                   (this.store as any)[key] = newVal
                   diffFromThis.added[key] = cloneUntilParsingId(newVal)
                   if (newVal[parsingId] === undefined) {
@@ -1109,8 +1109,11 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                     else attachF()
                   }
                 }
-                else {
-                  if (newVal[parsingId] === undefined) prop(newVal, strict)
+                else { // prop is DB and newVal is obj
+                  if (newVal[parsingId] === undefined) {
+                    constructAttatchToPrototype([newVal])(parsingId, {value: prop, enumerable: false})
+                    prop(newVal, strict)
+                  }
                   else {
                     if (newVal[parsingId] !== prop) {
                       //@ts-ignore
@@ -1285,7 +1288,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         }
         else {
           const attachF = () => {
-            debugger
+            // debugger
             setToThis(useVal[parsingId])
             useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
@@ -1461,14 +1464,15 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       }
       if (hasNew) {
         this.flushAble = true
+        // if (hasDup) {
+        //   console.warn("[DataBase] New and colliding diffs from children. This shouldnt happen.")
+        //   // unduplifyNestedObjectPath(this.diffFromChildCache)
+        //   // justifyNesting(this.diffFromChildCache)
+        // }
         for (const key in diffFromChild.diff) this.diffFromChildCache[key] = diffFromChild.diff[key]
         for (const origin of diffFromChild.origins) this.callOrigins.add(origin)
 
-        // if (hasDup) {
-        //   console.warn("[DataBase] New and colliding diffs from children. This shouldnt happen.")
-          // unduplifyNestedObjectPath(this.diffFromChildCache)
-          // justifyNesting(this.diffFromChildCache)
-        // }
+        
       }
       
 
@@ -1562,6 +1566,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       return retRecDeeper
     }
 
+
     
   }
 
@@ -1569,7 +1574,6 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     this.diffFromChildCache = {}
     this.diffFromThisCache = {added: {}, removed: {}}
     this.flushAble = false
-    for (const rm of this.canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
     const canRemoveFromOriginAfterFlush = [...this.canRemoveFromOriginAfterFlushTimeout]
     setTimeout(() => {
       for (const rm of canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
