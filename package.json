@@ -49,6 +49,7 @@
     "esm": "^3.2.25",
     "jest": "^25.0.0",
     "jest-expect-ordered": "^1.0.0",
+    "number-to-words": "^1.2.4",
     "postcss-loader": "^3.0.0",
     "project-obj": "^1.0.0",
     "rollup": "^2.23.0",

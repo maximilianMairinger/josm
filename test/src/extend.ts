@@ -3,6 +3,7 @@ import expectOrdered from "jest-expect-ordered"
 
 import { circularDeepEqual } from "fast-equals"
 import clone from "./../../app/src/lib/clone"
+import { toOrdinal } from "number-to-words"
 
 declare global {
   namespace jest {
@@ -23,6 +24,26 @@ function eq(exp, got) {
 
 expect.extend({
   ...expectOrdered,
-  eq
+  eq,
+  inOrder(exp: any[], got) {
+    if (exp[sym] === undefined) {
+      exp[sym] = {arr: [...exp], counter: 0}
+      expect.assertions(exp.length)
+    }
+    const { arr } = exp[sym]
+    const empty = exp.length === 0
+    const curVal = exp.shift()
+    
+    const counterIndex = exp[sym].counter
+    exp[sym].counter++
+    const counter = exp[sym].counter
+    
+    return {
+      pass: !empty && circularDeepEqual(clone(curVal), clone(got)),
+      message: () => `Expected checks in the following succession [${arr.map((e, i) => i < counterIndex ? this.utils.printExpected(e) : i === counterIndex ? this.utils.printReceived(got) : JSON.stringify(e)).join(", ")}].\nInstead of ${this.utils.printReceived(got)} expected ${this.utils.printExpected(curVal)} at the ${toOrdinal(counter)} invocation.`,
+    }
+  }
   
 })
+
+const sym = Symbol()

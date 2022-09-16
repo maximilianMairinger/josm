@@ -762,6 +762,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       let f = this.callMeWithDiffIndex.get(key)
       if (f !== undefined) {
         this.funcThis[key][internalDataBaseBridge].removeNotifyParentOfChangeCb(f)
+        this.callMeWithDiffIndex.delete(key)
       }
       else {
         f = (diff: any, origins: Set<any>) => {
@@ -1038,6 +1039,11 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
             const onDel = () => {
               const diff = {removed: {}}
               diff.removed[key] = undefined
+              const f = this.callMeWithDiffIndex.get(key)
+              if (f !== undefined) {
+                this.funcThis[key][internalDataBaseBridge].removeNotifyParentOfChangeCb(f)
+                this.callMeWithDiffIndex.delete(key)
+              }
               delete newVal[parsingId]
               delete funcThis[key]
               delete newData[key]
@@ -1272,6 +1278,11 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       const onDel = () => {
         const diff = {removed: {}}
         diff.removed[key] = undefined
+        const f = this.callMeWithDiffIndex.get(key)
+        if (f !== undefined) {
+          this.funcThis[key][internalDataBaseBridge].removeNotifyParentOfChangeCb(f)
+          this.callMeWithDiffIndex.delete(key)
+        }
         delete val[parsingId]
         delete funcThis[key]
         delete this.store[key]
@@ -1576,7 +1587,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     this.flushAble = false
     const canRemoveFromOriginAfterFlush = [...this.canRemoveFromOriginAfterFlushTimeout]
     setTimeout(() => {
-      for (const rm of canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
+      if (this.callOrigins !== undefined) for (const rm of canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
     })
   }
 

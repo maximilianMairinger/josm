@@ -30,90 +30,21 @@ const ob = {
 (ob.ppl.likes as any).likes = ob.ppl
 // console.log(ob)
 
-
-
-
 const db = new DataBase(ob) as any
 
 
-const ob2 = {
-  ppl: {
-    name: "linda",
-    age: 30,
-    likes: {
-      name: "binda",
-      age: 31
-    }
-  }
-};
+db((full) => {
+  console.log(cloneKeys(full))
+})
 
-(ob2.ppl.likes as any).likes = ob2.ppl;
-((ob2.ppl as any).root as any) = ob2;
-((ob2.ppl.likes as any).root as any) = ob2;
+const ppl = db.ppl
 
-db({ob2})
-
-
-
-const ob3 = {
-  ppl: {
-    name3: "winda",
-    age3: 30,
-    likes: {
-      name3: "rinda",
-      age3: 31
-    }
-  }
-};
-
-
-
-db({ob2: ob3})
-
-expect(db.ob2.ppl.likes.likes.name.get()).toBe("linda")
-expect(db.ob2.ppl.likes.likes.likes.name.get()).toBe("binda")
-
-expect(db.ob2.ppl.likes.likes.name3.get()).toBe("winda")
-expect(db.ob2.ppl.likes.likes.likes.name3.get()).toBe("rinda")
-
-
-
-
-
-const ob4 = {
-  ppl: {
-    name4: "winda2",
-    age3: 111,
-    likes: {
-      name4: "rinda2",
-      age4: 31
-    }
-  }
-};
-
-(ob4.ppl.likes as any).likes = ob4.ppl;
-
-db({ob2: ob4})
-
-expect(db.ob2.ppl.likes.likes.name.get()).toBe("linda")
-expect(db.ob2.ppl.likes.likes.likes.name.get()).toBe("binda")
-
-expect(db.ob2.ppl.likes.likes.name3.get()).toBe("winda")
-expect(db.ob2.ppl.likes.likes.likes.name3.get()).toBe("rinda")
-
-expect(db.ob2.ppl.likes.likes.name4.get()).toBe("winda2")
-expect(db.ob2.ppl.likes.likes.likes.name4.get()).toBe("rinda2")
-
-expect(db.ob2.ppl.likes.likes.age3.get()).toBe(111)
-
-
-
-
-
-
-
-
-
+ppl.name.set("max2")
+ppl.likes.name.set("lela2")
+ppl.likes.age.set(212)
+db({ppl: {likes: {likes: {name: "max3"}}}})
+ppl({likes: undefined})
+ppl({name: undefined})
 
 
 

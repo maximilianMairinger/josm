@@ -659,6 +659,43 @@ describe("DataBase", () => {
       expect(db.ob2.ppl.likes.likes.name.get()).toBe("linda")
       expect(db.ob2.ppl.likes.likes.likes.name.get()).toBe("binda")
     })
+
+    test("Add recursion at runtime", () => {
+      const ob = {
+        ppl: {
+          name: "max",
+          age: 22,
+          likes: {
+            name: "lela",
+            age: 21
+          }
+        }
+      };
+  
+      const db = new DataBase(ob) as any
+
+      db({ppl: {likes: {likes: db().ppl}}})
+      
+
+      expect(db.ppl.likes.likes.name.get()).toBe("max")
+      expect(db.ppl.likes.likes.age.get()).toBe(22)
+      expect(db.ppl.likes.likes.likes.name.get()).toBe("lela")
+      expect(db.ppl.likes.likes.likes.likes.likes.name.get()).toBe("lela")
+
+
+
+      expect(db.ppl2).toBe(undefined)
+      db({ppl2: db.ppl()})
+      expect(db.ppl2()).eq(clone(db.ppl()))
+      expect(db.ppl2.likes.likes.name.get()).toBe("max")
+      expect(db.ppl2.likes.likes.age.get()).toBe(22)
+      expect(db.ppl2.likes.likes.likes.name.get()).toBe("lela")
+      expect(db.ppl2.likes.likes.likes.likes.likes.name.get()).toBe("lela")
+
+
+      // TODO?
+      // db({ppl: {likes: {likes: db.ppl}}})
+    })
   
   
       
@@ -753,7 +790,83 @@ describe("DataBase", () => {
       expect(db.ob2.ppl.likes.likes.age3.get()).toBe(111)
       
     })
+
+    describe("Callbacks", () => {
+      test("Recieve full at root", () => {
+        const ob = {
+          ppl: {
+            name: "max",
+            age: 22,
+            likes: {
+              name: "lela",
+              age: 21
+            }
+          }
+        };
+        (ob.ppl.likes as any).likes = ob.ppl
+        // console.log(ob)
+    
+        const db = new DataBase(ob) as any
+
+        const mut = itrMut(ob)
+  
+        const e = expect([
+          mut(), 
+          mut({ppl: {name: "max2"}}),
+          mut({ppl: {likes: {name: "lela2"}}}),
+          mut({ppl: {age: 212, likes: {age: 212}}}),
+          mut({ppl: {likes: {likes: {name: "lela3"}}}}),
+          (() => {const m = mut(); delete m.ppl.likes; return m})(),
+          (() => {const m = mut(); delete m.ppl.likes; delete m.ppl.name; return m})(),
+        ])
+  
+        db((full) => {
+          e.inOrder(full)
+        })
+
+        const ppl = db.ppl
+
+        ppl.name.set("max2")
+        ppl.likes.name.set("lela2")
+        ppl({age: 212, likes: {age: 212}})
+        db({ppl: {likes: {likes: {name: "lela3"}}}})
+        ppl({likes: undefined})
+        ppl({name: undefined})
+      })
+    })
+
+
+
+    
   
   })
 
 })
+
+
+function mockMut(ob: object) {
+  const oob = clone(ob)
+  return function mut(changes: any = {}, ooob = oob) {
+    const o = clone(ooob)
+    for (const key in changes) {
+      if (typeof changes[key] === "object" && typeof o[key] === "object") changes[key] = mut(changes[key], o[key])
+      else o[key] = changes[key]
+    }
+    return o
+  }
+}
+
+function itrMut(ob: object) {
+  const oob = clone(ob)
+  return function mut(changes: any = {}, o = oob) {
+    for (const key in changes) {
+      if (typeof changes[key] === "object" && typeof o[key] === "object") mut(changes[key], o[key])
+      else o[key] = changes[key]
+    }
+    return clone(o)
+  }
+}
+
+function editOb() {
+
+}
