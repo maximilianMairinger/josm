@@ -766,12 +766,10 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       }
       else {
         f = (diff: any, origins: Set<any>) => {
-          const nestedDiff = {} 
-          nestedDiff[key] = diff
-          this.aggregateCall(undefined, {diff: nestedDiff, origins})
-          return () => {
-            return this.flushCall(false)
-          }
+          return this.aggregateCall(undefined, {diff: {[key]: diff}, origins}, false)
+        }
+        f.flush = () => {
+          return this.flushCall(false)
         }
         this.callMeWithDiffIndex.set(key, f)
       }
@@ -869,7 +867,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       }
     }
 
-    if (this.beforeDestroyCbs.size === 0) {
+    if (!this.isRoot && this.beforeDestroyCbs.size === 0) {
       delete this.store[parsingId as any]
 
       
@@ -880,7 +878,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         else {
           this.funcThis[key][internalDataBaseBridge].destroy(this)  
         }
-        delete this.funcThis[key]
+        // delete this.funcThis[key] 
+        // this is done in the respective del funcs
       }
 
       registerSubscriptionNamespace(() => {
@@ -899,10 +898,11 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       for (const e of this.locSubNsReg) e.destroy()
       this.locSubNsReg.clear()
   
-      for (const key in this) {
-        //@ts-ignore
-        delete this[key]
-      }
+      // for (const key in this) {
+      //   //@ts-ignore
+      //   delete this[key]
+      // }
+      // dont think this is necessary for GC
       return true
     }
     else {
@@ -1044,9 +1044,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 this.funcThis[key][internalDataBaseBridge].removeNotifyParentOfChangeCb(f)
                 this.callMeWithDiffIndex.delete(key)
               }
-              delete newVal[parsingId]
               delete funcThis[key]
-              delete newData[key]
+              delete newData[key] // isnt this the same as this.store?? Anyways do we need this. As it is not in the other onDel implementation
               delete this.store[key]
               this.aggregateCall(diff, undefined)
               this.flushCall()
@@ -1210,7 +1209,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         const destroyVals = {} as {[key in string]: (Data | DataBase)}
         const removeFunc = (key: string) => {
           const val = funcThis[key]
-          this.callMeWithDiffIndex.delete(key)
+          // this.callMeWithDiffIndex.delete(key)
+          // dont do this here. It is properly handled in destroy
           destroyVals[key] = val
         }
 
@@ -1283,7 +1283,6 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
           this.funcThis[key][internalDataBaseBridge].removeNotifyParentOfChangeCb(f)
           this.callMeWithDiffIndex.delete(key)
         }
-        delete val[parsingId]
         delete funcThis[key]
         delete this.store[key]
         this.aggregateCall(diff, undefined)
@@ -1299,7 +1298,6 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         }
         else {
           const attachF = () => {
-            // debugger
             setToThis(useVal[parsingId])
             useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
             funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
@@ -1327,7 +1325,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
           onDel()
         };
         (specialOnDel as any).key = key
-        funcThis[key].addBeforeDestroyCb(this, onDel)
+        funcThis[key].addBeforeDestroyCb(this, specialOnDel)
         const sub = funcThis[key].get((e) => {
           const diff = {}
           diff[key] = e
@@ -1443,48 +1441,54 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   private diffFromChildCache: object = {}
   private callOrigins = new Set<any>()
   private flushAble = false
-  private canRemoveFromOriginAfterFlushTimeout = [] as any[]
-  private canRemoveFromOriginAfterFlush = [] as any[]
 
-  aggregateCall(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: Set<any>, diff: object} | undefined) {
+  aggregateCall(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: Set<any>, diff: object} | undefined, primaryCall = true) {
+    let anyChange = false
     if (diffFromThis) {
-      if (diffFromThis.added) for (const key in diffFromThis.added) {
-        const callId = {c: this.funcThis[key]}
-        this.callOrigins.add(callId)
-        this.canRemoveFromOriginAfterFlush.push(callId);
-        (this.diffFromThisCache as any).added[key] = diffFromThis.added[key]
-      }
-      if (diffFromThis.removed) for (const key in diffFromThis.removed) {
-        const callId = {c: this.funcThis[key]}
-        this.callOrigins.add(callId)
-        this.canRemoveFromOriginAfterFlush.push(callId)
-        this.diffFromThisCache.removed[key] = diffFromThis.removed[key]
-      }
-      this.flushAble = true
-    } 
-    // TODO: remove callOrigins originating from this
-    if (diffFromChild) {
-      let hasDup = false
-      let hasNew = false
-      for (const origin of diffFromChild.origins) {
-        if (this.callOrigins.has(origin)) hasDup = true
-        else {
-          this.canRemoveFromOriginAfterFlushTimeout.push(origin)
-          hasNew = true
+      if (diffFromThis.added) {
+        if (!isObjectEmpty(diffFromThis.added)) anyChange = true
+        for (const key in diffFromThis.added) {
+          const callId = {c: this.funcThis[key]}
+          this.callOrigins.add(callId);
+          (this.diffFromThisCache as any).added[key] = diffFromThis.added[key]
         }
       }
+      if (diffFromThis.removed) {
+        if (!isObjectEmpty(diffFromThis.removed)) anyChange = true
+        for (const key in diffFromThis.removed) {
+          const callId = {c: this.funcThis[key]}
+          this.callOrigins.add(callId)
+          this.diffFromThisCache.removed[key] = diffFromThis.removed[key]
+        }
+      }
+      
+    }
+    // TODO: remove callOrigins originating from this
+    if (diffFromChild) {
+      let hasNew = false
+      for (const origin of diffFromChild.origins) {
+        if (!this.callOrigins.has(origin)) hasNew = true
+      }
+      // would we benefit from sorting the diffs by origin? So that we could just apply the new origin if one gets added.
       if (hasNew) {
-        this.flushAble = true
         // if (hasDup) {
         //   console.warn("[DataBase] New and colliding diffs from children. This shouldnt happen.")
         //   // unduplifyNestedObjectPath(this.diffFromChildCache)
         //   // justifyNesting(this.diffFromChildCache)
         // }
-        for (const key in diffFromChild.diff) this.diffFromChildCache[key] = diffFromChild.diff[key]
+        for (const key in diffFromChild.diff) {
+          if (!(key in this.diffFromThisCache.removed)) {
+            anyChange = true
+            this.diffFromChildCache[key] = diffFromChild.diff[key]
+          }
+        }
         for (const origin of diffFromChild.origins) this.callOrigins.add(origin)
 
-        
+        if (!anyChange) console.warn("JOSM>DataBase: Unexpected edgecase. Handled here but shouldnt happen.")
       }
+
+      
+      
       
 
 
@@ -1496,11 +1500,78 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
     }
 
+
+
+    if (anyChange) {
+      this.flushAble = true
+
+      let diffFromThisForParents: object
+
+      if (diffFromThis && !isObjectEmpty(diffFromThis.removed)) {
+        diffFromThisForParents = {}
+  
+        if (diffFromThis.added) for (const key in diffFromThis.added) {
+          diffFromThisForParents[key] = diffFromThis.added[key]
+        }
+        if (diffFromThis.removed) for (const key in diffFromThis.removed) {
+          diffFromThisForParents[key] = undefined
+        }
+      }
+      else if (diffFromThis !== undefined) diffFromThisForParents = diffFromThis.added as any
+      else diffFromThisForParents = {}
+  
+      const myDiffFromChild = diffFromChild === undefined || diffFromChild.diff === undefined ? {} : diffFromChild.diff
+      const diffFromChildAndThis = {...myDiffFromChild, ...diffFromThisForParents} // The order here is important: when deleting the diff from this is applied last, as it trumpfs th sub diff
+  
+
+      if (primaryCall) {
+        const deeperLs = [] as any[]
+        for (const f of this.notifyParentOfChangeCbs) {
+          const ret = f(diffFromChildAndThis, this.callOrigins)
+          if (ret) deeperLs.push(ret)
+        }  
+
+        const recDeeper = () => {
+          const deeeep = [] as any[]
+          for (const deeper of deeperLs) {
+            const ret = deeper()
+            if (ret) deeeep.push(ret)
+          }
+          if (!deeeep.empty) {
+            deeperLs.set(deeeep)
+            recDeeper()
+          }
+        }
+        recDeeper()
+      }
+      else {
+        const deeperLs = [] as any[]
+        const retRecDeeper = () => {
+          const deeeep = [] as any[]
+          for (const deeper of deeperLs) {
+            const ret = deeper()
+            if (ret) deeeep.push(ret)
+          }
+          if (!deeeep.empty) {
+            deeperLs.set(deeeep)
+            return retRecDeeper
+          }
+        }
+        if (!this.notifyParentOfChangeCbs.empty) return () => {
+          for (const f of this.notifyParentOfChangeCbs) {
+            const ret = f(diffFromChildAndThis, this.callOrigins)
+            if (ret) deeperLs.push(ret)
+          }
+          if (!deeperLs.empty) return retRecDeeper
+        }
+      }
+    
+    }
   }
 
 
-  flushCall(primaryFlush = true) {
-    if (!this.flushAble || this.inBulkChange) return
+  flushCall(primaryCall = true) {
+    if (!this.flushAble || this.inBulkChange || this.callOrigins.size === 0) return
     let diffFromThisForParents: object
     const diffFromChild = this.diffFromChildCache
     const diffFromThis = this.diffFromThisCache
@@ -1517,7 +1588,13 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
     else diffFromThisForParents = diffFromThis.added as any
 
-    const diffFromChildAndThis = {...diffFromThisForParents, ...diffFromChild}
+
+    const diffFromChildAndThis = {...diffFromChild, ...diffFromThisForParents} // The order here is important: when deleting the diff from this is applied last, as it trumpfs th sub diff
+
+    
+
+
+
 
     registerSubscriptionNamespace(() => {
       for (const key in diffFromThis.added) {
@@ -1536,19 +1613,18 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         this.__call(this.subscriptionsOfChildChanges as any, diffFromChildAndThis)
       }
     }, this.locSubNsReg)
-    
-
-    
 
 
-
-
-
-    const deeperLs = [] as any[]
-    for (const f of this.notifyParentOfChangeCbs) deeperLs.push(f(diffFromChildAndThis, this.callOrigins))
     this.discardCall()
 
-    if (primaryFlush) {
+    
+
+    if (primaryCall) {
+      const deeperLs = [] as any[]
+      for (const f of this.notifyParentOfChangeCbs) {
+        const ret = f.flush()
+        if (ret) deeperLs.push(ret)
+      }
       const recDeeper = () => {
         const deeeep = [] as any[]
         for (const deeper of deeperLs) {
@@ -1563,6 +1639,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       recDeeper()
     }
     else {
+      const deeperLs = [] as any[]
       const retRecDeeper = () => {
         const deeeep = [] as any[]
         for (const deeper of deeperLs) {
@@ -1574,9 +1651,14 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
           return retRecDeeper
         }
       }
-      return retRecDeeper
+      if (!this.notifyParentOfChangeCbs.empty) return () => {
+        for (const f of this.notifyParentOfChangeCbs) {
+          const ret = f.flush()
+          if (ret) deeperLs.push(ret)
+        }
+        if (!deeperLs.empty) return retRecDeeper
+      }
     }
-
 
     
   }
@@ -1585,10 +1667,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     this.diffFromChildCache = {}
     this.diffFromThisCache = {added: {}, removed: {}}
     this.flushAble = false
-    const canRemoveFromOriginAfterFlush = [...this.canRemoveFromOriginAfterFlushTimeout]
-    setTimeout(() => {
-      if (this.callOrigins !== undefined) for (const rm of canRemoveFromOriginAfterFlush) this.callOrigins.delete(rm)
-    })
+    this.callOrigins.clear()
   }
 
 

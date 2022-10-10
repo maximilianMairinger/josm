@@ -16,35 +16,31 @@ import delay from "tiny-delay"
 
 const expect = (e) => {return {toBe(w) {if (e !== w) throw new Error(`${e} !== ${w}`)}}}
 
-
-const ob = {
-  ppl: {
-    name: "max",
-    age: 22,
-    likes: {
-      name: "lela",
-      age: 21
-    }
+let ob = {
+  name: "max",
+  age: 22,
+  likes: {
+    name: "lela",
+    age: 21
   }
 };
-(ob.ppl.likes as any).likes = ob.ppl
-// console.log(ob)
+(ob.likes as any).likes = ob
+// console.log(cloneKeys(ob))
+
 
 const db = new DataBase(ob) as any
 
+db((full, diff) => {
+  // e.inOrder(full)
+  console.log(cloneKeys(full), diff)
+}, true, false)
 
-db((full) => {
-  console.log(cloneKeys(full))
-})
+const lela = db
 
-const ppl = db.ppl
 
-ppl.name.set("max2")
-ppl.likes.name.set("lela2")
-ppl.likes.age.set(212)
-db({ppl: {likes: {likes: {name: "max3"}}}})
-ppl({likes: undefined})
-ppl({name: undefined})
+lela({likes: undefined})
+// lela({name: "lela3"})
+
 
 
 

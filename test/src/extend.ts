@@ -1,6 +1,5 @@
 import expectOrdered from "jest-expect-ordered"
-
-
+import { stringify } from "./../../repl/src/serialize"
 import { circularDeepEqual } from "fast-equals"
 import clone from "./../../app/src/lib/clone"
 import { toOrdinal } from "number-to-words"
@@ -40,7 +39,7 @@ expect.extend({
     
     return {
       pass: !empty && circularDeepEqual(clone(curVal), clone(got)),
-      message: () => `Expected checks in the following succession [${arr.map((e, i) => i < counterIndex ? this.utils.printExpected(e) : i === counterIndex ? this.utils.printReceived(got) : JSON.stringify(e)).join(", ")}].\nInstead of ${this.utils.printReceived(got)} expected ${this.utils.printExpected(curVal)} at the ${toOrdinal(counter)} invocation.`,
+      message: () => `Expected checks in the following succession [${arr.map((e, i) => i < counterIndex ? this.utils.printExpected(e) : i === counterIndex ? this.utils.printReceived(got) : stringify(e)).join(", ")}].\nInstead of \n${this.utils.printReceived(got)}\n${this.utils.printExpected(curVal)}\nwas expected at the ${toOrdinal(counter)} invocation.`,
     }
   }
   

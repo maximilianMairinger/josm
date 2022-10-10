@@ -270,9 +270,10 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   }
 
   protected destroy() {
-    this.set(undefined)
+    // this.set(undefined)
     for (const f of this.beforeDestroyCbs) f()
     this.beforeDestroyCbs.clear()
+    this.set(undefined)
     for (const e of this.linksOfMe) e.destroy()
     this.linksOfMe.clear()
     for (const e of this.locSubNsReg) e.destroy()

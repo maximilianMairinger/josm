@@ -792,7 +792,7 @@ describe("DataBase", () => {
     })
 
     describe("Callbacks", () => {
-      test("Recieve full at root", () => {
+      test("Recieve full at root on data change", () => {
         const ob = {
           ppl: {
             name: "max",
@@ -808,14 +808,16 @@ describe("DataBase", () => {
     
         const db = new DataBase(ob) as any
 
-        const mut = itrMut(ob)
+        const {itr: mut} = mutate(ob)
   
         const e = expect([
           mut(), 
           mut({ppl: {name: "max2"}}),
           mut({ppl: {likes: {name: "lela2"}}}),
-          mut({ppl: {age: 212, likes: {age: 212}}}),
-          mut({ppl: {likes: {likes: {name: "lela3"}}}}),
+          mut({ppl: {age: "x0", likes: {age: "y0"}}}),
+          mut({ppl: {age: "x1", likes: {age: "y1"}}}),
+          mut({ppl: {age: "x2", likes: {age: "y2"}}}),
+          mut({ppl: {name: "whoo"}}),
           (() => {const m = mut(); delete m.ppl.likes; return m})(),
           (() => {const m = mut(); delete m.ppl.likes; delete m.ppl.name; return m})(),
         ])
@@ -828,12 +830,75 @@ describe("DataBase", () => {
 
         ppl.name.set("max2")
         ppl.likes.name.set("lela2")
-        ppl({age: 212, likes: {age: 212}})
-        db({ppl: {likes: {likes: {name: "lela3"}}}})
+        ppl({age: "x0", likes: {age: "y0"}})
+        ppl.likes({age: "y1", likes: {age: "x1"}})
+        ppl.likes.likes({age: "x2", likes: {age: "y2"}})
+        ppl({name: "whoo"})
         ppl({likes: undefined})
         ppl({name: undefined})
       })
+
+
+      test("Recieve full at self referencing child on data change", () => {
+        let ob = {
+          ppl: {
+            name: "max",
+            age: 22,
+            likes: {
+              name: "lela",
+              age: 21
+            }
+          }
+        };
+        (ob.ppl.likes as any).likes = ob.ppl
+        ob = ob.ppl.likes
+        // console.log(ob)
+    
+        const db = new DataBase(ob) as any
+        const {itr: mut} = mutate(ob)
+  
+        const e = expect([
+          mut(), 
+          mut({likes: {name: "max2"}}),
+          mut({likes: {likes: {name: "lela2"}}}),
+          mut({age: "x0", likes: {age: "y0"}}),
+          mut({age: "x1", likes: {age: "y1"}}),
+          mut({age: "x2", likes: {age: "y2"}}),
+          mut({name: "whoo"}),
+          mut({newProp: "new", likes: {age: 1}}),
+          mut({newProp3: "new", likes: {age: 2, newProp2: "new"}}),
+
+          (() => {const m = mut(); delete m.name; return m})(),
+          (() => {const m = mut(); delete m.name; delete m.likes; return m})()
+        ])
+
+  
+        db((full) => {
+          e.inOrder(full)
+          // console.log(full)
+        })
+  
+        const lela = db
+  
+        lela.likes.name.set("max2")
+        lela.name.set("lela2")
+        lela({age: "x0", likes: {age: "y0"}})
+        lela.likes({age: "y1", likes: {age: "x1"}})
+        lela.likes.likes({age: "x2", likes: {age: "y2"}})
+        lela({name: "whoo"})
+        lela({likes: {age: 1}, newProp: "new"})
+        lela({likes: {age: 1}, newProp: "new"}) // should be ignored as no new changes
+        lela({likes: {age: 2, newProp2: "new"}, newProp3: "new"})
+        lela({likes: {age: 2, newProp2: "new"}, newProp3: "new"}) // should be ignored as no new changes
+
+        lela({name: undefined})
+
+        lela({likes: undefined})
+      })
     })
+
+    // TODO: self reference
+    // double reference delete (finds shortest way?) 
 
 
 
@@ -844,29 +909,28 @@ describe("DataBase", () => {
 })
 
 
-function mockMut(ob: object) {
+function mutate(ob: object) {
   const oob = clone(ob)
-  return function mut(changes: any = {}, ooob = oob) {
+
+  function mock(changes: any = {}, ooob = oob) {
     const o = clone(ooob)
-    for (const key in changes) {
-      if (typeof changes[key] === "object" && typeof o[key] === "object") changes[key] = mut(changes[key], o[key])
+    if (changes instanceof Function) changes(o)
+    else for (const key in changes) {
+      if (typeof changes[key] === "object" && typeof o[key] === "object") changes[key] = mock(changes[key], o[key])
       else o[key] = changes[key]
     }
     return o
   }
-}
-
-function itrMut(ob: object) {
-  const oob = clone(ob)
-  return function mut(changes: any = {}, o = oob) {
-    for (const key in changes) {
-      if (typeof changes[key] === "object" && typeof o[key] === "object") mut(changes[key], o[key])
+  function itr(changes: any = {}, o = oob) {
+    if (changes instanceof Function) changes(o)
+    else for (const key in changes) {
+      if (typeof changes[key] === "object" && typeof o[key] === "object") itr(changes[key], o[key])
       else o[key] = changes[key]
     }
     return clone(o)
   }
-}
-
-function editOb() {
-
+  return {
+    mock,
+    itr
+  }
 }
