@@ -17,6 +17,42 @@ export const cloneKeysButKeepSym = (() => {
   }
 })()
 
+export function mergeDeepButNotRecursive(from, into) {
+  for (const key of Object.keys(from)) {
+    if (into[key] instanceof Object && from[key] instanceof Object) {
+      mergeDeepButNotRecursive(from[key], into[key])
+    }
+    else {
+      into[key] = from[key]
+    }
+  }
+  return into
+}
+
+export const mergeDeep = (() => {
+  let known: WeakMap<any, any>
+  return function mergeDeep(from, into) {
+    known = new WeakMap()
+    return mergeDeepRec(from, into)
+  }
+  function mergeDeepRec(from, into) {
+    if (from instanceof Object) {
+      if (known.has(from)) return known.get(from)
+      known.set(from, into)
+      for (const key of Object.keys(from)) {
+        if (into[key] instanceof Object && from[key] instanceof Object) {
+          mergeDeepRec(from[key], into[key])
+        }
+        else {
+          into[key] = from[key]
+        }
+      }
+      return into
+    }
+    else return from
+  }
+})()
+
 
 
 export const cloneKeys = (() => {

@@ -25,20 +25,21 @@ let ob = {
   }
 };
 (ob.likes as any).likes = ob
+ob = ob.likes
 // console.log(cloneKeys(ob))
 
 
 const db = new DataBase(ob) as any
 
 db((full, diff) => {
-  // e.inOrder(full)
-  console.log(cloneKeys(full), diff)
+  console.log(diff)
 }, true, false)
+
 
 const lela = db
 
-
-lela({likes: undefined})
+lela.likes.name.set("max2")
+lela.name.set("lela2")
 // lela({name: "lela3"})
 
 

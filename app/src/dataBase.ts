@@ -5,7 +5,7 @@ import { constructAttatchToPrototype } from "attatch-to-prototype"
 import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
 import { MultiMap } from "./lib/multiMap"
-import { cloneKeys, cloneKeysButKeepSym } from "./lib/clone"
+import { cloneKeys, cloneKeysButKeepSym, mergeDeepButNotRecursive } from "./lib/clone"
 import { SyncProm } from "./lib/syncProm"
 
 
@@ -1082,7 +1082,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                     diff[key] = e
                     //@ts-ignore
                     this.store[key] = e
-                    this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+                    this.aggregateCall(undefined, {diff, origins: [{c: funcThis[key]}]})
                     this.flushCall()
                   }, false)
                 }
@@ -1195,7 +1195,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                   diff[key] = e
                   //@ts-ignore
                   this.store[key] = e
-                  this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+                  this.aggregateCall(undefined, {diff, origins: [{c: funcThis[key]}]})
                   this.flushCall()
                 }, false)
               }
@@ -1331,7 +1331,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
           diff[key] = e
           //@ts-ignore
           this.store[key] = e
-          this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+          this.aggregateCall(undefined, {diff, origins: [{c: funcThis[key]}]})
           this.flushCall()
         }, false)
       }
@@ -1442,7 +1442,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   private callOrigins = new Set<any>()
   private flushAble = false
 
-  aggregateCall(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: Set<any>, diff: object} | undefined, primaryCall = true) {
+  aggregateCall(diffFromThis: {added?: object, removed?: object} | undefined, diffFromChild: {origins: any[], diff: object} | undefined, primaryCall = true) {
     let anyChange = false
     if (diffFromThis) {
       if (diffFromThis.added) {
@@ -1466,9 +1466,15 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     // TODO: remove callOrigins originating from this
     if (diffFromChild) {
       let hasNew = false
-      for (const origin of diffFromChild.origins) {
-        if (!this.callOrigins.has(origin)) hasNew = true
+
+
+      for (let i = diffFromChild.origins.length - 1; i >= 0; i--) {
+        if (!this.callOrigins.has(diffFromChild.origins[i])) {
+          hasNew = true
+          break
+        }
       }
+
       // would we benefit from sorting the diffs by origin? So that we could just apply the new origin if one gets added.
       if (hasNew) {
         // if (hasDup) {
@@ -1476,15 +1482,15 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         //   // unduplifyNestedObjectPath(this.diffFromChildCache)
         //   // justifyNesting(this.diffFromChildCache)
         // }
+        mergeDeepButNotRecursive(diffFromChild.diff, this.diffFromChildCache)
+
         for (const key in diffFromChild.diff) {
-          if (!(key in this.diffFromThisCache.removed)) {
-            anyChange = true
-            this.diffFromChildCache[key] = diffFromChild.diff[key]
-          }
+          if (key in this.diffFromThisCache.removed) delete this.diffFromChildCache[key]
+          else anyChange = true
         }
         for (const origin of diffFromChild.origins) this.callOrigins.add(origin)
 
-        if (!anyChange) console.warn("JOSM>DataBase: Unexpected edgecase. Handled here but shouldnt happen.")
+        if (!anyChange) console.warn("JOSM > DataBase: Unexpected edgecase. Handled here but shouldnt happen.")
       }
 
       
@@ -1527,7 +1533,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       if (primaryCall) {
         const deeperLs = [] as any[]
         for (const f of this.notifyParentOfChangeCbs) {
-          const ret = f(diffFromChildAndThis, this.callOrigins)
+          const ret = f(diffFromChildAndThis, [...this.callOrigins])
           if (ret) deeperLs.push(ret)
         }  
 
@@ -1559,7 +1565,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         }
         if (!this.notifyParentOfChangeCbs.empty) return () => {
           for (const f of this.notifyParentOfChangeCbs) {
-            const ret = f(diffFromChildAndThis, this.callOrigins)
+            const ret = f(diffFromChildAndThis, [...this.callOrigins])
             if (ret) deeperLs.push(ret)
           }
           if (!deeperLs.empty) return retRecDeeper

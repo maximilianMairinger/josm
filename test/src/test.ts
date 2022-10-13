@@ -566,7 +566,7 @@ describe("DataBase", () => {
     expect(store).eq({l3: "woo"})
   })
 
-  test("Deep DB", () => {
+  test("Nested DB", () => {
     const db = new DataBase({flat: 1, deep: {deeper: 2}}) as any
     expect(db.deep.deeper.get()).toBe(2)
     expect(db.deep.deeper).toBeInstanceOf(Data)
@@ -584,8 +584,8 @@ describe("DataBase", () => {
     expect(db()).eq({deep: {deeper: 5}})
   })
 
-  describe("Recursion", () => {
-    test("Recursive DB", () => {
+  describe("Cyclic", () => {
+    test("Cyclic DB", () => {
       const ob = {
         ppl: {
           name: "max",
@@ -620,7 +620,7 @@ describe("DataBase", () => {
       expect(db.ppl.likes.likes.likes.likes.likes().age).toBe(22)
     })
 
-    test("Add recursive structur at runtime", () => {
+    test("Add cyclic structur at runtime", () => {
 
       const ob = {
         ppl: {
@@ -660,7 +660,7 @@ describe("DataBase", () => {
       expect(db.ob2.ppl.likes.likes.likes.name.get()).toBe("binda")
     })
 
-    test("Add recursion at runtime", () => {
+    test("Add cyclic structure at runtime", () => {
       const ob = {
         ppl: {
           name: "max",
@@ -699,7 +699,7 @@ describe("DataBase", () => {
   
   
       
-    test("Add intersection rectursive structure", () => {
+    test("Add intersection cyclic structure", () => {
       const ob = {
         ppl: {
           name: "max",
@@ -894,6 +894,141 @@ describe("DataBase", () => {
         lela({name: undefined})
 
         lela({likes: undefined})
+      })
+
+      test("Recieve merged diff at root on data change", () => {
+        const ob = {
+          ppl: {
+            name: "max",
+            age: 22,
+            likes: {
+              name: "lela",
+              age: 21
+            }
+          }
+        };
+        (ob.ppl.likes as any).likes = ob.ppl
+        // console.log(ob)
+    
+        const db = new DataBase(ob) as any
+
+        const {itr: mut} = mutate(ob)
+  
+        const e = expect([
+          mut(), 
+          {ppl: {name: "max2"}},
+          {ppl: {likes: {name: "lela2"}}},
+          {ppl: {age: "x0", likes: {age: "y0"}}},
+          {ppl: {age: "x1", likes: {age: "y1"}}},
+          {ppl: {age: "x2", likes: {age: "y2"}}},
+          {ppl: {name: "whoo"}},
+          {ppl: {likes: undefined}},
+          {ppl: {name: undefined}}
+        ])
+  
+        db((full, diff) => {
+          e.inOrder(diff)
+        })
+
+        const ppl = db.ppl
+
+        ppl.name.set("max2")
+        ppl.likes.name.set("lela2")
+        ppl({age: "x0", likes: {age: "y0"}})
+        ppl.likes({age: "y1", likes: {age: "x1"}})
+        ppl.likes.likes({age: "x2", likes: {age: "y2"}})
+        ppl({name: "whoo"})
+        ppl({likes: undefined})
+        ppl({name: undefined})
+      })
+
+      test("Recieve merged diff at self referencing child on data change", () => {
+        let ob = {
+          ppl: {
+            name: "max",
+            age: 22,
+            likes: {
+              name: "lela",
+              age: 21
+            }
+          }
+        };
+        (ob.ppl.likes as any).likes = ob.ppl
+        ob = ob.ppl.likes
+        // console.log(ob)
+    
+        const db = new DataBase(ob) as any
+        const {itr: mut} = mutate(ob)
+  
+        const e = expect([
+          mut(),
+          {likes: {name: "max2"}},
+          {name: "lela2"},
+          {age: "x0", likes: {age: "y0"}},
+          {age: "x1", likes: {age: "y1"}},
+          {age: "x2", likes: {age: "y2"}},
+          {name: "whoo"},
+          {newProp: "new", likes: {age: 1}},
+          {newProp3: "new", likes: {age: 2, newProp2: "new"}},
+          {name: undefined},
+          {likes: undefined}
+        ])
+
+  
+        db((full, diff) => {
+          e.inOrder(diff)
+          // console.log(full)
+        })
+  
+        const lela = db
+  
+        lela.likes.name.set("max2")
+        lela.name.set("lela2")
+        lela({age: "x0", likes: {age: "y0"}})
+        lela.likes({age: "y1", likes: {age: "x1"}})
+        lela.likes.likes({age: "x2", likes: {age: "y2"}})
+        lela({name: "whoo"})
+        lela({likes: {age: 1}, newProp: "new"})
+        lela({likes: {age: 1}, newProp: "new"}) // should be ignored as no new changes
+        lela({likes: {age: 2, newProp2: "new"}, newProp3: "new"})
+        lela({likes: {age: 2, newProp2: "new"}, newProp3: "new"}) // should be ignored as no new changes
+
+        lela({name: undefined})
+
+        lela({likes: undefined})
+      })
+
+
+      test("Recive diff from two different nested subjects", () => {
+        const ob = {
+          ob1: {
+            prop1: "val1"
+          },
+          ob2: {
+            prop2: "val2"
+          }
+        }
+
+        const db = new DataBase(ob) as any
+        db((full, diff) => {
+          expect(diff).eq({ob1: {prop1: "change1"}, ob2: {prop2: "change2"}})
+        }, true, false)
+        db({ob1: {prop1: "change1"}, ob2: {prop2: "change2"}})
+      })
+
+      test("Recive merged diff from two different subjects", () => {
+        const ob = {
+          ob: {
+            prop1: "val1",
+            prop2: "val2"
+          }
+        }
+
+        const db = new DataBase(ob) as any
+        db((full, diff) => {
+          expect(diff).eq({ob: {prop1: "change1", prop2: "change2"}})
+        }, true, false)
+        db({ob: {prop1: "change1", prop2: "change2"}})
       })
     })
 
