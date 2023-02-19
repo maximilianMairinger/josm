@@ -17,6 +17,7 @@ import { circularDeepEqual } from "fast-equals"
 import { dataDerivativeLiableIndex } from './derivativeExtension'
 import constructAttatchToPrototype from 'attatch-to-prototype'
 import { cloneKeysButKeepSym } from './lib/clone'
+import { MultiMap } from './lib/multiMap'
 
 
 // record???
@@ -91,21 +92,46 @@ export class Data<Value = unknown, _Default extends Value = Value> {
   }
   
 
-  // Datas can only have one parent, thus there is no need to keep track of them. From is just there to match the syntax of InternalDataBase
-  private beforeDestroyCbs = []
+  
+  private beforeDestroyCbs = new MultiMap as MultiMap<unknown, Function>
   private addBeforeDestroyCb(from: any, cb: () => void) {
-    this.beforeDestroyCbs.push(cb)
+    this.beforeDestroyCbs.set(from, cb)
   }
 
-  protected destroy() {
-    this.set(undefined)
-    for (const f of this.beforeDestroyCbs) f()
-    this.beforeDestroyCbs.clear()
-    for (const e of this.linksOfMe) e.destroy()
-    this.linksOfMe.clear()
-    for (const e of this.locSubNsReg) e.destroy()
-    this.locSubNsReg.clear()
-    this.subscriptions.clear()
+  protected destroy(from, key?: string) {
+    const myBeforeDestroyCbs = this.beforeDestroyCbs.get(from)
+    if (key === undefined || myBeforeDestroyCbs.length === 1) {
+      myBeforeDestroyCbs.forEach(f => f())
+      this.beforeDestroyCbs.delete(from)
+    }
+    else {
+      for (let i = 0; i < myBeforeDestroyCbs.length; i++) {
+        // This is suboptimal, as it is not indexed thus having a timecomplexity of O(n).
+        // But this will probably never manifest itself, as having multiple keys (on one db) pointing to the same db object 
+        // is not really usefull at all. Just for testing maybe, so thats why this is handled here.
+        if ((myBeforeDestroyCbs[i] as any).key === key) {
+          myBeforeDestroyCbs.splice(i, 1)
+          break
+        }
+        
+      }
+    }
+
+
+    if (this.beforeDestroyCbs.size === 0) {
+      this.set(undefined)
+      for (const [key, f] of this.beforeDestroyCbs) f()
+      this.beforeDestroyCbs.clear()
+      for (const e of this.linksOfMe) e.destroy()
+      this.linksOfMe.clear()
+      for (const e of this.locSubNsReg) e.destroy()
+      this.locSubNsReg.clear()
+      this.subscriptions.clear()
+      return true
+    }
+    else {
+      return false
+    }
   }
 
   public set(value: Value): Value {

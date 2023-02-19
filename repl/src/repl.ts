@@ -12,17 +12,32 @@ import { MultiMap } from "./../../app/src/lib/multiMap"
 import { deepEqual } from "fast-equals"
 
 
-const currentLanguage = new Data("de") as Data<"en" | "de">
+// const currentLanguage = new Data("de") as Data<"en" | "de">
 
 
-const superLang = new DataBase<{en: object, de: object}>({de: {hey: "Hallo"} as any, en: {hey: "hi eng"} as any})
+// const superLang = new DataBase<{en: object, de: object}>({de: {hey: "Hallo"} as any, en: {hey: "hi eng"} as any})
 
-const lang = superLang(currentLanguage) as any as DataBase<any>
-superLang.de({what: {deep: "was"}})
-console.log(lang.whee)
+// const lang = superLang(currentLanguage) as any as DataBase<any>
+// superLang.de({what: {deep: "was"}})
+// console.log(lang.whee)
 
 
 
+
+
+const db = new DataBase({})
+
+const d = new Data(2)
+
+db(console.log)
+
+db({lel: d})
+
+
+d.set(3)
+
+
+// console.log(db["lel"].get())
 
 
 

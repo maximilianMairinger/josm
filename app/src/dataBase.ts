@@ -24,7 +24,7 @@ export const parsingId = Symbol("parsingId")
 
 
 interface Link {
-  destroy(): void
+  destroy(...a: any): boolean
   resolvePath(): void
   destroyPathSubscriptions(): void
   dataChange(wrapper: DataBase<any>): void
@@ -155,7 +155,7 @@ export class DataLink extends Data implements Link {
     super(justInheritanceFlag)
     this.dataChange(wrapper)
   }
-  protected destroy() {
+  protected destroy(from, key?: string) {
     this.destroyPathSubscriptions()
 
     for (const sub of this.subs) sub.deactivate()
@@ -164,6 +164,8 @@ export class DataLink extends Data implements Link {
     for (let key in this) {
       delete this[key]
     }
+
+    return true
   }
 
   tunnel(func: Function): any {
@@ -306,7 +308,7 @@ class DataBaseLink extends Function implements Link {
       delete this[iterator]
     }
     
-    
+    return true
   }
 
   destroyPathSubscriptions() {}
@@ -854,7 +856,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
             if (strict) handledKeys.push(key)
 
             const prop = funcThis[key]
-            const newVal = newData[key]
+            let newVal = newData[key]
             const defaultVal = this._default !== undefined ? this._default[key] : undefined
 
             const onDel = () => {
@@ -882,6 +884,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                   prop.set(newVal)
                 }
                 else { // newVal is object and prop is Data
+                  if (newVal instanceof Data) throw new Error("Cannot set to non empty property");
+                  if (newVal instanceof DataBase) throw new Error("Cannot set to non empty property");
                   (this.store as any)[key] = newVal
                   diffFromThis.added[key] = cloneUntilParsingId(newVal)
                   if (newVal[parsingId] === undefined) {
@@ -905,6 +909,8 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
               }
               else { // prop instanceof DataBase
                 if (typeof newVal === "object") {
+                  if (newVal instanceof Data) throw new Error("Cannot set to non empty property");
+                  if (newVal instanceof DataBase) throw new Error("Cannot set to non empty property");
                   if (newVal[parsingId] === undefined) prop(newVal, strict, parsingId)
                   else {
                     if (newVal[parsingId] !== prop) {
@@ -951,25 +957,50 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
             } 
             else { // prop is undefined
               if (typeof newVal === "object") {
-                (this.store as any)[key] = newVal
-                diffFromThis.added[key] = cloneUntilParsingId(newVal)
+                if (newVal instanceof Data) {
+                  (this.store as any)[key] = newVal.get()
+                  diffFromThis.added[key] = newVal.get()
 
-                if (newVal[parsingId] === undefined) {
-                  constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
-
-                  funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
+                  constructAttatchToPrototype(funcThis)(key, {value: newVal, enumerable: true})
+                  const specialOnDel = () => {
+                    sub.deactivate()
+                    onDel()
+                  };
+                  (specialOnDel as any).key = key
+                  funcThis[key].addBeforeDestroyCb(this, specialOnDel)
+                  const sub = funcThis[key].get((e) => {
+                    const diff = {}
+                    diff[key] = e
+                    //@ts-ignore
+                    this.store[key] = e
+                    this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+                    this.flushCall()
+                  }, false)
                 }
-                else { 
-                  const attachF = () => {
-                    constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId], enumerable: true})
-                    newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+                else {
+                  if (newVal instanceof DataBase) newVal = (newVal as any)()
 
-
+                  (this.store as any)[key] = newVal
+                  diffFromThis.added[key] = cloneUntilParsingId(newVal)
+  
+                  if (newVal[parsingId] === undefined) {
+                    constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
+  
                     funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                   }
-                  if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
-                  else attachF()
+                  else { 
+                    const attachF = () => {
+                      constructAttatchToPrototype(funcThis)(key, {value: newVal[parsingId], enumerable: true})
+                      newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+  
+  
+                      funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
+                    }
+                    if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                    else attachF()
+                  }
                 }
+                
                 
               }
               else { // newVal primitive and prop is undefined
@@ -1058,7 +1089,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       const defaultVal = this._default !== undefined ? this._default[key] : undefined
       const val = store[key]
       if (val === undefined) (store as any)[key] = defaultVal
-      const useVal = val === undefined ? defaultVal : val
+      let useVal = val === undefined ? defaultVal : val
       
 
       
@@ -1079,18 +1110,40 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         (onDel as any).key = key
 
         if (typeof useVal === objectString) {
-          if (useVal[parsingId] === undefined) {
-            setToThis(new InternalDataBase(val, defaultVal, this.callMeWithDiff(key)))
-            funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
+          if (useVal instanceof Data) {
+            setToThis(useVal)
+
+            const specialOnDel = () => {
+              sub.deactivate()
+              onDel()
+            };
+            (specialOnDel as any).key = key
+            funcThis[key].addBeforeDestroyCb(this, onDel)
+            const sub = funcThis[key].get((e) => {
+              const diff = {}
+              diff[key] = e
+              //@ts-ignore
+              this.store[key] = e
+              this.aggregateCall(undefined, {diff, origins: new Set([{c: funcThis[key]}])})
+              this.flushCall()
+            }, false)
           }
           else {
-            const attachF = () => {
-              setToThis(useVal[parsingId])
-              useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+            if (useVal instanceof DataBase) useVal = useVal()
+
+            if (useVal[parsingId] === undefined) {
+              setToThis(new InternalDataBase(val, defaultVal, this.callMeWithDiff(key)))
               funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
             }
-            if (useVal[parsingId] instanceof Promise) useVal[parsingId].then(attachF)
-            else attachF()
+            else {
+              const attachF = () => {
+                setToThis(useVal[parsingId])
+                useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
+                funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
+              }
+              if (useVal[parsingId] instanceof Promise) useVal[parsingId].then(attachF)
+              else attachF()
+            }
           }
         }
         else {
