@@ -1,4 +1,4 @@
-import { Data, DataSubscription, DataCollection } from "../../app/src/josm"
+import { Data, DataSubscription, DataCollection, DataBase } from "../../app/src/josm"
 import delay from "delay"
 
 
@@ -532,5 +532,61 @@ describe("DataCollection", () => {
     d2.set(2000)
     d.get(me, false)
     d1.set(1000)
+  })
+})
+
+
+describe("DataBase", () => {
+
+  // null and undefined must be defined
+  // probably we should respect the valueof Data?
+  test("Set values are truthy", () => {
+    const db = new DataBase({
+      a: 0,
+      b: "sd",
+      c: false,
+      d: 1,
+      e: {
+        a: 0,
+      }
+    })
+
+    expect(!!db.a).toBe(true)
+    expect(!!db.b).toBe(true)
+    expect(!!db.c).toBe(true)
+    expect(!!db.d).toBe(true)
+    expect(!!db.e).toBe(true)
+
+  })
+
+  test("Set and then unset values are falsy", () => {
+    const db = new DataBase({
+      a: 0,
+      b: "sd",
+      c: false,
+      d: 1,
+      e: {
+        a: 0,
+      },
+      f: {
+        a: 0
+      }
+    })
+
+    db({a: undefined})
+    db({b: undefined})
+    db({c: undefined})
+    db({d: undefined})
+    db({e: undefined})
+    db({f: {a: undefined}})
+
+
+    expect(!!db.a).toBe(false)
+    expect(!!db.b).toBe(false)
+    expect(!!db.c).toBe(false)
+    expect(!!db.d).toBe(false)
+    expect(!!db.e).toBe(false)
+    expect(!!db.f).toBe(true)
+    expect(!!db.f.a).toBe(false)
   })
 })

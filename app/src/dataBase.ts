@@ -722,9 +722,9 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       
       this.notifyParentOfChangeCbs.clear()
       
-      for (const e of this.linksOfMe) e.destroy()
+      for (const e of this.linksOfMe) e.destroy(this)
       this.linksOfMe.clear()
-      for (const e of this.locSubNsReg) e.destroy()
+      for (const e of this.locSubNsReg) e.destroy(this)
       this.locSubNsReg.clear()
   
       for (const key in this) {
@@ -890,7 +890,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                   diffFromThis.added[key] = cloneUntilParsingId(newVal)
                   if (newVal[parsingId] === undefined) {
                     //@ts-ignore
-                    prop.destroy()
+                    prop.destroy(this)
 
                     constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
                     // ok
@@ -1051,7 +1051,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
 
         for (const key in destroyVals) {
           const val = destroyVals[key]
-          if (val instanceof Data) (val as any).destroy()
+          if (val instanceof Data) (val as any).destroy(this)
           else (val[internalDataBaseBridge as any] as any).destroy(this, key)
         }
         

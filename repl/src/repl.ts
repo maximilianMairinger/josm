@@ -25,16 +25,11 @@ import { deepEqual } from "fast-equals"
 
 
 
-const db = new DataBase({})
+const db = new DataBase({lel: 2})
 
-const d = new Data(2)
+// db({lel: undefined})
+console.log(db.lel)
 
-db(console.log)
-
-db({lel: d})
-
-
-d.set(3)
 
 
 // console.log(db["lel"].get())
