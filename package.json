@@ -2,17 +2,18 @@
   "name": "josm",
   "version": "1.7.37",
   "description": "Signal like state manager for objects. Use on server-side to enable real time apps or on client-side to enable reactive UIs.",
-  "main": "./app/dist/esm/josm.mjs",
+  "main": "./app/dist/esm/josm.js",
   "types": "./app/dist/esm/josm.d.ts",
+  "type": "module",
   "exports": {
     "node": {
-      "import": "./app/dist/esm/josm.mjs",
+      "import": "./app/dist/esm/josm.js",
       "require": "./app/dist/cjs/josm.js"
     },
-    "default": "./app/dist/esm/josm.mjs"
+    "default": "./app/dist/esm/josm.js"
   },
   "scripts": {
-    "build": "del-cli app/dist && npm run buildESM; npm run buildCJS && renamer --find /\\.js$/i --replace .mjs app/dist/esm/**",
+    "build": "del-cli app/dist && npm run buildESM; npm run buildCJS",
     "buildESM": "tsc -p ./tsconfig.prod.esm.json",
     "buildCJS": "tsc -p ./tsconfig.prod.cjs.json",
     "dev": "npm run webDev",
