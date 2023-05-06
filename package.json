@@ -1,6 +1,6 @@
 {
   "name": "josm",
-  "version": "1.7.36",
+  "version": "1.7.37",
   "description": "Signal like state manager for objects. Use on server-side to enable real time apps or on client-side to enable reactive UIs.",
   "main": "./app/dist/esm/josm.mjs",
   "types": "./app/dist/esm/josm.d.ts",
