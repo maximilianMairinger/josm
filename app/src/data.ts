@@ -157,9 +157,11 @@ export class Data<Value = unknown, _Default extends Value = Value> {
 }
 
 
+type ReadonlyData<T> = Omit<Data<T>, "set">
+
 // Why this works is an absolute mirracle to me...
 // In typescript@3.8.3 recursive generics are to the best of my knowledge not possible (and do not seem to be of highest priority to the ts devs), but somehow it works like this
-export type FuckedUpDataSet<Values extends any[]> = Data<Values[0]> | DataCollection<Values[number]>
+export type FuckedUpDataSet<Values extends any[]> = ReadonlyData<Values[0]> | DataCollection<Values[number]>
 
 
 
