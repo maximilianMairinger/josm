@@ -23,15 +23,17 @@ import { deepEqual } from "fast-equals"
 
 
 
-const e = {lel: null} as {lel: null}
+const e = {lel: 2, lel2: {deep: 3}} as const
 
-e
 
 
 const db = new DataBase(e)
 
+debugger
+db({lel3: {lel: 2}})
+
 // db({lel: undefined})
-console.log(db.lel.get())
+console.log(Object.keys(db()))
 
 
 

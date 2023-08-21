@@ -978,7 +978,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                   }, false)
                 }
                 else {
-                  if (newVal instanceof DataBase) newVal = (newVal as any)()
+                  if (newVal instanceof DataBase) newVal = (newVal as () => void)();
 
                   (this.store as any)[key] = newVal
                   diffFromThis.added[key] = cloneUntilParsingId(newVal)
