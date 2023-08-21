@@ -37,7 +37,7 @@ function justifyNesting(obj: any) {
   const deeper = [] as any[];
   for (const key in obj) {
     const val = obj[key];
-    if (typeof val === "object") deeper.push({ key, val });
+    if (typeof val === "object" && val !== null) deeper.push({ key, val });
     else just = true;
   }
 
@@ -64,7 +64,7 @@ const rmSymWhereNew = (sym: any) => {
     if (!knownOg.has(diff[sym])) delete diff[sym]
     else return
     for (const key in diff) {
-      if (typeof diff[key] === "object") {
+      if (typeof diff[key] === "object" && diff[key] !== null) {
         rmSymWhereNewRec(diff[key], og[key])
       }
     }
@@ -87,7 +87,7 @@ const unduplifyNestedObjectPath = (() => {
     const deeper = [] as any[];
     for (const key in obj) {
       const val = obj[key];
-      if (typeof val === "object") {
+      if (typeof val === "object" && val !== null) {
         if (!known.has(val)) {
           known.add(val);
           deeper.push(val);
@@ -880,7 +880,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
             }
             if (prop !== undefined) {
               if (prop instanceof Data) {
-                if (typeof newVal !== "object") {
+                if (!(typeof newVal === "object" && newVal !== null)) {
                   prop.set(newVal)
                 }
                 else { // newVal is object and prop is Data
@@ -908,7 +908,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 }
               }
               else { // prop instanceof DataBase
-                if (typeof newVal === "object") {
+                if (typeof newVal === objectString && newVal !== null) {
                   if (newVal instanceof Data) throw new Error("Cannot set to non empty property");
                   if (newVal instanceof DataBase) throw new Error("Cannot set to non empty property");
                   if (newVal[parsingId] === undefined) prop(newVal, strict, parsingId)
@@ -956,7 +956,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
               }
             } 
             else { // prop is undefined
-              if (typeof newVal === "object") {
+              if (typeof newVal === "object" && newVal !== null) {
                 if (newVal instanceof Data) {
                   (this.store as any)[key] = newVal.get()
                   diffFromThis.added[key] = newVal.get()
@@ -1109,7 +1109,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
         };   
         (onDel as any).key = key
 
-        if (typeof useVal === objectString) {
+        if (typeof useVal === objectString && useVal !== null) {
           if (useVal instanceof Data) {
             setToThis(useVal)
 
@@ -1394,8 +1394,10 @@ type ComplexData = {[key in string | number]: any}
 export type RemovePotentialArrayFunctions<Ob extends object> = Ob extends Array<any> ? Ob extends Array<infer I> ? Omit<Ob, keyof Array<I>> extends {0: any} ? Omit<Ob, keyof Array<any>> : {[key in number]: I} : Ob : Ob
 
 
+
+
 type DataBaseify<Type extends object> = { 
-  [Key in keyof Type]: Type[Key] extends object ? RecDataBase<RemovePotentialArrayFunctions<Type[Key]>> : Data<Type[Key]>
+  [Key in keyof Type]: Type[Key] extends object ? Type[Key] extends null ? Data<Type[Key]> : RecDataBase<RemovePotentialArrayFunctions<Type[Key]>> : Data<Type[Key]>
 }
 
 type RecDataBase<Store extends {[key in string]: any} = {[key in string]: any}> = DataBase<Store>/* & OmitFunctionProperties<InternalDataBase<Store>["DataBaseFunction"]>)*/
