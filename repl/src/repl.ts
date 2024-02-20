@@ -10,6 +10,7 @@ import { stringify, parse, retrocycle } from "./serialize"
 import LinkedList, { Token } from "fast-linked-list"
 import { MultiMap } from "./../../app/src/lib/multiMap"
 import { deepEqual } from "fast-equals"
+import clone from "circ-clone"
 
 
 // const currentLanguage = new Data("de") as Data<"en" | "de">
@@ -22,18 +23,49 @@ import { deepEqual } from "fast-equals"
 // console.log(lang.whee)
 
 
+const srcOb = {a: {b: 2}, c: "cc"} as any
+srcOb.a.d = srcOb
 
-const e = {lel: 2, lel2: {deep: 3}} as const
+const val = new DataBase(srcOb) as any
+
+val({a: {d: {a: {b: 4}}}})
+
+console.log(val())
 
 
 
-const db = new DataBase(e)
 
-debugger
-db({lel3: {lel: 2}})
+// const lel = new DataBase({
+//   whoop: true,
+// })
 
-// db({lel: undefined})
-console.log(Object.keys(db()))
+// debugger
+
+// const ob = {
+//   q: 1,
+//   circ1: {q: 2}
+// } as any
+
+
+
+
+// lel(ob)
+
+// console.log(clone(lel()))
+
+// lel({circ1: {circ2: lel()}})
+
+
+// const ob2 = {
+//   q: 1,
+//   circ1: {q: 2}
+// } as any
+
+// lel(ob2)
+
+// lel({circ1: {circ2: lel()}})
+
+// console.log(clone(lel()))
 
 
 

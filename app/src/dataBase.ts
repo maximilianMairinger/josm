@@ -6,6 +6,7 @@ import { dbDerivativeCollectionIndex } from "./derivativeExtension"
 import diff from "fast-object-diff"
 import { MultiMap } from "./lib/multiMap"
 import { cloneKeysButKeepSym } from "./lib/clone"
+import { SyncPromise } from "more-proms"
 
 
 
@@ -636,6 +637,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
       
       return f
     }
+    this.funcThis[internalDataBaseBridge] = this
     this.initFuncProps(store as any, _default)
 
     if (notifyParentOfChange) {
@@ -650,7 +652,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     
     
 
-    this.funcThis[internalDataBaseBridge] = this
+    
     const attach = constructAttatchToPrototype(this.funcThis, {enumerable: false})
     const { index } = dbDerivativeCollectionIndex
     for (let key in index) {
@@ -902,7 +904,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                       newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
                       newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                     }
-                    if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                    if (newVal[parsingId] instanceof SyncPromise) newVal[parsingId].then(attachF)
                     else attachF()
                   }
                 }
@@ -924,7 +926,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                         newVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
                         newVal[parsingId][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                       }
-                      if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                      if (newVal[parsingId] instanceof SyncPromise) newVal[parsingId].then(attachF)
                       else attachF()
                     }
                     else return funcThis // cleanup code is in finally block
@@ -984,6 +986,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                   diffFromThis.added[key] = cloneUntilParsingId(newVal)
   
                   if (newVal[parsingId] === undefined) {
+                    // Q: set promise to parsing id before rec call? A: No, is handled in the constr via the initFuncs call.
                     constructAttatchToPrototype(funcThis)(key, {value: new InternalDataBase(newVal, defaultVal, this.callMeWithDiff(key)), enumerable: true})
   
                     funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
@@ -996,7 +999,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
   
                       funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
                     }
-                    if (newVal[parsingId] instanceof Promise) newVal[parsingId].then(attachF)
+                    if (newVal[parsingId] instanceof SyncPromise) newVal[parsingId].then(attachF)
                     else attachF()
                   }
                 }
@@ -1081,7 +1084,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
     }
 
     let resParsingId: Function
-    constructAttatchToPrototype([this.store])(parsingId, {value: new Promise((res) => {resParsingId = res})})
+    constructAttatchToPrototype([this.store])(parsingId, {value: new SyncPromise((res) => {resParsingId = res})})
     
 
 
@@ -1141,7 +1144,7 @@ export class InternalDataBase<Store extends ComplexData, _Default extends Store 
                 useVal[parsingId][internalDataBaseBridge].addNotifyParentOfChangeCb(this.callMeWithDiff(key))
                 funcThis[key][internalDataBaseBridge].addBeforeDestroyCb(this, onDel)
               }
-              if (useVal[parsingId] instanceof Promise) useVal[parsingId].then(attachF)
+              if (useVal[parsingId] instanceof SyncPromise) useVal[parsingId].then(attachF)
               else attachF()
             }
           }

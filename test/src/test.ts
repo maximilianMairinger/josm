@@ -589,4 +589,23 @@ describe("DataBase", () => {
     expect(!!db.f).toBe(true)
     expect(!!db.f.a).toBe(false)
   })
+
+  describe("Cyclic", () => {
+    test("Init with cyclic", () => {
+      const srcOb = {a: {b: 2}, c: "cc"} as any
+      srcOb.a.d = srcOb
+      const val = new DataBase(srcOb) as any
+      expect(val.a.d.a.b.get()).toBe(2)
+    })
+
+    test("Latent cyclic", () => {
+      const srcOb = {a: {b: 2}, c: "cc"} as any
+      
+      const val = new DataBase(srcOb) as any
+
+      val.a({d: srcOb})
+
+      expect(val.a.d.a.b.get()).toBe(2)
+    })
+  })
 })
