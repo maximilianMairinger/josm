@@ -1,7 +1,7 @@
 import { cloneKeys } from "./../../app/src/lib/clone"
 import { DataSubscription } from "./../../app/src/data"
 // import { Data, DataBase } from "./../../app/src/extendedDB"
-import { Data, DataBase, DataCollection } from "./../../app/src/josm"
+import { Data, DataBase, DataCollection, flattenNestedData } from "./../../app/src/josm"
 import copy from "fast-copy"
 import { InternalDataBase, internalDataBaseBridge, parsingId } from "../../app/src/dataBase"
 
@@ -13,6 +13,25 @@ import { deepEqual } from "fast-equals"
 import clone from "circ-clone"
 
 
+
+let d1 = new Data(1)
+let d2 = new Data(d1)
+let d3 = new Data(d2)
+let d4 = new Data(d3)
+
+flattenNestedData(d4, []).get((val) => {
+  console.log(val)
+})
+
+
+d2.set(2)
+let d5 = new Data("lel2")
+d4 = new Data(d5)
+d3.set(d4)
+d5.set("lel3")
+d4.set("q")
+d3.set(3)
+
 // const currentLanguage = new Data("de") as Data<"en" | "de">
 
 
@@ -23,14 +42,14 @@ import clone from "circ-clone"
 // console.log(lang.whee)
 
 
-const srcOb = {a: {b: 2}, c: "cc"} as any
-srcOb.a.d = srcOb
+// const srcOb = {a: {b: 2}, c: "cc"} as any
+// srcOb.a.d = srcOb
 
-const val = new DataBase(srcOb) as any
+// const val = new DataBase(srcOb) as any
 
-val({a: {d: {a: {b: 4}}}})
+// val({a: {d: {a: {b: 4}}}})
 
-console.log(val())
+// console.log(val())
 
 
 
