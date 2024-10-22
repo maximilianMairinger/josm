@@ -23,7 +23,10 @@ Observables are called `Data` in Jsom. These are the simplest building blocks as
 ```typescript
 let data = new Data(1)
 
-data.get(console.log) // Calls (the observer) console.log every time data is set
+// Calls the observing function every time data is set
+data.get((value) => {
+  console.log(value)
+}) 
 
 data.set(10)
 data.set(100)
@@ -43,7 +46,9 @@ let data2 = new Data(2)
 
 let dataCollection = new DataCollection(data1, data2)
 
-dataCollection.get(console.log, /*initialize: boolean = true*/ false)
+dataCollection.get((value) => {
+  console.log(value)
+}, /*initialize: boolean = true*/ false)
 
 data1.set(10)
 data1.set(100)
@@ -59,7 +64,9 @@ Both Data and DataCollection return a `DataSubscription` when subscribing \(via 
 ```typescript
 let data1 = new Data(1)
 
-let dataSubscription = data.get(console.log)
+let dataSubscription = data.get((value) => {
+  console.log(value)
+})
 
 dataSubscription.deactivate()
 data1.set(10)
@@ -167,7 +174,9 @@ let lang = new DataBase({
 
 let currentLangKey = new Data("en")
 
-lang(currentLangKey).appName.get(console.log)   // "Cool.oi"  // initially english
+lang(currentLangKey).appName.get((val) => {
+  console.log(val)                              // "Cool.oi"  // initially english
+})   
 currentLangKey.set("de")                        // "Cool.io"  // now german
 lang.en.appName.set("Cool.io")
 currentLangKey.set("de")                        //            // no change ("Cool.io" > "Cool.io") 
