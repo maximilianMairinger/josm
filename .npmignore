@@ -24,3 +24,4 @@ rollup.web.dev.config.mjs
 tsconfig.cjs.json
 tsconfig.json
 devServer.mjs
+rollup.web.common.config.mjs
