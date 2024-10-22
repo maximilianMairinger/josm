@@ -12,9 +12,11 @@ import { ReadonlyData, Data, instanceTypeSym, DataSubscription } from "./josm"
 
 type DataChain<T> = ReadonlyData<T> | ReadonlyData<ReadonlyData<T>> | ReadonlyData<ReadonlyData<ReadonlyData<T>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>>>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>>>>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>>>>>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>>>>>>>> | ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<ReadonlyData<T>>>>>>>>>>>
 
-export function flattenNestedData<T>(data: DataChain<T>, subs: DataSubscription<any>[]) {
-  
-  
+export function flattenNestedData<T>(data: DataChain<T>) {
+  return _flattenNestedData(data, [])
+}
+
+function _flattenNestedData<T>(data: DataChain<T>, subs: DataSubscription<any>[]) {
   const out = new Data<T>()
   const mySubIndex = subs.length+1
   let innerSub: DataSubscription<any>
@@ -23,7 +25,7 @@ export function flattenNestedData<T>(data: DataChain<T>, subs: DataSubscription<
       for (let i = mySubIndex; i < subs.length; i++) subs[i].deactivate()
       subs.length = mySubIndex
       if (innerSub) innerSub.deactivate()
-      innerSub = flattenNestedData(innerData as any, subs).get((innerPlain) => {
+      innerSub = _flattenNestedData(innerData as any, subs).get((innerPlain) => {
         out.set(innerPlain as any)
       })
     }
