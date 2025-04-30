@@ -14,7 +14,7 @@
   "scripts": {
     "build": "del-cli app/dist && concurrently \"npm run buildESM\" \"npm run buildCJS\" --raw",
     "buildESM": "tsc -p ./tsconfig.prod.esm.json && mjsify app/dist esm cjs",
-    "buildCJS": "tsc -p ./tsconfig.prod.cjs.json && npm run buildCJS2",
+    "buildCJS": "tsc -p ./tsconfig.prod.cjs.json --declaration false --declarationMap false && npm run buildCJS2",
     "buildCJS2": "node rollup.node.prod.config.mjs",
     "dev": "npm run devWeb",
     "devWeb": "concurrently \"rollup --config rollup.web.dev.config.mjs -w\" \"node devServer.mjs\" --raw ",
