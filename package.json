@@ -6,10 +6,15 @@
   "types": "./app/dist/esm/josm.d.ts",
   "exports": {
     "node": {
+      "types": "./app/dist/esm/josm.d.ts",
       "import": "./app/dist/esm/josm.mjs",
       "require": "./app/dist/cjs/josm.js"
     },
-    "default": "./app/dist/esm/josm.mjs"
+    "default": {
+      "types": "./app/dist/esm/josm.d.ts",
+      "import": "./app/dist/esm/josm.mjs"
+    },
+    "types": "./app/dist/esm/josm.d.ts"
   },
   "scripts": {
     "build": "del-cli app/dist && concurrently \"npm run buildESM\" \"npm run buildCJS\" --raw",
